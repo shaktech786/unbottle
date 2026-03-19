@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useSessionContext } from "@/lib/session/context";
 import { TransportControls } from "@/components/sequencer/transport-controls";
 import { ArrangementPanel } from "@/components/arrangement/arrangement-panel";
@@ -15,6 +16,9 @@ import { useTonePlayer } from "@/lib/hooks/use-tone-player";
 import { useSequencer } from "@/lib/hooks/use-sequencer";
 import { useHyperfocusGuard } from "@/lib/hooks/use-hyperfocus-guard";
 import { useApiKey } from "@/lib/hooks/use-api-key";
+import { useElevenLabsKey } from "@/lib/hooks/use-elevenlabs-key";
+import { useToast } from "@/components/ui/toast-provider";
+import { Tooltip } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 import type { ChatContext } from "@/lib/hooks/use-chat";
@@ -42,6 +46,8 @@ export default function SessionWorkspacePage() {
     updateSession,
   } = useSessionContext();
 
+  const { addToast } = useToast();
+
   // ------- Sequencer (note management with undo/redo) -------
   const sequencer = useSequencer(contextNotes);
 
@@ -63,6 +69,7 @@ export default function SessionWorkspacePage() {
   // Debounced save to API
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingNotesRef = useRef<Note[]>(sequencer.notes);
+  const lastSaveToastRef = useRef<number>(0);
 
   // Keep ref in sync with latest notes (must be in effect, not render)
   useEffect(() => {
@@ -82,9 +89,20 @@ export default function SessionWorkspacePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ notes: notesToSave }),
-      }).catch(() => {
-        // Best effort save
-      });
+      })
+        .then((res) => {
+          if (res.ok) {
+            // Throttle save toasts to at most once every 30s
+            const now = Date.now();
+            if (now - lastSaveToastRef.current > 30_000) {
+              lastSaveToastRef.current = now;
+              addToast({ message: "Session saved", variant: "default", duration: 2000 });
+            }
+          }
+        })
+        .catch(() => {
+          addToast({ message: "Failed to save changes", variant: "error" });
+        });
     }, NOTES_SAVE_DEBOUNCE_MS);
 
     return () => {
@@ -119,8 +137,9 @@ export default function SessionWorkspacePage() {
   const [bookmarks] = useState<Bookmark[]>([]);
   const [mobileTab, setMobileTab] = useState<MobileTab>("arrange");
 
-  // ------- API key -------
+  // ------- API keys -------
   const { apiKey } = useApiKey();
+  const { apiKey: elevenLabsKey } = useElevenLabsKey();
 
   // ------- Chat sendMessage ref (so captures can send to chat) -------
   const chatSendRef = useRef<((msg: string) => void) | null>(null);
@@ -167,9 +186,17 @@ export default function SessionWorkspacePage() {
           textDescription: entry.textDescription,
           audioUrl: entry.audioUrl,
         }),
-      }).catch(() => {
-        // Best effort
-      });
+      })
+        .then((res) => {
+          if (res.ok) {
+            addToast({ message: "Capture saved", variant: "success", duration: 2500 });
+          } else {
+            addToast({ message: "Failed to save capture", variant: "error" });
+          }
+        })
+        .catch(() => {
+          addToast({ message: "Failed to save capture", variant: "error" });
+        });
 
       // If it's a text description, also send it to the AI producer chat
       if (entry.textDescription && chatSendRef.current) {
@@ -182,15 +209,21 @@ export default function SessionWorkspacePage() {
         setBpm(entry.bpm);
       }
     },
-    [session, updateSession, setBpm],
+    [session, updateSession, setBpm, addToast],
   );
 
   // ------- Arrangement generation handler -------
   const handleGenerateArrangement = useCallback(
     (newSections: Omit<Section, "id" | "sessionId">[]) => {
-      void addSections(newSections);
+      void addSections(newSections).then(() => {
+        addToast({
+          message: `Arrangement generated -- ${newSections.length} section${newSections.length === 1 ? "" : "s"} added`,
+          variant: "success",
+          duration: 3000,
+        });
+      });
     },
-    [addSections],
+    [addSections, addToast],
   );
 
   // ------- Callbacks -------
@@ -235,6 +268,21 @@ export default function SessionWorkspacePage() {
 
   return (
     <div className="flex h-full flex-col bg-slate-950">
+      {/* API key missing banners */}
+      {!apiKey && (
+        <div className="shrink-0 border-b border-amber-500/20 bg-amber-500/5 px-4 py-2">
+          <p className="text-xs text-amber-400">
+            Chat is offline -- add an API key in{" "}
+            <Link
+              href="/settings"
+              className="font-medium underline underline-offset-2 hover:text-amber-300"
+            >
+              Settings
+            </Link>
+          </p>
+        </div>
+      )}
+
       {/* Hyperfocus nudge (overlay at top) */}
       {shouldNudge && (
         <HyperfocusNudge
@@ -259,27 +307,37 @@ export default function SessionWorkspacePage() {
           onStop={stop}
           trailing={
             <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setGenerateOpen(true)}
+              <Tooltip
+                content={
+                  !elevenLabsKey
+                    ? "Add an ElevenLabs key in Settings to enable"
+                    : "Generate audio with AI"
+                }
               >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setGenerateOpen(true)}
+                  disabled={!elevenLabsKey}
+                  className={cn(!elevenLabsKey && "opacity-50")}
                 >
-                  <path d="M9 18V5l12-2v13" />
-                  <circle cx="6" cy="18" r="3" />
-                  <circle cx="18" cy="16" r="3" />
-                </svg>
-                <span className="hidden sm:inline">AI Generate</span>
-              </Button>
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M9 18V5l12-2v13" />
+                    <circle cx="6" cy="18" r="3" />
+                    <circle cx="18" cy="16" r="3" />
+                  </svg>
+                  <span className="hidden sm:inline">AI Generate</span>
+                </Button>
+              </Tooltip>
               <Button
                 variant="ghost"
                 size="sm"

@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import Link from "next/link";
 import type { Session, Track, Section, Note } from "@/lib/music/types";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -157,19 +158,66 @@ export function SessionProvider({ sessionId, children }: SessionProviderProps) {
   }
 
   if (error) {
+    const isNotFound =
+      error.toLowerCase().includes("not found") ||
+      error.toLowerCase().includes("404");
+
     return (
       <div className="flex h-full items-center justify-center bg-slate-950">
-        <div className="text-center">
-          <p className="text-lg font-medium text-red-400">
-            Failed to load session
+        <div className="mx-auto max-w-sm text-center">
+          {/* Icon */}
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-500/10">
+            <svg
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-red-400"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          </div>
+
+          <p className="text-lg font-medium text-neutral-200">
+            {isNotFound ? "Session not found" : "Failed to load session"}
           </p>
-          <p className="mt-1 text-sm text-slate-400">{error}</p>
-          <button
-            onClick={fetchSession}
-            className="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
-          >
-            Retry
-          </button>
+          <p className="mt-1 text-sm text-neutral-400">
+            {isNotFound
+              ? "This session may have been deleted or the link is incorrect."
+              : "Something went wrong loading this session."}
+          </p>
+
+          <div className="mt-6 flex items-center justify-center gap-3">
+            {isNotFound ? (
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-400"
+              >
+                Back to Dashboard
+              </Link>
+            ) : (
+              <>
+                <button
+                  onClick={fetchSession}
+                  className="inline-flex items-center rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-400"
+                >
+                  Try Again
+                </button>
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center rounded-lg bg-neutral-800 px-4 py-2 text-sm font-medium text-neutral-300 transition-colors hover:bg-neutral-700"
+                >
+                  Dashboard
+                </Link>
+              </>
+            )}
+          </div>
         </div>
       </div>
     );

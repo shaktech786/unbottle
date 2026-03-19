@@ -20,12 +20,16 @@ export interface UseChatOptions {
   apiKey?: string | null;
 }
 
+export type ChatErrorType = "auth" | "network" | "server" | null;
+
 export interface UseChatReturn {
   messages: ChatMessage[];
   sendMessage: (content: string) => Promise<void>;
   isStreaming: boolean;
   clearMessages: () => void;
   isLoadingHistory: boolean;
+  /** The most recent error type, or null if no error. Resets on next successful send. */
+  chatError: ChatErrorType;
 }
 
 interface SSEEvent {
@@ -54,6 +58,7 @@ export function useChat({ sessionId, context, apiKey }: UseChatOptions): UseChat
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [chatError, setChatError] = useState<ChatErrorType>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   // Load chat history on mount
@@ -106,6 +111,7 @@ export function useChat({ sessionId, context, apiKey }: UseChatOptions): UseChat
 
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
       setIsStreaming(true);
+      setChatError(null);
 
       try {
         // Build conversation history from prior messages (exclude the
@@ -133,9 +139,19 @@ export function useChat({ sessionId, context, apiKey }: UseChatOptions): UseChat
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => null);
-          throw new Error(
-            errorData?.error ?? `Request failed with status ${response.status}`,
-          );
+          // Classify error type for the UI
+          if (response.status === 401 || response.status === 403) {
+            setChatError("auth");
+            throw new Error("AI chat requires an API key. Add one in Settings.");
+          } else if (response.status >= 500) {
+            setChatError("server");
+            throw new Error("Something went wrong. Try again.");
+          } else {
+            setChatError("server");
+            throw new Error(
+              errorData?.error ?? `Request failed with status ${response.status}`,
+            );
+          }
         }
 
         const reader = response.body?.getReader();
@@ -200,6 +216,19 @@ export function useChat({ sessionId, context, apiKey }: UseChatOptions): UseChat
       } catch (err) {
         if ((err as Error).name === "AbortError") return;
 
+        // Classify network-level failures (TypeError: Failed to fetch)
+        if (
+          err instanceof TypeError &&
+          (err.message.includes("fetch") || err.message.includes("network") || err.message === "Failed to fetch")
+        ) {
+          setChatError("network");
+        } else {
+          // If we already set a specific error type (auth/server) in the response
+          // handler above, setChatError was already called -- this covers the
+          // generic catch case.
+          setChatError((prev) => prev ?? "server");
+        }
+
         const errorContent =
           err instanceof Error ? err.message : "Something went wrong.";
 
@@ -224,5 +253,5 @@ export function useChat({ sessionId, context, apiKey }: UseChatOptions): UseChat
     setIsStreaming(false);
   }, []);
 
-  return { messages, sendMessage, isStreaming, clearMessages, isLoadingHistory };
+  return { messages, sendMessage, isStreaming, clearMessages, isLoadingHistory, chatError };
 }

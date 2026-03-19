@@ -9,7 +9,7 @@ import { useSession } from "@/lib/hooks/use-session";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { sessions, isLoading, listSessions, createSession } = useSession();
+  const { sessions, isLoading, error, listSessions, createSession } = useSession();
 
   useEffect(() => {
     listSessions();
@@ -98,13 +98,30 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* Error loading sessions */}
+        {error && !isLoading && (
+          <div className="mb-6 rounded-xl border border-red-500/20 bg-red-500/5 p-6 text-center">
+            <p className="text-sm font-medium text-red-400">
+              Couldn&apos;t load your sessions.
+            </p>
+            <button
+              onClick={() => listSessions()}
+              className="mt-3 inline-flex items-center rounded-lg bg-neutral-800 px-4 py-2 text-sm font-medium text-neutral-300 transition-colors hover:bg-neutral-700"
+            >
+              Try refreshing
+            </button>
+          </div>
+        )}
+
         {/* Recent sessions */}
-        <div>
-          <h3 className="mb-4 text-sm font-medium uppercase tracking-wider text-neutral-500">
-            Recent Sessions
-          </h3>
-          <SessionList sessions={sessions} isLoading={isLoading} />
-        </div>
+        {!error && (
+          <div>
+            <h3 className="mb-4 text-sm font-medium uppercase tracking-wider text-neutral-500">
+              Recent Sessions
+            </h3>
+            <SessionList sessions={sessions} isLoading={isLoading} />
+          </div>
+        )}
       </div>
     </div>
   );

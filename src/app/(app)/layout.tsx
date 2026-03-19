@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
+import { OfflineBanner } from "@/components/ui/offline-banner";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-950 text-slate-50">
+    <div className="flex h-screen flex-col overflow-hidden bg-slate-950 text-slate-50">
+      <OfflineBanner />
+      <div className="flex flex-1 overflow-hidden">
       <Sidebar
         mobileOpen={mobileMenuOpen}
         onMobileClose={() => setMobileMenuOpen(false)}
@@ -60,6 +63,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
 
         <main className="flex flex-1 flex-col overflow-hidden">{children}</main>
+      </div>
       </div>
     </div>
   );

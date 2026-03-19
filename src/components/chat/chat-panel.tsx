@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState, type MutableRefObject } from "react";
 import { cn } from "@/lib/utils/cn";
-import { useChat, type ChatContext } from "@/lib/hooks/use-chat";
+import { useChat, type ChatContext, type ChatErrorType } from "@/lib/hooks/use-chat";
 import { getAuthHeaders } from "@/lib/hooks/use-api-key";
+import { useToast } from "@/components/ui/toast-provider";
 import type { Suggestion, Section } from "@/lib/music/types";
+import Link from "next/link";
 import { MessageList } from "./message-list";
 import { ChatInput } from "./chat-input";
 import { SuggestionChips } from "./suggestion-chips";
@@ -53,11 +55,12 @@ export function ChatPanel({
   sendMessageRef,
   className,
 }: ChatPanelProps) {
-  const { messages, sendMessage, isStreaming } = useChat({
+  const { messages, sendMessage, isStreaming, chatError } = useChat({
     sessionId,
     context,
     apiKey,
   });
+  const { addToast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Expose sendMessage to parent via ref
@@ -136,12 +139,15 @@ export function ChatPanel({
       if (data.sections?.length) {
         onGenerateArrangement(data.sections);
       }
-    } catch {
-      // Could display error in chat, but keeping it simple
+    } catch (err) {
+      addToast({
+        message: err instanceof Error ? err.message : "Failed to generate arrangement",
+        variant: "error",
+      });
     } finally {
       setIsGenerating(false);
     }
-  }, [messages, onGenerateArrangement, isGenerating, apiKey, context]);
+  }, [messages, onGenerateArrangement, isGenerating, apiKey, context, addToast]);
 
   return (
     <div
@@ -160,6 +166,9 @@ export function ChatPanel({
           </span>
         )}
       </div>
+
+      {/* Error banner */}
+      <ChatErrorBanner errorType={chatError} />
 
       {/* Messages */}
       <MessageList messages={messages} className="flex-1" />
@@ -208,6 +217,47 @@ export function ChatPanel({
 
       {/* Input */}
       <ChatInput onSend={sendMessage} disabled={isStreaming} />
+    </div>
+  );
+}
+
+/* ---------- Error banner sub-component ---------- */
+
+function ChatErrorBanner({ errorType }: { errorType: ChatErrorType }) {
+  if (!errorType) return null;
+
+  if (errorType === "auth") {
+    return (
+      <div className="mx-3 mt-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+        <p className="text-xs text-amber-400">
+          AI chat requires an API key.{" "}
+          <Link
+            href="/settings"
+            className="font-medium underline underline-offset-2 hover:text-amber-300"
+          >
+            Add one in Settings
+          </Link>
+        </p>
+      </div>
+    );
+  }
+
+  if (errorType === "network") {
+    return (
+      <div className="mx-3 mt-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+        <p className="text-xs text-amber-400">
+          Connection lost. Check your internet and try again.
+        </p>
+      </div>
+    );
+  }
+
+  // server / generic
+  return (
+    <div className="mx-3 mt-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2">
+      <p className="text-xs text-red-400">
+        Something went wrong. Try again.
+      </p>
     </div>
   );
 }

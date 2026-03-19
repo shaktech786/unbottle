@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils/cn";
 
-export type ToastVariant = "default" | "success" | "error" | "info";
+export type ToastVariant = "default" | "success" | "error" | "info" | "warning";
 
 export type ToastData = {
   id: string;
@@ -22,6 +22,7 @@ const variantClasses: Record<ToastVariant, string> = {
   success: "border-emerald-800 bg-emerald-900/80 text-emerald-100",
   error: "border-red-800 bg-red-900/80 text-red-100",
   info: "border-indigo-800 bg-indigo-900/80 text-indigo-100",
+  warning: "border-amber-800 bg-amber-900/80 text-amber-100",
 };
 
 export function Toast({ toast, onDismiss }: ToastProps) {

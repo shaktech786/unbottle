@@ -7,6 +7,7 @@ import { ExportProgress } from "./export-progress";
 import { AudioPlayer } from "@/components/audio/audio-player";
 import { useAudioGenerator } from "@/lib/hooks/use-audio-generator";
 import { useElevenLabsKey } from "@/lib/hooks/use-elevenlabs-key";
+import { useToast } from "@/components/ui/toast-provider";
 
 export interface ExportDialogProps {
   open: boolean;
@@ -25,6 +26,7 @@ export function ExportDialog({
   trackIds,
   className,
 }: ExportDialogProps) {
+  const { addToast } = useToast();
   const [status, setStatus] = useState<ExportStatus>("idle");
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -60,11 +62,13 @@ export function ExportDialog({
       const url = URL.createObjectURL(blob);
       setDownloadUrl(url);
       setStatus("done");
+      addToast({ message: "Export complete", variant: "success", duration: 3000 });
     } catch (err) {
       setErrorMessage(
         err instanceof Error ? err.message : "Export failed",
       );
       setStatus("error");
+      addToast({ message: "Export failed. Try again.", variant: "error" });
     }
   }
 

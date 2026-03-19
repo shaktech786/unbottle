@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
+import Link from "next/link";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { AudioPlayer } from "./audio-player";
@@ -50,6 +51,22 @@ export function GeneratePanel({
     reset,
   } = useAudioGenerator(apiKey);
 
+  // Track slow generation (>30s).
+  // We store when generation started and use a timer to flip a flag.
+  // The flag auto-resets because `isGenerating` gates the display below.
+  const [slowHintReady, setSlowHintReady] = useState(false);
+
+  useEffect(() => {
+    if (!isGenerating) return;
+    const timer = setTimeout(() => setSlowHintReady(true), 30_000);
+    return () => {
+      clearTimeout(timer);
+      setSlowHintReady(false);
+    };
+  }, [isGenerating]);
+
+  const showSlowHint = isGenerating && slowHintReady;
+
   // Compute default prompt from session context (shown as placeholder)
   const defaultPrompt = useMemo(
     () => buildMusicPrompt({ genre, mood, bpm, keySignature }),
@@ -93,8 +110,13 @@ export function GeneratePanel({
         {!apiKey && (
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
             <p className="text-xs text-amber-400">
-              No ElevenLabs API key configured. Add one in{" "}
-              <span className="font-medium">Settings</span> to generate audio.
+              Audio generation requires an ElevenLabs API key.{" "}
+              <Link
+                href="/settings"
+                className="font-medium underline underline-offset-2 hover:text-amber-300"
+              >
+                Add one in Settings
+              </Link>
             </p>
           </div>
         )}
@@ -214,10 +236,25 @@ export function GeneratePanel({
           {isGenerating ? progress || "Generating..." : "Generate Audio"}
         </Button>
 
-        {/* Error */}
+        {/* Slow generation hint */}
+        {isGenerating && showSlowHint && (
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+            <p className="text-xs text-amber-400">
+              This can take up to a minute for longer tracks...
+            </p>
+          </div>
+        )}
+
+        {/* Error with retry */}
         {error && (
           <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2">
             <p className="text-xs text-red-400">{error}</p>
+            <button
+              onClick={() => handleGenerate()}
+              className="mt-2 rounded-md bg-red-500/20 px-3 py-1 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/30"
+            >
+              Retry
+            </button>
           </div>
         )}
 
