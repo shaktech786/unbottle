@@ -1,23 +1,24 @@
 import { NextResponse } from "next/server";
 import type { Note, Track } from "@/lib/music/types";
 import { exportToMidi } from "@/lib/midi/writer";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/supabase/auth";
+import {
+  getSession as getSessionDB,
+  getTracks as getTracksDB,
+  getSessionNotes,
+} from "@/lib/supabase/db";
 
-/**
- * In-memory session store.
- *
- * In production this would be replaced by a database query.
- * For MVP, the client can POST the track and note data directly
- * rather than referencing a session ID.
- */
+const supabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL);
 
 interface ExportRequest {
-  /** Session ID (for future DB lookups). */
+  /** Session ID (for DB lookups when no inline data is provided). */
   sessionId?: string;
   /** Track IDs to include (optional -- exports all if omitted). */
   trackIds?: string[];
-  /** Tracks to export (inline data for MVP). */
+  /** Tracks to export (inline data -- takes precedence over DB). */
   tracks?: Track[];
-  /** Notes to export (inline data for MVP). */
+  /** Notes to export (inline data -- takes precedence over DB). */
   notes?: Note[];
   /** Tempo. */
   bpm?: number;
@@ -27,9 +28,27 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const body = (await request.json()) as ExportRequest;
 
-    const tracks = body.tracks ?? [];
+    let tracks = body.tracks ?? [];
     let notes = body.notes ?? [];
-    const bpm = body.bpm ?? 120;
+    let bpm = body.bpm ?? 120;
+
+    // If no inline data but sessionId is provided, load from Supabase
+    if (tracks.length === 0 && body.sessionId && supabaseConfigured) {
+      const client = await createClient();
+      await requireAuth(client);
+
+      const session = await getSessionDB(client, body.sessionId);
+      if (!session) {
+        return NextResponse.json(
+          { error: "Session not found" },
+          { status: 404 },
+        );
+      }
+
+      bpm = body.bpm ?? session.bpm;
+      tracks = await getTracksDB(client, body.sessionId);
+      notes = await getSessionNotes(client, body.sessionId);
+    }
 
     if (tracks.length === 0) {
       return NextResponse.json(
@@ -73,6 +92,12 @@ export async function POST(request: Request): Promise<Response> {
       },
     });
   } catch (err) {
+    if (err instanceof Error && err.message === "Authentication required") {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 },
+      );
+    }
     const message =
       err instanceof Error ? err.message : "Internal server error";
     return NextResponse.json({ error: message }, { status: 500 });

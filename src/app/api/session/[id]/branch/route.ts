@@ -1,12 +1,20 @@
 import { type NextRequest } from "next/server";
 import {
-  getSession,
-  createSession,
-  getTracks,
-  getSections,
-  addTrack,
-  addSection,
+  getSession as getSessionMemory,
+  createSession as createSessionMemory,
+  getTracks as getTracksMemory,
+  getSections as getSectionsMemory,
+  addTrack as addTrackMemory,
+  addSection as addSectionMemory,
 } from "@/lib/session/store";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/supabase/auth";
+import {
+  getSession as getSessionDB,
+  branchSession as branchSessionDB,
+} from "@/lib/supabase/db";
+
+const supabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL);
 
 export const dynamic = "force-dynamic";
 
@@ -16,11 +24,6 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const session = getSession(id);
-
-  if (!session) {
-    return Response.json({ error: "Session not found" }, { status: 404 });
-  }
 
   let body: Record<string, unknown> = {};
   try {
@@ -29,13 +32,48 @@ export async function POST(
     // Empty body is fine, we use defaults
   }
 
+  if (supabaseConfigured) {
+    try {
+      const client = await createClient();
+      const user = await requireAuth(client);
+
+      const session = await getSessionDB(client, id);
+      if (!session) {
+        return Response.json({ error: "Session not found" }, { status: 404 });
+      }
+
+      const label =
+        typeof body.label === "string" && body.label.trim()
+          ? body.label.trim()
+          : undefined;
+
+      const branched = await branchSessionDB(client, id, user.id, label);
+      if (!branched) {
+        return Response.json({ error: "Failed to branch session" }, { status: 500 });
+      }
+
+      return Response.json({ session: branched }, { status: 201 });
+    } catch (err) {
+      if (err instanceof Error && err.message === "Authentication required") {
+        return Response.json({ error: "Authentication required" }, { status: 401 });
+      }
+      const message = err instanceof Error ? err.message : "Internal server error";
+      return Response.json({ error: message }, { status: 500 });
+    }
+  }
+
+  // Fallback: in-memory store
+  const session = getSessionMemory(id);
+  if (!session) {
+    return Response.json({ error: "Session not found" }, { status: 404 });
+  }
+
   const label =
     typeof body.label === "string" && body.label.trim()
       ? body.label.trim()
       : `Branch of ${session.title}`;
 
-  // Create branched session with same musical parameters
-  const branched = createSession({
+  const branched = createSessionMemory({
     userId: session.userId,
     title: label,
     description: session.description,
@@ -48,10 +86,9 @@ export async function POST(
     parentBranchId: session.id,
   });
 
-  // Copy tracks from the original session
-  const originalTracks = getTracks(id);
+  const originalTracks = getTracksMemory(id);
   for (const track of originalTracks) {
-    addTrack(branched.id, {
+    addTrackMemory(branched.id, {
       name: track.name,
       instrument: track.instrument,
       volume: track.volume,
@@ -63,10 +100,9 @@ export async function POST(
     });
   }
 
-  // Copy sections from the original session
-  const originalSections = getSections(id);
+  const originalSections = getSectionsMemory(id);
   for (const section of originalSections) {
-    addSection(branched.id, {
+    addSectionMemory(branched.id, {
       name: section.name,
       type: section.type,
       startBar: section.startBar,
