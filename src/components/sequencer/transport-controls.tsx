@@ -69,7 +69,7 @@ export function TransportControls({
   );
 
   return (
-    <div className="flex h-14 shrink-0 items-center gap-4 border-b border-slate-800 bg-slate-950 px-4">
+    <div className="flex h-14 shrink-0 items-center gap-2 border-b border-slate-800 bg-slate-950 px-3 overflow-x-auto sm:gap-4 sm:px-4">
       {/* Play/Stop */}
       <button
         onClick={togglePlay}

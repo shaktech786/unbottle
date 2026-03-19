@@ -60,13 +60,13 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl p-8">
+    <div className="mx-auto max-w-2xl p-4 sm:p-8 overflow-y-auto">
       <h1 className="mb-2 text-2xl font-bold text-slate-100">Settings</h1>
       <p className="mb-8 text-slate-400">
         Configure your Unbottle experience.
       </p>
 
-      <Card className="p-6">
+      <Card className="p-4 sm:p-6">
         <h2 className="mb-1 text-lg font-semibold text-slate-100">
           Anthropic API Key
         </h2>
@@ -121,7 +121,7 @@ export default function SettingsPage() {
                   console.anthropic.com
                 </a>
               </p>
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <Input
                   type="password"
                   placeholder="sk-ant-api03-..."
@@ -129,7 +129,7 @@ export default function SettingsPage() {
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSave()}
                 />
-                <Button onClick={handleSave} disabled={!inputValue.trim()}>
+                <Button onClick={handleSave} disabled={!inputValue.trim()} className="min-h-[44px] sm:min-h-0 shrink-0">
                   {saved ? "Saved!" : "Save"}
                 </Button>
               </div>
@@ -142,7 +142,7 @@ export default function SettingsPage() {
         )}
       </Card>
 
-      <Card className="mt-6 p-6">
+      <Card className="mt-4 p-4 sm:mt-6 sm:p-6">
         <h2 className="mb-1 text-lg font-semibold text-slate-100">
           ElevenLabs API Key
         </h2>
@@ -198,7 +198,7 @@ export default function SettingsPage() {
                   elevenlabs.io
                 </a>
               </p>
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <Input
                   type="password"
                   placeholder="xi-..."
@@ -206,7 +206,7 @@ export default function SettingsPage() {
                   onChange={(e) => setElInputValue(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleElSave()}
                 />
-                <Button onClick={handleElSave} disabled={!elInputValue.trim()}>
+                <Button onClick={handleElSave} disabled={!elInputValue.trim()} className="min-h-[44px] sm:min-h-0 shrink-0">
                   {elSaved ? "Saved!" : "Save"}
                 </Button>
               </div>
@@ -219,7 +219,7 @@ export default function SettingsPage() {
         )}
       </Card>
 
-      <Card className="mt-6 p-6">
+      <Card className="mt-4 p-4 sm:mt-6 sm:p-6">
         <h2 className="mb-1 text-lg font-semibold text-slate-100">
           How it works
         </h2>

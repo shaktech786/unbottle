@@ -98,7 +98,7 @@ export default function Home() {
   return (
     <div className="flex flex-col flex-1">
       {/* Hero */}
-      <section className="relative flex flex-col items-center justify-center px-6 py-32 text-center sm:py-40 overflow-hidden">
+      <section className="relative flex flex-col items-center justify-center px-4 py-20 text-center sm:px-6 sm:py-32 md:py-40 overflow-hidden">
         {/* Gradient background */}
         <div
           aria-hidden="true"
@@ -109,7 +109,7 @@ export default function Home() {
           className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,rgba(99,102,241,0.12),transparent_70%)]"
         />
 
-        <h1 className="max-w-3xl text-4xl font-bold leading-tight tracking-tight text-slate-50 sm:text-5xl md:text-6xl">
+        <h1 className="max-w-3xl text-3xl font-bold leading-tight tracking-tight text-slate-50 sm:text-4xl md:text-5xl lg:text-6xl">
           The music in your head
           <br />
           <span className="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">
@@ -117,14 +117,14 @@ export default function Home() {
           </span>
         </h1>
 
-        <p className="mt-6 max-w-xl text-lg leading-relaxed text-slate-400 sm:text-xl">
+        <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-400 sm:mt-6 sm:text-lg md:text-xl">
           An AI producer that helps solo musicians go from idea to finished
           track &mdash; built for how your brain actually works.
         </p>
 
-        <div className="mt-10">
+        <div className="mt-8 w-full px-4 sm:mt-10 sm:w-auto sm:px-0">
           <Link href="/dashboard">
-            <Button size="lg" className="text-base px-8">
+            <Button size="lg" className="w-full text-base px-8 min-h-[44px] sm:w-auto">
               Start Creating
             </Button>
           </Link>
@@ -132,7 +132,7 @@ export default function Home() {
       </section>
 
       {/* Features */}
-      <section className="mx-auto w-full max-w-5xl px-6 py-24">
+      <section className="mx-auto w-full max-w-5xl px-4 py-16 sm:px-6 sm:py-24">
         <h2 className="text-center text-sm font-semibold uppercase tracking-widest text-indigo-400">
           Why Unbottle
         </h2>
@@ -140,7 +140,7 @@ export default function Home() {
           Everything you need, nothing you don&apos;t
         </p>
 
-        <div className="mt-16 grid gap-8 sm:grid-cols-3">
+        <div className="mt-10 grid grid-cols-1 gap-6 sm:mt-16 sm:gap-8 md:grid-cols-3">
           {features.map((f) => (
             <Card key={f.title} variant="interactive" className="flex flex-col gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-indigo-600/10 text-indigo-400">
@@ -159,7 +159,7 @@ export default function Home() {
 
       {/* How it works */}
       <section className="border-t border-slate-800/60 bg-slate-900/30">
-        <div className="mx-auto w-full max-w-4xl px-6 py-24">
+        <div className="mx-auto w-full max-w-4xl px-4 py-16 sm:px-6 sm:py-24">
           <h2 className="text-center text-sm font-semibold uppercase tracking-widest text-indigo-400">
             How it works
           </h2>
@@ -167,7 +167,7 @@ export default function Home() {
             From spark to finished track
           </p>
 
-          <div className="mt-16 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-10 grid grid-cols-1 gap-8 sm:mt-16 sm:grid-cols-2 lg:grid-cols-4">
             {steps.map((s) => (
               <div key={s.number} className="flex flex-col gap-3">
                 <span className="text-3xl font-bold text-indigo-500/40">
@@ -186,7 +186,7 @@ export default function Home() {
       </section>
 
       {/* Final CTA */}
-      <section className="flex flex-col items-center px-6 py-24 text-center">
+      <section className="flex flex-col items-center px-4 py-16 text-center sm:px-6 sm:py-24">
         <h2 className="max-w-lg text-3xl font-bold text-slate-50 sm:text-4xl">
           Stop letting great ideas die in your head.
         </h2>
@@ -194,9 +194,9 @@ export default function Home() {
           Your next track is one session away. Let your AI producer handle the
           rest.
         </p>
-        <div className="mt-8">
+        <div className="mt-8 w-full px-4 sm:w-auto sm:px-0">
           <Link href="/dashboard">
-            <Button size="lg" className="text-base px-8">
+            <Button size="lg" className="w-full text-base px-8 min-h-[44px] sm:w-auto">
               Start Creating
             </Button>
           </Link>

@@ -164,7 +164,7 @@ export function SequencerPanel({
 
         {/* Snap */}
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-slate-500">Snap</span>
+          <span className="hidden sm:inline text-xs text-slate-500">Snap</span>
           <select
             value={snap}
             onChange={(e) => setSnap(e.target.value as SnapValue)}

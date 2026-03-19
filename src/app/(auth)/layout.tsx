@@ -27,7 +27,7 @@ export default function AuthLayout({
       </div>
 
       {/* Card container */}
-      <div className="w-full max-w-md rounded-xl border border-slate-800 bg-slate-900 p-8 shadow-xl">
+      <div className="w-full max-w-md rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-xl sm:p-8">
         {children}
       </div>
     </div>

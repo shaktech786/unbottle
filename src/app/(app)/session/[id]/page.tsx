@@ -15,8 +15,11 @@ import { useTonePlayer } from "@/lib/hooks/use-tone-player";
 import { useHyperfocusGuard } from "@/lib/hooks/use-hyperfocus-guard";
 import { useApiKey } from "@/lib/hooks/use-api-key";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils/cn";
 import type { ChatContext } from "@/lib/hooks/use-chat";
 import type { Bookmark } from "@/lib/music/types";
+
+type MobileTab = "arrange" | "chat" | "capture";
 
 export default function SessionWorkspacePage() {
   const { session, sections, tracks, notes, updateSession } =
@@ -27,6 +30,7 @@ export default function SessionWorkspacePage() {
   const [exportOpen, setExportOpen] = useState(false);
   const [generateOpen, setGenerateOpen] = useState(false);
   const [bookmarks] = useState<Bookmark[]>([]);
+  const [mobileTab, setMobileTab] = useState<MobileTab>("arrange");
 
   // ------- API key -------
   const { apiKey } = useApiKey();
@@ -92,6 +96,12 @@ export default function SessionWorkspacePage() {
 
   if (!session) return null;
 
+  const mobileTabs: { key: MobileTab; label: string }[] = [
+    { key: "arrange", label: "Arrange" },
+    { key: "chat", label: "Chat" },
+    { key: "capture", label: "Capture" },
+  ];
+
   return (
     <div className="flex h-full flex-col bg-slate-950">
       {/* Hyperfocus nudge (overlay at top) */}
@@ -105,66 +115,130 @@ export default function SessionWorkspacePage() {
       )}
 
       {/* Transport Controls */}
-      <TransportControls
-        bpm={session.bpm}
-        keySignature={session.keySignature}
-        timeSignature={session.timeSignature}
-        onBpmChange={handleBpmChange}
-        onKeyChange={handleKeyChange}
-        onTimeSignatureChange={handleTimeSignatureChange}
-        isPlaying={isPlaying}
-        onPlay={handlePlay}
-        onStop={stop}
-        trailing={
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setGenerateOpen(true)}
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+      <div className="shrink-0 overflow-x-auto">
+        <TransportControls
+          bpm={session.bpm}
+          keySignature={session.keySignature}
+          timeSignature={session.timeSignature}
+          onBpmChange={handleBpmChange}
+          onKeyChange={handleKeyChange}
+          onTimeSignatureChange={handleTimeSignatureChange}
+          isPlaying={isPlaying}
+          onPlay={handlePlay}
+          onStop={stop}
+          trailing={
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setGenerateOpen(true)}
               >
-                <path d="M9 18V5l12-2v13" />
-                <circle cx="6" cy="18" r="3" />
-                <circle cx="18" cy="16" r="3" />
-              </svg>
-              AI Generate
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setExportOpen(true)}
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M9 18V5l12-2v13" />
+                  <circle cx="6" cy="18" r="3" />
+                  <circle cx="18" cy="16" r="3" />
+                </svg>
+                <span className="hidden sm:inline">AI Generate</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setExportOpen(true)}
               >
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              Export
-            </Button>
-          </div>
-        }
-      />
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                <span className="hidden sm:inline">Export</span>
+              </Button>
+            </div>
+          }
+        />
+      </div>
 
-      {/* Main workspace */}
-      <div className="flex flex-1 overflow-hidden">
+      {/* Mobile tab bar */}
+      <div className="flex shrink-0 border-b border-slate-800 md:hidden">
+        {mobileTabs.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setMobileTab(tab.key)}
+            className={cn(
+              "flex-1 py-2.5 text-xs font-medium transition-colors",
+              mobileTab === tab.key
+                ? "border-b-2 border-indigo-500 text-indigo-400"
+                : "text-slate-400 hover:text-slate-200",
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Mobile content area */}
+      <div className="flex flex-1 flex-col overflow-hidden md:hidden">
+        {mobileTab === "arrange" && (
+          <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-3">
+            <ArrangementPanel
+              sections={sections}
+              onAddSection={handleAddSection}
+            />
+            <SequencerPanel
+              tracks={tracks}
+              notes={notes}
+              bpm={session.bpm}
+              playheadTick={currentTick}
+              isPlaying={isPlaying}
+              onPlay={handlePlay}
+              onStop={stop}
+              onSetBpm={handleBpmChange}
+              className="flex-1 min-h-[300px]"
+            />
+          </div>
+        )}
+
+        {mobileTab === "chat" && (
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <ChatPanel
+              sessionId={session.id}
+              context={chatContext}
+              apiKey={apiKey}
+              className="flex-1"
+            />
+            <div className="border-t border-slate-800 p-3">
+              <BookmarkList bookmarks={bookmarks} />
+            </div>
+          </div>
+        )}
+
+        {mobileTab === "capture" && (
+          <CapturePanel
+            collapsed={false}
+            className="flex-1 w-full border-l-0"
+          />
+        )}
+      </div>
+
+      {/* Desktop workspace (unchanged 3-column layout) */}
+      <div className="hidden md:flex flex-1 overflow-hidden">
         {/* Left Panel: Chat */}
         <div className="flex w-[380px] shrink-0 flex-col border-r border-slate-800">
           <ChatPanel

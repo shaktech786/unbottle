@@ -22,18 +22,18 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       <Header title="Dashboard" />
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         {/* Welcome + action */}
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-slate-100">
+            <h2 className="text-xl font-bold text-slate-100 sm:text-2xl">
               Welcome back
             </h2>
             <p className="mt-1 text-sm text-slate-400">
               Pick up where you left off, or start something new.
             </p>
           </div>
-          <Button size="lg" onClick={handleNewSession}>
+          <Button size="lg" onClick={handleNewSession} className="w-full min-h-[44px] sm:w-auto">
             <svg
               width="18"
               height="18"

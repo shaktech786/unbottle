@@ -34,13 +34,13 @@ export function Dialog({ open, onClose, title, children, className }: DialogProp
       ref={dialogRef}
       onClose={handleClose}
       className={cn(
-        "w-full max-w-lg rounded-xl border border-slate-700 bg-slate-900 p-0 text-slate-50 shadow-2xl",
+        "w-[calc(100%-2rem)] max-w-lg rounded-xl border border-slate-700 bg-slate-900 p-0 text-slate-50 shadow-2xl sm:w-full",
         "backdrop:bg-black/60 backdrop:backdrop-blur-sm",
         "open:animate-in open:fade-in-0 open:zoom-in-95",
         className,
       )}
     >
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         {title && (
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-slate-50">{title}</h2>

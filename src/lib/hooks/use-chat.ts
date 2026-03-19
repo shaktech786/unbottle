@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import type { ChatMessage, Section, Track } from "@/lib/music/types";
 import { getAuthHeaders } from "@/lib/hooks/use-api-key";
 
@@ -25,6 +25,7 @@ export interface UseChatReturn {
   sendMessage: (content: string) => Promise<void>;
   isStreaming: boolean;
   clearMessages: () => void;
+  isLoadingHistory: boolean;
 }
 
 interface SSEEvent {
@@ -36,10 +37,46 @@ function createId(): string {
   return `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+// Persist a completed message pair to the server
+async function persistMessages(sessionId: string, userMsg: ChatMessage, assistantMsg: ChatMessage) {
+  try {
+    await fetch(`/api/session/${sessionId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: [userMsg, assistantMsg] }),
+    });
+  } catch {
+    // Non-critical — messages are still in client state
+  }
+}
+
 export function useChat({ sessionId, context, apiKey }: UseChatOptions): UseChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const abortRef = useRef<AbortController | null>(null);
+
+  // Load chat history on mount
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoadingHistory(true);
+
+    fetch(`/api/session/${sessionId}/messages`)
+      .then((res) => (res.ok ? res.json() : { messages: [] }))
+      .then((data: { messages?: ChatMessage[] }) => {
+        if (!cancelled && data.messages?.length) {
+          setMessages(data.messages);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setIsLoadingHistory(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId]);
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -97,6 +134,7 @@ export function useChat({ sessionId, context, apiKey }: UseChatOptions): UseChat
 
         const decoder = new TextDecoder();
         let buffer = "";
+        let fullContent = "";
 
         while (true) {
           const { done, value } = await reader.read();
@@ -121,6 +159,7 @@ export function useChat({ sessionId, context, apiKey }: UseChatOptions): UseChat
             }
 
             if (event.type === "token" && event.content) {
+              fullContent += event.content;
               setMessages((prev) =>
                 prev.map((msg) =>
                   msg.id === assistantId
@@ -141,8 +180,13 @@ export function useChat({ sessionId, context, apiKey }: UseChatOptions): UseChat
                 ),
               );
             }
-            // "done" events just signal stream end, handled by the loop exiting
           }
+        }
+
+        // Persist both messages to server after stream completes
+        if (fullContent) {
+          const finalAssistant = { ...assistantMessage, content: fullContent };
+          persistMessages(sessionId, userMessage, finalAssistant);
         }
       } catch (err) {
         if ((err as Error).name === "AbortError") return;
@@ -171,5 +215,5 @@ export function useChat({ sessionId, context, apiKey }: UseChatOptions): UseChat
     setIsStreaming(false);
   }, []);
 
-  return { messages, sendMessage, isStreaming, clearMessages };
+  return { messages, sendMessage, isStreaming, clearMessages, isLoadingHistory };
 }

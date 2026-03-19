@@ -66,7 +66,7 @@ export default function NewSessionPage() {
 
   return (
     <div className="flex flex-1 flex-col overflow-y-auto">
-      <div className="mx-auto w-full max-w-2xl px-6 py-12">
+      <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-12">
         <h1 className="text-2xl font-bold text-slate-100">New Session</h1>
         <p className="mt-1 text-sm text-slate-400">
           Set the vibe, or just jump in.
@@ -126,7 +126,7 @@ export default function NewSessionPage() {
                   type="button"
                   onClick={() => setGenre(genre === g ? null : g)}
                   className={cn(
-                    "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                    "rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors min-h-[36px]",
                     genre === g
                       ? "border-indigo-500 bg-indigo-600/20 text-indigo-300"
                       : "border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300",
@@ -139,7 +139,7 @@ export default function NewSessionPage() {
                 type="button"
                 onClick={() => setGenre(genre === "__custom__" ? null : "__custom__")}
                 className={cn(
-                  "rounded-full border border-dashed px-3 py-1 text-xs font-medium transition-colors",
+                  "rounded-full border border-dashed px-3.5 py-1.5 text-xs font-medium transition-colors min-h-[36px]",
                   genre === "__custom__"
                     ? "border-indigo-500 bg-indigo-600/20 text-indigo-300"
                     : "border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300",
@@ -170,7 +170,7 @@ export default function NewSessionPage() {
                   type="button"
                   onClick={() => setMood(mood === m ? null : m)}
                   className={cn(
-                    "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                    "rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors min-h-[36px]",
                     mood === m
                       ? "border-indigo-500 bg-indigo-600/20 text-indigo-300"
                       : "border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300",
@@ -194,7 +194,7 @@ export default function NewSessionPage() {
                 max={240}
                 value={bpm}
                 onChange={(e) => setBpm(Number(e.target.value))}
-                className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-slate-700 accent-indigo-500"
+                className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-slate-700 accent-indigo-500 touch-pan-x"
               />
               <span className="w-12 text-right font-mono text-sm font-semibold text-slate-100 tabular-nums">
                 {bpm}
@@ -214,7 +214,7 @@ export default function NewSessionPage() {
                   type="button"
                   onClick={() => setKeySignature(key)}
                   className={cn(
-                    "flex h-9 w-9 items-center justify-center rounded-lg text-xs font-medium transition-colors",
+                    "flex h-10 w-10 items-center justify-center rounded-lg text-xs font-medium transition-colors sm:h-9 sm:w-9",
                     keySignature === key
                       ? "bg-indigo-600 text-white"
                       : "bg-slate-800 text-slate-300 hover:bg-slate-700",
@@ -227,7 +227,7 @@ export default function NewSessionPage() {
           </div>
 
           {/* Submit */}
-          <Button type="submit" size="lg" loading={isLoading} className="mt-2">
+          <Button type="submit" size="lg" loading={isLoading} className="mt-2 w-full min-h-[44px]">
             Create Session
           </Button>
         </form>

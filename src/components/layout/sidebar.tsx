@@ -103,17 +103,35 @@ function LogoutIcon() {
   );
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
+}
+
+export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const router = useRouter();
 
   return (
-    <aside
-      className={cn(
-        "flex flex-col border-r border-slate-800 bg-slate-950 transition-all duration-200",
-        collapsed ? "w-16" : "w-64",
+    <>
+      {/* Mobile overlay backdrop */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 md:hidden"
+          onClick={onMobileClose}
+          aria-hidden="true"
+        />
       )}
-    >
+      <aside
+        className={cn(
+          "flex flex-col border-r border-slate-800 bg-slate-950 transition-all duration-200",
+          // Desktop: always visible, respects collapsed width
+          "hidden md:flex",
+          collapsed ? "md:w-16" : "md:w-64",
+          // Mobile: overlay drawer
+          mobileOpen && "fixed inset-y-0 left-0 z-50 flex w-64",
+        )}
+      >
       {/* Logo */}
       <div className="flex h-14 items-center gap-3 border-b border-slate-800 px-4">
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-600">
@@ -140,7 +158,7 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex flex-1 flex-col gap-1 p-3">
+      <nav className="flex flex-1 flex-col gap-1 p-3" onClick={onMobileClose}>
         {collapsed ? (
           <>
             <NavLink
@@ -201,5 +219,6 @@ export function Sidebar() {
         </button>
       </div>
     </aside>
+    </>
   );
 }
