@@ -7,6 +7,7 @@ import type {
   Note,
   Section,
   ChatMessage,
+  CaptureData,
   Bookmark,
 } from "@/lib/music/types";
 
@@ -17,6 +18,7 @@ const tracksBySession = new Map<string, Track[]>();
 const notesByTrack = new Map<string, Note[]>();
 const sectionsBySession = new Map<string, Section[]>();
 const chatMessagesBySession = new Map<string, ChatMessage[]>();
+const capturesBySession = new Map<string, CaptureData[]>();
 const bookmarksBySession = new Map<string, Bookmark[]>();
 
 // --- ID generator ---
@@ -124,6 +126,43 @@ export function getNotes(trackId: string): Note[] {
   return notesByTrack.get(trackId) ?? [];
 }
 
+export function getSessionNotes(sessionId: string): Note[] {
+  const tracks = getTracks(sessionId);
+  const allNotes: Note[] = [];
+  for (const track of tracks) {
+    allNotes.push(...getNotes(track.id));
+  }
+  return allNotes.sort((a, b) => a.startTick - b.startTick);
+}
+
+export function removeNote(trackId: string, noteId: string): boolean {
+  const notes = notesByTrack.get(trackId);
+  if (!notes) return false;
+  const idx = notes.findIndex((n) => n.id === noteId);
+  if (idx === -1) return false;
+  notes.splice(idx, 1);
+  return true;
+}
+
+/**
+ * Replace all notes for a session with the provided array.
+ * Clears existing notes for all tracks in the session, then inserts the new ones.
+ */
+export function syncSessionNotes(sessionId: string, notes: Note[]): Note[] {
+  const tracks = getTracks(sessionId);
+  // Clear all existing notes for this session's tracks
+  for (const track of tracks) {
+    notesByTrack.set(track.id, []);
+  }
+  // Insert new notes grouped by trackId
+  for (const note of notes) {
+    const trackNotes = notesByTrack.get(note.trackId) ?? [];
+    trackNotes.push(note);
+    notesByTrack.set(note.trackId, trackNotes);
+  }
+  return notes;
+}
+
 // --- Section helpers ---
 
 export function addSection(
@@ -169,6 +208,31 @@ export function getChatMessages(sessionId: string): ChatMessage[] {
   return (chatMessagesBySession.get(sessionId) ?? []).sort(
     (a, b) =>
       new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+  );
+}
+
+// --- Capture helpers ---
+
+export function addCapture(
+  sessionId: string,
+  data: Omit<CaptureData, "id" | "sessionId" | "createdAt">,
+): CaptureData {
+  const capture: CaptureData = {
+    ...data,
+    id: generateId(),
+    sessionId,
+    createdAt: new Date().toISOString(),
+  };
+  const captures = capturesBySession.get(sessionId) ?? [];
+  captures.push(capture);
+  capturesBySession.set(sessionId, captures);
+  return capture;
+}
+
+export function getCaptures(sessionId: string): CaptureData[] {
+  return (capturesBySession.get(sessionId) ?? []).sort(
+    (a, b) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
 }
 

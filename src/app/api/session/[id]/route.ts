@@ -3,6 +3,7 @@ import {
   updateSession as updateSessionMemory,
   getTracks as getTracksMemory,
   getSections as getSectionsMemory,
+  getSessionNotes as getSessionNotesMemory,
 } from "@/lib/session/store";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/supabase/auth";
@@ -12,6 +13,7 @@ import {
   // deleteSession as deleteSessionDB, // soft delete via updateSession
   getTracks as getTracksDB,
   getSections as getSectionsDB,
+  getSessionNotes as getSessionNotesDB,
 } from "@/lib/supabase/db";
 
 const supabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL);
@@ -35,12 +37,13 @@ export async function GET(
         return Response.json({ error: "Session not found" }, { status: 404 });
       }
 
-      const [tracks, sections] = await Promise.all([
+      const [tracks, sections, notes] = await Promise.all([
         getTracksDB(client, id),
         getSectionsDB(client, id),
+        getSessionNotesDB(client, id),
       ]);
 
-      return Response.json({ session, tracks, sections });
+      return Response.json({ session, tracks, sections, notes });
     } catch (err) {
       if (err instanceof Error && err.message === "Authentication required") {
         return Response.json({ error: "Authentication required" }, { status: 401 });
@@ -57,7 +60,8 @@ export async function GET(
   }
   const tracks = getTracksMemory(id);
   const sections = getSectionsMemory(id);
-  return Response.json({ session, tracks, sections });
+  const notes = getSessionNotesMemory(id);
+  return Response.json({ session, tracks, sections, notes });
 }
 
 // PUT /api/session/[id] - update session metadata

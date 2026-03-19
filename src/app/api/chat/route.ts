@@ -4,9 +4,15 @@ import type { Section, Track } from "@/lib/music/types";
 
 export const dynamic = "force-dynamic";
 
+interface HistoryMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
 interface ChatRequestBody {
   sessionId: string;
   message: string;
+  history?: HistoryMessage[];
   context?: {
     bpm?: number;
     keySignature?: string;
@@ -21,7 +27,7 @@ interface ChatRequestBody {
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as ChatRequestBody;
-    const { message, context } = body;
+    const { message, history, context } = body;
 
     if (!message?.trim()) {
       return Response.json({ error: "Message is required" }, { status: 400 });
@@ -39,9 +45,20 @@ export async function POST(request: Request) {
 
     const userApiKey = getUserApiKey(request);
 
+    // Build full message array: prior conversation history + current user message.
+    // History is already limited to 20 messages by the client.
+    const validHistory: { role: "user" | "assistant"; content: string }[] = (
+      history ?? []
+    ).filter((m) => m.content && (m.role === "user" || m.role === "assistant"));
+
+    const messages: { role: "user" | "assistant"; content: string }[] = [
+      ...validHistory,
+      { role: "user", content: message },
+    ];
+
     const stream = await streamChat({
       systemPrompt,
-      messages: [{ role: "user", content: message }],
+      messages,
       apiKey: userApiKey,
     });
 

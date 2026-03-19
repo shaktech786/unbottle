@@ -17,6 +17,8 @@ interface SessionContextValue {
   tracks: Track[];
   sections: Section[];
   notes: Note[];
+  setNotes: (notes: Note[]) => void;
+  addSections: (newSections: Omit<Section, "id" | "sessionId">[]) => Promise<void>;
   isLoading: boolean;
   error: string | null;
   updateSession: (updates: Partial<Session>) => void;
@@ -34,7 +36,7 @@ export function SessionProvider({ sessionId, children }: SessionProviderProps) {
   const [session, setSession] = useState<Session | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
-  const [notes] = useState<Note[]>([]);
+  const [notes, setNotes] = useState<Note[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,6 +56,7 @@ export function SessionProvider({ sessionId, children }: SessionProviderProps) {
       setSession(data.session);
       setTracks(data.tracks ?? []);
       setSections(data.sections ?? []);
+      setNotes(data.notes ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load session");
     } finally {
@@ -107,6 +110,28 @@ export function SessionProvider({ sessionId, children }: SessionProviderProps) {
     [flushUpdates],
   );
 
+  const addSections = useCallback(
+    async (newSections: Omit<Section, "id" | "sessionId">[]) => {
+      if (newSections.length === 0) return;
+      try {
+        const res = await fetch(`/api/session/${sessionId}/sections`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sections: newSections }),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error ?? "Failed to save sections");
+        }
+        const data = (await res.json()) as { sections: Section[] };
+        setSections((prev) => [...prev, ...data.sections]);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to add sections");
+      }
+    },
+    [sessionId],
+  );
+
   // Flush on unmount
   useEffect(() => {
     return () => {
@@ -157,6 +182,8 @@ export function SessionProvider({ sessionId, children }: SessionProviderProps) {
         tracks,
         sections,
         notes,
+        setNotes,
+        addSections,
         isLoading,
         error,
         updateSession,

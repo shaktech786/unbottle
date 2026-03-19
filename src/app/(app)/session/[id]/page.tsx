@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSessionContext } from "@/lib/session/context";
 import { TransportControls } from "@/components/sequencer/transport-controls";
 import { ArrangementPanel } from "@/components/arrangement/arrangement-panel";
@@ -12,18 +12,105 @@ import { GeneratePanel } from "@/components/audio/generate-panel";
 import { HyperfocusNudge } from "@/components/session/hyperfocus-nudge";
 import { BookmarkList } from "@/components/session/bookmark-list";
 import { useTonePlayer } from "@/lib/hooks/use-tone-player";
+import { useSequencer } from "@/lib/hooks/use-sequencer";
 import { useHyperfocusGuard } from "@/lib/hooks/use-hyperfocus-guard";
 import { useApiKey } from "@/lib/hooks/use-api-key";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 import type { ChatContext } from "@/lib/hooks/use-chat";
-import type { Bookmark } from "@/lib/music/types";
+import type { Bookmark, Note, Section } from "@/lib/music/types";
 
 type MobileTab = "arrange" | "chat" | "capture";
 
+interface CaptureEntry {
+  type: "record" | "tap" | "describe";
+  textDescription?: string;
+  bpm?: number;
+  audioUrl?: string;
+}
+
+const NOTES_SAVE_DEBOUNCE_MS = 2000;
+
 export default function SessionWorkspacePage() {
-  const { session, sections, tracks, notes, updateSession } =
-    useSessionContext();
+  const {
+    session,
+    sections,
+    tracks,
+    notes: contextNotes,
+    setNotes: setContextNotes,
+    addSections,
+    updateSession,
+  } = useSessionContext();
+
+  // ------- Sequencer (note management with undo/redo) -------
+  const sequencer = useSequencer(contextNotes);
+
+  // Sync context notes into sequencer when they load from API
+  // (only on initial load / refresh, not on every sequencer change)
+  const hasInitialized = useRef(false);
+  useEffect(() => {
+    if (contextNotes.length > 0 && !hasInitialized.current) {
+      sequencer.setNotes(contextNotes);
+      hasInitialized.current = true;
+    }
+  }, [contextNotes]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sync sequencer notes back to context whenever they change
+  useEffect(() => {
+    setContextNotes(sequencer.notes);
+  }, [sequencer.notes, setContextNotes]);
+
+  // Debounced save to API
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingNotesRef = useRef<Note[]>(sequencer.notes);
+
+  // Keep ref in sync with latest notes (must be in effect, not render)
+  useEffect(() => {
+    pendingNotesRef.current = sequencer.notes;
+  }, [sequencer.notes]);
+
+  useEffect(() => {
+    if (!session?.id) return;
+    if (!hasInitialized.current && contextNotes.length === 0 && sequencer.notes.length === 0) return;
+
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+    saveTimerRef.current = setTimeout(() => {
+      const notesToSave = pendingNotesRef.current;
+      fetch(`/api/session/${session.id}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes: notesToSave }),
+      }).catch(() => {
+        // Best effort save
+      });
+    }, NOTES_SAVE_DEBOUNCE_MS);
+
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, [sequencer.notes, session?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Flush pending save on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+      if (session?.id && pendingNotesRef.current.length > 0) {
+        fetch(`/api/session/${session.id}/notes`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ notes: pendingNotesRef.current }),
+        }).catch(() => {
+          // Best effort on unmount
+        });
+      }
+    };
+  }, [session?.id]);
 
   // ------- State -------
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
@@ -35,14 +122,17 @@ export default function SessionWorkspacePage() {
   // ------- API key -------
   const { apiKey } = useApiKey();
 
-  // ------- Tone.js player -------
+  // ------- Chat sendMessage ref (so captures can send to chat) -------
+  const chatSendRef = useRef<((msg: string) => void) | null>(null);
+
+  // ------- Tone.js player (uses sequencer notes, not empty context) -------
   const {
     isPlaying,
     play,
     stop,
     setBpm,
     currentTick,
-  } = useTonePlayer(notes, session?.bpm ?? 120);
+  } = useTonePlayer(sequencer.notes, session?.bpm ?? 120);
 
   // ------- Hyperfocus guard -------
   const { shouldNudge, elapsedMinutes, dismiss: dismissNudge } =
@@ -60,6 +150,47 @@ export default function SessionWorkspacePage() {
       tracks,
     }),
     [session?.bpm, session?.keySignature, session?.timeSignature, session?.genre, session?.mood, sections, tracks],
+  );
+
+  // ------- Capture -> Session handler -------
+  const handleCaptureAddToSession = useCallback(
+    (entry: CaptureEntry) => {
+      if (!session) return;
+
+      // Persist the capture to the API
+      const captureType = entry.type === "describe" ? "text" : entry.type === "tap" ? "tap" : "audio";
+      fetch(`/api/session/${session.id}/captures`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: captureType,
+          textDescription: entry.textDescription,
+          audioUrl: entry.audioUrl,
+        }),
+      }).catch(() => {
+        // Best effort
+      });
+
+      // If it's a text description, also send it to the AI producer chat
+      if (entry.textDescription && chatSendRef.current) {
+        chatSendRef.current(`[Capture] ${entry.textDescription}`);
+      }
+
+      // If it's a tap with BPM, update the session BPM
+      if (entry.type === "tap" && entry.bpm) {
+        updateSession({ bpm: entry.bpm });
+        setBpm(entry.bpm);
+      }
+    },
+    [session, updateSession, setBpm],
+  );
+
+  // ------- Arrangement generation handler -------
+  const handleGenerateArrangement = useCallback(
+    (newSections: Omit<Section, "id" | "sessionId">[]) => {
+      void addSections(newSections);
+    },
+    [addSections],
   );
 
   // ------- Callbacks -------
@@ -203,10 +334,16 @@ export default function SessionWorkspacePage() {
             />
             <SequencerPanel
               tracks={tracks}
-              notes={notes}
+              notes={sequencer.notes}
               bpm={session.bpm}
               playheadTick={currentTick}
               isPlaying={isPlaying}
+              onAddNote={sequencer.addNote}
+              onSelectNote={sequencer.selectNote}
+              onClearSelection={sequencer.clearSelection}
+              onMoveNote={sequencer.moveNote}
+              onResizeNote={sequencer.resizeNote}
+              selectedNotes={sequencer.selectedNotes}
               onPlay={handlePlay}
               onStop={stop}
               onSetBpm={handleBpmChange}
@@ -221,6 +358,8 @@ export default function SessionWorkspacePage() {
               sessionId={session.id}
               context={chatContext}
               apiKey={apiKey}
+              sendMessageRef={chatSendRef}
+              onGenerateArrangement={handleGenerateArrangement}
               className="flex-1"
             />
             <div className="border-t border-slate-800 p-3">
@@ -232,12 +371,13 @@ export default function SessionWorkspacePage() {
         {mobileTab === "capture" && (
           <CapturePanel
             collapsed={false}
+            onAddToSession={handleCaptureAddToSession}
             className="flex-1 w-full border-l-0"
           />
         )}
       </div>
 
-      {/* Desktop workspace (unchanged 3-column layout) */}
+      {/* Desktop workspace (3-column layout) */}
       <div className="hidden md:flex flex-1 overflow-hidden">
         {/* Left Panel: Chat */}
         <div className="flex w-[380px] shrink-0 flex-col border-r border-slate-800">
@@ -245,6 +385,8 @@ export default function SessionWorkspacePage() {
             sessionId={session.id}
             context={chatContext}
             apiKey={apiKey}
+            sendMessageRef={chatSendRef}
+            onGenerateArrangement={handleGenerateArrangement}
             className="flex-1"
           />
 
@@ -265,10 +407,16 @@ export default function SessionWorkspacePage() {
           {/* Sequencer */}
           <SequencerPanel
             tracks={tracks}
-            notes={notes}
+            notes={sequencer.notes}
             bpm={session.bpm}
             playheadTick={currentTick}
             isPlaying={isPlaying}
+            onAddNote={sequencer.addNote}
+            onSelectNote={sequencer.selectNote}
+            onClearSelection={sequencer.clearSelection}
+            onMoveNote={sequencer.moveNote}
+            onResizeNote={sequencer.resizeNote}
+            selectedNotes={sequencer.selectedNotes}
             onPlay={handlePlay}
             onStop={stop}
             onSetBpm={handleBpmChange}
@@ -280,6 +428,7 @@ export default function SessionWorkspacePage() {
         <CapturePanel
           collapsed={rightPanelCollapsed}
           onToggleCollapse={() => setRightPanelCollapsed((prev) => !prev)}
+          onAddToSession={handleCaptureAddToSession}
         />
       </div>
 

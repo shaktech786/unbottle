@@ -108,6 +108,14 @@ export function useChat({ sessionId, context, apiKey }: UseChatOptions): UseChat
       setIsStreaming(true);
 
       try {
+        // Build conversation history from prior messages (exclude the
+        // placeholder assistant message we just appended). Limit to
+        // the last 20 messages to stay within token budgets.
+        const priorMessages = messages
+          .filter((m) => m.role === "user" || (m.role === "assistant" && m.content))
+          .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
+        const history = priorMessages.slice(-20);
+
         const response = await fetch("/api/chat", {
           method: "POST",
           headers: {
@@ -117,6 +125,7 @@ export function useChat({ sessionId, context, apiKey }: UseChatOptions): UseChat
           body: JSON.stringify({
             sessionId,
             message: content.trim(),
+            history,
             context,
           }),
           signal: controller.signal,
@@ -206,7 +215,7 @@ export function useChat({ sessionId, context, apiKey }: UseChatOptions): UseChat
         abortRef.current = null;
       }
     },
-    [sessionId, context, isStreaming, apiKey],
+    [sessionId, context, isStreaming, apiKey, messages],
   );
 
   const clearMessages = useCallback(() => {
