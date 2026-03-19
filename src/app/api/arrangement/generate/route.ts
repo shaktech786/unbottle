@@ -1,4 +1,4 @@
-import { generateCompletion } from "@/lib/ai/claude";
+import { generateCompletion, getUserApiKey } from "@/lib/ai/claude";
 import { buildArrangementPrompt } from "@/lib/ai/prompts/arrangement";
 import type { Section, ChordEvent, SectionType } from "@/lib/music/types";
 
@@ -81,10 +81,13 @@ export async function POST(request: Request) {
       existingSections: body.existingSections,
     });
 
+    const userApiKey = getUserApiKey(request);
+
     const rawResponse = await generateCompletion(
       systemPrompt,
       prompt,
       4096,
+      userApiKey,
     );
 
     // Strip any markdown code fences the model may have added

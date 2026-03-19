@@ -1,4 +1,4 @@
-import { streamChat } from "@/lib/ai/claude";
+import { streamChat, getUserApiKey } from "@/lib/ai/claude";
 import { buildProducerSystemPrompt } from "@/lib/ai/prompts/producer";
 import type { Section, Track } from "@/lib/music/types";
 
@@ -37,9 +37,12 @@ export async function POST(request: Request) {
       tracks: context?.tracks,
     });
 
+    const userApiKey = getUserApiKey(request);
+
     const stream = await streamChat({
       systemPrompt,
       messages: [{ role: "user", content: message }],
+      apiKey: userApiKey,
     });
 
     const encoder = new TextEncoder();

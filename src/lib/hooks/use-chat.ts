@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef } from "react";
 import type { ChatMessage, Section, Track } from "@/lib/music/types";
+import { getAuthHeaders } from "@/lib/hooks/use-api-key";
 
 export interface ChatContext {
   bpm?: number;
@@ -16,6 +17,7 @@ export interface ChatContext {
 export interface UseChatOptions {
   sessionId: string;
   context?: ChatContext;
+  apiKey?: string | null;
 }
 
 export interface UseChatReturn {
@@ -34,7 +36,7 @@ function createId(): string {
   return `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-export function useChat({ sessionId, context }: UseChatOptions): UseChatReturn {
+export function useChat({ sessionId, context, apiKey }: UseChatOptions): UseChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
@@ -71,7 +73,10 @@ export function useChat({ sessionId, context }: UseChatOptions): UseChatReturn {
       try {
         const response = await fetch("/api/chat", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeaders(apiKey ?? null),
+          },
           body: JSON.stringify({
             sessionId,
             message: content.trim(),
@@ -157,7 +162,7 @@ export function useChat({ sessionId, context }: UseChatOptions): UseChatReturn {
         abortRef.current = null;
       }
     },
-    [sessionId, context, isStreaming],
+    [sessionId, context, isStreaming, apiKey],
   );
 
   const clearMessages = useCallback(() => {

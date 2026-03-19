@@ -1,4 +1,4 @@
-import { generateCompletion } from "@/lib/ai/claude";
+import { generateCompletion, getUserApiKey } from "@/lib/ai/claude";
 import {
   buildMomentumPrompt,
   type MomentumSessionState,
@@ -41,10 +41,13 @@ export async function POST(request: Request) {
 
     const systemPrompt = buildMomentumPrompt(sessionState);
 
+    const userApiKey = getUserApiKey(request);
+
     const rawResponse = await generateCompletion(
       systemPrompt,
       "Analyze my current session and suggest what I should do next.",
       2048,
+      userApiKey,
     );
 
     const cleaned = rawResponse
