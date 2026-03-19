@@ -4,6 +4,9 @@ import { useState } from "react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ExportProgress } from "./export-progress";
+import { AudioPlayer } from "@/components/audio/audio-player";
+import { useAudioGenerator } from "@/lib/hooks/use-audio-generator";
+import { useElevenLabsKey } from "@/lib/hooks/use-elevenlabs-key";
 
 export interface ExportDialogProps {
   open: boolean;
@@ -25,6 +28,17 @@ export function ExportDialog({
   const [status, setStatus] = useState<ExportStatus>("idle");
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Audio generation
+  const { apiKey: elevenLabsKey } = useElevenLabsKey();
+  const {
+    generate: generateAudio,
+    isGenerating: isAudioGenerating,
+    progress: audioProgress,
+    audioUrl: generatedAudioUrl,
+    error: audioError,
+    reset: resetAudio,
+  } = useAudioGenerator(elevenLabsKey);
 
   async function handleMidiExport() {
     setStatus("exporting");
@@ -54,6 +68,10 @@ export function ExportDialog({
     }
   }
 
+  async function handleAudioGenerate() {
+    await generateAudio({ sessionId, duration: 30, forceInstrumental: true });
+  }
+
   function handleClose() {
     // Revoke blob URL on close
     if (downloadUrl) {
@@ -62,6 +80,7 @@ export function ExportDialog({
     }
     setStatus("idle");
     setErrorMessage(null);
+    resetAudio();
     onClose();
   }
 
@@ -122,19 +141,67 @@ export function ExportDialog({
           )}
         </div>
 
-        {/* Audio export (coming soon) */}
-        <div className="rounded-lg border border-slate-800 p-4 opacity-50">
+        {/* AI Audio generation */}
+        <div className="rounded-lg border border-slate-700 p-4">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <h3 className="text-sm font-medium text-slate-400">Audio File</h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                WAV / MP3 audio bounce
+              <h3 className="text-sm font-medium text-slate-200">AI Audio</h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Generate MP3 audio via ElevenLabs
               </p>
             </div>
-            <span className="text-[10px] font-medium text-slate-600 bg-slate-800 px-2 py-0.5 rounded-full">
-              Coming Soon
-            </span>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-slate-500">
+              <path d="M9 18V5l12-2v13" />
+              <circle cx="6" cy="18" r="3" />
+              <circle cx="18" cy="16" r="3" />
+            </svg>
           </div>
+
+          {!isAudioGenerating && !generatedAudioUrl && !audioError && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleAudioGenerate}
+              className="w-full"
+            >
+              Generate Audio
+            </Button>
+          )}
+
+          {isAudioGenerating && (
+            <div className="flex flex-col items-center gap-2 py-2">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-600 border-t-indigo-500" />
+              <span className="text-xs text-slate-400">
+                {audioProgress || "Generating..."}
+              </span>
+              <div className="w-full h-1 rounded-full bg-slate-800 overflow-hidden">
+                <div className="h-full w-1/3 rounded-full bg-indigo-500 animate-pulse" />
+              </div>
+            </div>
+          )}
+
+          {generatedAudioUrl && (
+            <div className="flex flex-col gap-2">
+              <AudioPlayer
+                src={generatedAudioUrl}
+                filename={`unbottle-session-${sessionId}.mp3`}
+              />
+            </div>
+          )}
+
+          {audioError && (
+            <div className="flex flex-col gap-2">
+              <p className="text-xs text-red-400">{audioError}</p>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleAudioGenerate}
+                className="w-full"
+              >
+                Retry
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Close */}

@@ -8,6 +8,7 @@ import { ChatPanel } from "@/components/chat/chat-panel";
 import { CapturePanel } from "@/components/capture/capture-panel";
 import { SequencerPanel } from "@/components/sequencer/sequencer-panel";
 import { ExportDialog } from "@/components/export/export-dialog";
+import { GeneratePanel } from "@/components/audio/generate-panel";
 import { HyperfocusNudge } from "@/components/session/hyperfocus-nudge";
 import { BookmarkList } from "@/components/session/bookmark-list";
 import { useTonePlayer } from "@/lib/hooks/use-tone-player";
@@ -24,6 +25,7 @@ export default function SessionWorkspacePage() {
   // ------- State -------
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [generateOpen, setGenerateOpen] = useState(false);
   const [bookmarks] = useState<Bookmark[]>([]);
 
   // ------- API key -------
@@ -114,27 +116,50 @@ export default function SessionWorkspacePage() {
         onPlay={handlePlay}
         onStop={stop}
         trailing={
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setExportOpen(true)}
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setGenerateOpen(true)}
             >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-            Export
-          </Button>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M9 18V5l12-2v13" />
+                <circle cx="6" cy="18" r="3" />
+                <circle cx="18" cy="16" r="3" />
+              </svg>
+              AI Generate
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setExportOpen(true)}
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Export
+            </Button>
+          </div>
         }
       />
 
@@ -189,6 +214,16 @@ export default function SessionWorkspacePage() {
         open={exportOpen}
         onClose={() => setExportOpen(false)}
         sessionId={session.id}
+      />
+
+      {/* AI Audio Generation Panel */}
+      <GeneratePanel
+        open={generateOpen}
+        onClose={() => setGenerateOpen(false)}
+        genre={session.genre}
+        mood={session.mood}
+        bpm={session.bpm}
+        keySignature={session.keySignature}
       />
     </div>
   );
