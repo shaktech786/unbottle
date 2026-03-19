@@ -1,10 +1,22 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-background: #020617;
-  --color-foreground: #f8fafc;
+  --color-background: #0a0a0a;
+  --color-foreground: #fafaf9;
+  --color-surface: #111111;
+  --color-surface-raised: #1a1a1a;
+  --color-amber-glow: #f59e0b;
+  --color-amber-deep: #d97706;
+  --color-teal-accent: #06b6d4;
+  --color-warm-white: #fafaf9;
+  --color-warm-gray: #e7e5e4;
+  --color-muted: #a8a29e;
+  --color-dim: #78716c;
   --font-sans: var(--font-inter);
+  --font-heading: var(--font-space-grotesk);
 }
+
+/* ---- Base ---- */
 
 body {
   background: var(--color-background);
@@ -12,17 +24,88 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
-@keyframes gradient-shift {
+/* ---- Noise texture overlay ---- */
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* ---- Heading font utility ---- */
+
+.font-heading {
+  font-family: var(--font-heading), var(--font-sans), system-ui, sans-serif;
+}
+
+/* ---- Waveform animation ---- */
+
+@keyframes waveform-pulse {
   0%,
   100% {
-    background-position: 0% 50%;
+    transform: scaleY(0.3);
   }
   50% {
-    background-position: 100% 50%;
+    transform: scaleY(1);
   }
 }
 
-.animate-gradient {
-  background-size: 200% 200%;
-  animation: gradient-shift 8s ease infinite;
+.waveform-bar {
+  animation: waveform-pulse 1.2s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* ---- Subtle fade-in for scroll reveal ---- */
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.7s ease-out both;
+}
+
+/* ---- Ambient glow pulse ---- */
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    opacity: 0.15;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 6s ease-in-out infinite;
+}
+
+/* ---- Step connector line ---- */
+
+@keyframes draw-line {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.animate-draw-line {
+  animation: draw-line 0.8s ease-out both;
+  transform-origin: left;
 }

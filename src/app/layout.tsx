@@ -1,10 +1,15 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Space_Grotesk } from "next/font/google";
 import { ToastProvider } from "@/components/ui/toast-provider";
 import "./globals.css";
 
 const inter = Inter({
   variable: "--font-inter",
+  subsets: ["latin"],
+});
+
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space-grotesk",
   subsets: ["latin"],
 });
 
@@ -20,8 +25,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} dark h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-slate-950 text-slate-50">
+    <html
+      lang="en"
+      className={`${inter.variable} ${spaceGrotesk.variable} dark h-full antialiased`}
+    >
+      <body className="min-h-full flex flex-col bg-[#0a0a0a] text-stone-100">
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>

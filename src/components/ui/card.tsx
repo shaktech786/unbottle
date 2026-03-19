@@ -8,9 +8,9 @@ export type CardProps = HTMLAttributes<HTMLDivElement> & {
 };
 
 const variantClasses: Record<CardVariant, string> = {
-  default: "border-slate-800",
+  default: "border-neutral-800",
   interactive:
-    "border-slate-800 cursor-pointer transition-all hover:border-slate-600 hover:bg-slate-800/60 hover:shadow-lg hover:shadow-indigo-500/5",
+    "border-neutral-800 cursor-pointer transition-all duration-300 hover:border-neutral-600 hover:bg-neutral-800/60 hover:shadow-lg hover:shadow-amber-500/5",
 };
 
 export function Card({
@@ -22,7 +22,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "rounded-xl border bg-slate-900/50 p-6",
+        "rounded-xl border bg-neutral-900/50 p-6",
         variantClasses[variant],
         className,
       )}

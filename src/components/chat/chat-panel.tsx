@@ -78,15 +78,18 @@ export function ChatPanel({
   return (
     <div
       className={cn(
-        "flex h-full flex-col bg-slate-950",
+        "flex h-full flex-col bg-neutral-950",
         className,
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
-        <h2 className="text-sm font-semibold text-slate-200">Producer Chat</h2>
+      <div className="flex items-center justify-between border-b border-neutral-800/50 px-4 py-3">
+        <h2 className="text-sm font-semibold text-neutral-200">Producer</h2>
         {isStreaming && (
-          <span className="text-xs text-indigo-400">Thinking...</span>
+          <span className="flex items-center gap-1.5 text-xs text-amber-400">
+            <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-orange-500" />
+            Thinking...
+          </span>
         )}
       </div>
 

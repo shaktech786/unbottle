@@ -42,7 +42,7 @@ export function ChatInput({ onSend, disabled = false, className }: ChatInputProp
   }, []);
 
   return (
-    <div className={cn("border-t border-slate-800 bg-slate-950 px-4 py-3", className)}>
+    <div className={cn("border-t border-neutral-800/50 bg-neutral-950 px-4 py-3", className)}>
       <div className="flex items-end gap-2">
         <textarea
           ref={textareaRef}
@@ -56,10 +56,11 @@ export function ChatInput({ onSend, disabled = false, className }: ChatInputProp
           rows={1}
           placeholder="Describe what you're hearing in your head..."
           className={cn(
-            "flex-1 resize-none rounded-xl border bg-slate-900 px-4 py-3 text-sm text-slate-50",
-            "border-slate-700 placeholder:text-slate-500",
-            "focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20",
+            "flex-1 resize-none rounded-xl border bg-neutral-900 px-4 py-3 text-sm text-neutral-50",
+            "border-neutral-700 placeholder:text-neutral-500",
+            "focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20",
             "disabled:cursor-not-allowed disabled:opacity-50",
+            "transition-colors duration-300",
             "max-h-40",
           )}
         />
@@ -68,8 +69,8 @@ export function ChatInput({ onSend, disabled = false, className }: ChatInputProp
           disabled={disabled || !value.trim()}
           className={cn(
             "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
-            "bg-indigo-600 text-white transition-colors",
-            "hover:bg-indigo-500",
+            "bg-amber-500 text-white transition-colors duration-300",
+            "hover:bg-amber-400",
             "disabled:cursor-not-allowed disabled:opacity-40",
           )}
           aria-label="Send message"

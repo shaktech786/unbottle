@@ -32,7 +32,7 @@ function formatContent(text: string): React.ReactNode[] {
     nodes.push(
       <pre
         key={`cb-${nodes.length}`}
-        className="my-2 overflow-x-auto rounded-md bg-slate-950 p-3 text-sm text-slate-200"
+        className="my-2 overflow-x-auto rounded-md bg-neutral-950 p-3 text-sm text-neutral-200"
       >
         <code>{match[1]}</code>
       </pre>,
@@ -70,7 +70,7 @@ function formatInline(text: string, keyOffset: number): React.ReactNode[] {
       nodes.push(
         <code
           key={`ic-${keyOffset}-${nodes.length}`}
-          className="rounded bg-slate-950 px-1.5 py-0.5 text-sm text-indigo-300"
+          className="rounded bg-neutral-950 px-1.5 py-0.5 font-mono text-sm text-amber-300"
         >
           {match[3]}
         </code>,
@@ -101,12 +101,12 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         className={cn(
           "max-w-[85%] rounded-2xl px-4 py-3",
           isUser
-            ? "rounded-br-md bg-indigo-600 text-white"
-            : "rounded-bl-md bg-slate-800 text-slate-200",
+            ? "rounded-br-md bg-amber-600/20 text-neutral-100"
+            : "rounded-bl-md bg-neutral-800/50 text-neutral-200",
         )}
       >
         {isEmpty ? (
-          <span className="inline-block h-5 w-5 animate-pulse rounded-full bg-slate-600" />
+          <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-orange-500" />
         ) : (
           <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">
             {formatContent(message.content)}
@@ -114,8 +114,8 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         )}
         <div
           className={cn(
-            "mt-1.5 text-xs",
-            isUser ? "text-indigo-200" : "text-slate-500",
+            "mt-1.5 font-mono text-xs",
+            isUser ? "text-amber-400/50" : "text-neutral-600",
           )}
         >
           {formatTimestamp(message.createdAt)}

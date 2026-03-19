@@ -32,7 +32,7 @@ export function SectionTimeline({ sections, onAddSection }: SectionTimelineProps
         {/* Add Section button */}
         <button
           onClick={onAddSection}
-          className="flex h-[68px] w-[80px] shrink-0 flex-col items-center justify-center rounded-lg border border-dashed border-slate-700 text-slate-500 transition-colors hover:border-slate-600 hover:text-slate-300"
+          className="flex h-[68px] w-[80px] shrink-0 flex-col items-center justify-center rounded-lg border border-dashed border-neutral-700 text-neutral-500 transition-colors duration-300 hover:border-neutral-600 hover:text-neutral-300"
         >
           <svg
             width="16"
@@ -53,9 +53,9 @@ export function SectionTimeline({ sections, onAddSection }: SectionTimelineProps
 
       {/* Chord display for selected section */}
       {selected && (
-        <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-3">
+        <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-3">
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-xs font-medium text-slate-300">
+            <p className="text-xs font-medium text-neutral-300">
               {selected.name} — Chords
             </p>
           </div>

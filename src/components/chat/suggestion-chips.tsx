@@ -15,7 +15,7 @@ const categoryColors: Record<Suggestion["category"], string> = {
   structure: "border-amber-500/30 text-amber-300 hover:bg-amber-500/10",
   capture: "border-rose-500/30 text-rose-300 hover:bg-rose-500/10",
   export: "border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10",
-  general: "border-slate-500/30 text-slate-300 hover:bg-slate-500/10",
+  general: "border-neutral-500/30 text-neutral-300 hover:bg-neutral-500/10",
 };
 
 export function SuggestionChips({
@@ -37,7 +37,7 @@ export function SuggestionChips({
           key={suggestion.id}
           onClick={() => onSelect(suggestion)}
           className={cn(
-            "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+            "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors duration-300",
             categoryColors[suggestion.category],
           )}
         >

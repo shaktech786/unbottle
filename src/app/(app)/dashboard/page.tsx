@@ -26,10 +26,10 @@ export default function DashboardPage() {
         {/* Welcome + action */}
         <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-xl font-bold text-slate-100 sm:text-2xl">
-              Welcome back
+            <h2 className="text-xl font-bold text-neutral-100 sm:text-2xl">
+              What are you working on?
             </h2>
-            <p className="mt-1 text-sm text-slate-400">
+            <p className="mt-1 text-sm text-neutral-400">
               Pick up where you left off, or start something new.
             </p>
           </div>
@@ -55,9 +55,9 @@ export default function DashboardPage() {
         {!isLoading && sessions.length === 0 && (
           <button
             onClick={handleNewSession}
-            className="mb-8 flex w-full items-center gap-6 rounded-2xl border border-dashed border-indigo-500/30 bg-indigo-600/5 p-8 text-left transition-colors hover:border-indigo-500/50 hover:bg-indigo-600/10"
+            className="group mb-8 flex w-full items-center gap-6 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-8 text-left transition-all duration-300 hover:border-amber-500/40 hover:bg-amber-500/10 hover:shadow-lg hover:shadow-amber-500/5"
           >
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-indigo-600/20">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-amber-500/20 transition-colors duration-300 group-hover:bg-amber-500/30">
               <svg
                 width="32"
                 height="32"
@@ -67,7 +67,7 @@ export default function DashboardPage() {
                 strokeWidth="1.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="text-indigo-400"
+                className="text-amber-400"
               >
                 <path d="M9 18V5l12-2v13" />
                 <circle cx="6" cy="18" r="3" />
@@ -75,10 +75,10 @@ export default function DashboardPage() {
               </svg>
             </div>
             <div>
-              <p className="text-lg font-semibold text-indigo-300">
+              <p className="text-lg font-semibold text-amber-300">
                 Just Start
               </p>
-              <p className="mt-1 text-sm text-slate-400">
+              <p className="mt-1 text-sm text-neutral-400">
                 Jump in with defaults (120 BPM, key of C). You can change
                 everything later.
               </p>
@@ -91,7 +91,7 @@ export default function DashboardPage() {
           <div className="mb-8 text-center">
             <button
               onClick={() => router.push("/session/new")}
-              className="text-sm text-slate-400 underline underline-offset-4 hover:text-slate-200"
+              className="text-sm text-neutral-400 underline underline-offset-4 transition-colors duration-300 hover:text-neutral-200"
             >
               Or configure a session first
             </button>
@@ -100,7 +100,7 @@ export default function DashboardPage() {
 
         {/* Recent sessions */}
         <div>
-          <h3 className="mb-4 text-sm font-medium uppercase tracking-wider text-slate-500">
+          <h3 className="mb-4 text-sm font-medium uppercase tracking-wider text-neutral-500">
             Recent Sessions
           </h3>
           <SessionList sessions={sessions} isLoading={isLoading} />

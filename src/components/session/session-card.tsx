@@ -33,18 +33,47 @@ const statusColors: Record<Session["status"], string> = {
   active: "bg-emerald-500",
   paused: "bg-amber-500",
   completed: "bg-blue-500",
-  archived: "bg-slate-500",
+  archived: "bg-neutral-500",
 };
 
+/** Genre-based accent color for the left bar */
+const genreAccentColors: Record<string, string> = {
+  "Hip-Hop": "#f59e0b",
+  Pop: "#ec4899",
+  "R&B": "#a855f7",
+  Electronic: "#06b6d4",
+  Rock: "#ef4444",
+  Jazz: "#f97316",
+  "Lo-fi": "#8b5cf6",
+  Ambient: "#14b8a6",
+  Funk: "#eab308",
+  Soul: "#d946ef",
+  Classical: "#6366f1",
+  Trap: "#f43f5e",
+};
+
+function getAccentColor(genre?: string | null): string {
+  if (!genre) return "#f59e0b"; // default amber
+  return genreAccentColors[genre] ?? "#f59e0b";
+}
+
 export function SessionCard({ session }: SessionCardProps) {
+  const accent = getAccentColor(session.genre);
+
   return (
     <Link
       href={`/session/${session.id}`}
-      className="group flex flex-col rounded-xl border border-slate-800 bg-slate-900/50 p-4 transition-all hover:border-slate-700 hover:bg-slate-900"
+      className="group relative flex flex-col overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/50 p-4 transition-all duration-300 hover:border-neutral-700 hover:bg-neutral-900 hover:shadow-lg hover:shadow-amber-500/5"
     >
+      {/* Left accent bar */}
+      <span
+        className="absolute inset-y-0 left-0 w-1"
+        style={{ backgroundColor: accent }}
+      />
+
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <h3 className="text-sm font-semibold text-slate-100 group-hover:text-indigo-400 transition-colors">
+      <div className="flex items-start justify-between pl-2">
+        <h3 className="text-sm font-semibold text-neutral-100 transition-colors duration-300 group-hover:text-amber-400">
           {session.title}
         </h3>
         <span
@@ -57,27 +86,27 @@ export function SessionCard({ session }: SessionCardProps) {
       </div>
 
       {/* Badges */}
-      <div className="mt-3 flex flex-wrap gap-1.5">
+      <div className="mt-3 flex flex-wrap gap-1.5 pl-2">
         {session.genre && (
-          <span className="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300">
+          <span className="rounded-full bg-neutral-800 px-2 py-0.5 text-xs text-neutral-300">
             {session.genre}
           </span>
         )}
         {session.mood && (
-          <span className="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300">
+          <span className="rounded-full bg-neutral-800 px-2 py-0.5 text-xs text-neutral-300">
             {session.mood}
           </span>
         )}
-        <span className="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-400">
+        <span className="rounded-full bg-neutral-800 px-2 py-0.5 font-mono text-xs text-neutral-400">
           {session.bpm} BPM
         </span>
-        <span className="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-400">
+        <span className="rounded-full bg-neutral-800 px-2 py-0.5 font-mono text-xs text-neutral-400">
           {session.keySignature}
         </span>
       </div>
 
       {/* Footer */}
-      <p className="mt-3 text-xs text-slate-500">
+      <p className="mt-3 pl-2 text-xs text-neutral-500">
         {formatRelativeTime(session.lastActiveAt)}
       </p>
     </Link>

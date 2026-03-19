@@ -54,23 +54,23 @@ export default function SettingsPage() {
   if (!isLoaded) {
     return (
       <div className="p-8">
-        <div className="h-8 w-48 animate-pulse rounded bg-slate-800" />
+        <div className="h-8 w-48 animate-pulse rounded bg-neutral-800" />
       </div>
     );
   }
 
   return (
     <div className="mx-auto max-w-2xl p-4 sm:p-8 overflow-y-auto">
-      <h1 className="mb-2 text-2xl font-bold text-slate-100">Settings</h1>
-      <p className="mb-8 text-slate-400">
+      <h1 className="mb-2 text-2xl font-bold text-neutral-100">Settings</h1>
+      <p className="mb-8 text-neutral-400">
         Configure your Unbottle experience.
       </p>
 
       <Card className="p-4 sm:p-6">
-        <h2 className="mb-1 text-lg font-semibold text-slate-100">
+        <h2 className="mb-1 text-lg font-semibold text-neutral-100">
           Anthropic API Key
         </h2>
-        <p className="mb-4 text-sm text-slate-400">
+        <p className="mb-4 text-sm text-neutral-400">
           Unbottle uses Claude to power the AI producer. You can use your own
           Anthropic API key, or use the default server key if available.
         </p>
@@ -84,7 +84,7 @@ export default function SettingsPage() {
                     <span className="text-sm font-medium text-emerald-400">
                       Your key is active
                     </span>
-                    <p className="mt-0.5 font-mono text-xs text-slate-500">
+                    <p className="mt-0.5 font-mono text-xs text-neutral-500">
                       {showKey
                         ? apiKey
                         : `${apiKey?.slice(0, 12)}...${apiKey?.slice(-4)}`}
@@ -92,7 +92,7 @@ export default function SettingsPage() {
                   </div>
                   <button
                     onClick={() => setShowKey(!showKey)}
-                    className="text-xs text-slate-500 hover:text-slate-300"
+                    className="text-xs text-neutral-500 transition-colors duration-300 hover:text-neutral-300"
                   >
                     {showKey ? "Hide" : "Show"}
                   </button>
@@ -102,21 +102,21 @@ export default function SettingsPage() {
             <Button variant="danger" size="sm" onClick={handleRemove}>
               Remove Key
             </Button>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-neutral-500">
               Removing your key will fall back to the server&apos;s default key
               (if one is configured).
             </p>
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="rounded-lg border border-slate-700 bg-slate-800/50 p-4">
-              <p className="mb-3 text-sm text-slate-300">
+            <div className="rounded-lg border border-neutral-700 bg-neutral-800/50 p-4">
+              <p className="mb-3 text-sm text-neutral-300">
                 Get your API key from{" "}
                 <a
                   href="https://console.anthropic.com/settings/keys"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-indigo-400 underline hover:text-indigo-300"
+                  className="text-amber-400 underline transition-colors duration-300 hover:text-amber-300"
                 >
                   console.anthropic.com
                 </a>
@@ -134,7 +134,7 @@ export default function SettingsPage() {
                 </Button>
               </div>
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-neutral-500">
               Your key is stored locally in your browser. It&apos;s never sent
               anywhere except Anthropic&apos;s API.
             </p>
@@ -143,10 +143,10 @@ export default function SettingsPage() {
       </Card>
 
       <Card className="mt-4 p-4 sm:mt-6 sm:p-6">
-        <h2 className="mb-1 text-lg font-semibold text-slate-100">
+        <h2 className="mb-1 text-lg font-semibold text-neutral-100">
           ElevenLabs API Key
         </h2>
-        <p className="mb-4 text-sm text-slate-400">
+        <p className="mb-4 text-sm text-neutral-400">
           Unbottle uses ElevenLabs to generate AI audio. Provide your own API
           key to enable audio generation, or use the default server key if
           available.
@@ -161,7 +161,7 @@ export default function SettingsPage() {
                     <span className="text-sm font-medium text-emerald-400">
                       Your key is active
                     </span>
-                    <p className="mt-0.5 font-mono text-xs text-slate-500">
+                    <p className="mt-0.5 font-mono text-xs text-neutral-500">
                       {showElKey
                         ? elevenLabsKey
                         : `${elevenLabsKey?.slice(0, 12)}...${elevenLabsKey?.slice(-4)}`}
@@ -169,7 +169,7 @@ export default function SettingsPage() {
                   </div>
                   <button
                     onClick={() => setShowElKey(!showElKey)}
-                    className="text-xs text-slate-500 hover:text-slate-300"
+                    className="text-xs text-neutral-500 transition-colors duration-300 hover:text-neutral-300"
                   >
                     {showElKey ? "Hide" : "Show"}
                   </button>
@@ -179,21 +179,21 @@ export default function SettingsPage() {
             <Button variant="danger" size="sm" onClick={handleElRemove}>
               Remove Key
             </Button>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-neutral-500">
               Removing your key will fall back to the server&apos;s default key
               (if one is configured).
             </p>
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="rounded-lg border border-slate-700 bg-slate-800/50 p-4">
-              <p className="mb-3 text-sm text-slate-300">
+            <div className="rounded-lg border border-neutral-700 bg-neutral-800/50 p-4">
+              <p className="mb-3 text-sm text-neutral-300">
                 Get your API key from{" "}
                 <a
                   href="https://elevenlabs.io/app/settings/api-keys"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-indigo-400 underline hover:text-indigo-300"
+                  className="text-amber-400 underline transition-colors duration-300 hover:text-amber-300"
                 >
                   elevenlabs.io
                 </a>
@@ -211,7 +211,7 @@ export default function SettingsPage() {
                 </Button>
               </div>
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-neutral-500">
               Your key is stored locally in your browser. It&apos;s never sent
               anywhere except ElevenLabs&apos; API.
             </p>
@@ -220,22 +220,22 @@ export default function SettingsPage() {
       </Card>
 
       <Card className="mt-4 p-4 sm:mt-6 sm:p-6">
-        <h2 className="mb-1 text-lg font-semibold text-slate-100">
+        <h2 className="mb-1 text-lg font-semibold text-neutral-100">
           How it works
         </h2>
-        <ul className="space-y-2 text-sm text-slate-400">
+        <ul className="space-y-2 text-sm text-neutral-400">
           <li className="flex gap-2">
-            <span className="text-indigo-400">1.</span>
+            <span className="font-mono text-amber-400">1.</span>
             If you provide your own key, all AI requests use your Anthropic
             account directly.
           </li>
           <li className="flex gap-2">
-            <span className="text-indigo-400">2.</span>
+            <span className="font-mono text-amber-400">2.</span>
             If you have a Claude Pro/Team subscription, you can generate an API
             key at console.anthropic.com — your subscription credits apply.
           </li>
           <li className="flex gap-2">
-            <span className="text-indigo-400">3.</span>
+            <span className="font-mono text-amber-400">3.</span>
             If no key is set, Unbottle uses a shared server key (when
             available).
           </li>

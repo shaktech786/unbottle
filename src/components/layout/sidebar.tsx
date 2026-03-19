@@ -76,7 +76,7 @@ function CollapseIcon({ collapsed }: { collapsed: boolean }) {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className={cn("transition-transform", collapsed && "rotate-180")}
+      className={cn("transition-transform duration-300", collapsed && "rotate-180")}
     >
       <polyline points="11 17 6 12 11 7" />
       <polyline points="18 17 13 12 18 7" />
@@ -124,7 +124,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
       )}
       <aside
         className={cn(
-          "flex flex-col border-r border-slate-800 bg-slate-950 transition-all duration-200",
+          "flex flex-col border-r border-neutral-800/50 bg-[#0a0a0a] transition-all duration-300",
           // Desktop: always visible, respects collapsed width
           "hidden md:flex",
           collapsed ? "md:w-16" : "md:w-64",
@@ -133,26 +133,14 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
         )}
       >
       {/* Logo */}
-      <div className="flex h-14 items-center gap-3 border-b border-slate-800 px-4">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-600">
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="white"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M9 18V5l12-2v13" />
-            <circle cx="6" cy="18" r="3" />
-            <circle cx="18" cy="16" r="3" />
-          </svg>
-        </div>
-        {!collapsed && (
-          <span className="text-lg font-semibold text-slate-100">
-            Unbottle
+      <div className="flex h-14 items-center gap-3 border-b border-neutral-800/50 px-4">
+        {!collapsed ? (
+          <span className="text-lg font-bold tracking-tight text-neutral-100">
+            <span className="text-amber-500">Un</span>bottle
+          </span>
+        ) : (
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center text-base font-bold text-amber-500">
+            U
           </span>
         )}
       </div>
@@ -189,7 +177,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
       </nav>
 
       {/* Settings + logout + collapse */}
-      <div className="border-t border-slate-800 p-3">
+      <div className="border-t border-neutral-800/50 p-3">
         {collapsed ? (
           <NavLink href="/settings" icon={<SettingsIcon />} label="" />
         ) : (
@@ -201,7 +189,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
             await supabase.auth.signOut();
             router.push("/login");
           }}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-neutral-500 transition-colors duration-300 hover:bg-neutral-800/70 hover:text-neutral-300"
           aria-label="Log out"
         >
           <span className="flex h-5 w-5 items-center justify-center">
@@ -211,7 +199,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
         </button>
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+          className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-neutral-500 transition-colors duration-300 hover:bg-neutral-800/70 hover:text-neutral-300"
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           <CollapseIcon collapsed={collapsed} />
