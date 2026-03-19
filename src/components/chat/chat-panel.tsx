@@ -14,6 +14,7 @@ interface ChatPanelProps {
   context?: ChatContext;
   suggestions?: Suggestion[];
   decisionContext?: string;
+  apiKey?: string | null;
   className?: string;
 }
 
@@ -43,11 +44,13 @@ export function ChatPanel({
   context,
   suggestions,
   decisionContext,
+  apiKey,
   className,
 }: ChatPanelProps) {
   const { messages, sendMessage, isStreaming } = useChat({
     sessionId,
     context,
+    apiKey,
   });
 
   const activeSuggestions = useMemo(

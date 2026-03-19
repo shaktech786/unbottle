@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
+import { createClient } from "@/lib/supabase/client";
 import { NavLink } from "./nav-link";
 
 // Inline SVG icons to avoid extra dependencies
@@ -82,8 +84,28 @@ function CollapseIcon({ collapsed }: { collapsed: boolean }) {
   );
 }
 
+function LogoutIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <polyline points="16 17 21 12 16 7" />
+      <line x1="21" y1="12" x2="9" y2="12" />
+    </svg>
+  );
+}
+
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const router = useRouter();
 
   return (
     <aside
@@ -148,13 +170,27 @@ export function Sidebar() {
         )}
       </nav>
 
-      {/* Settings + collapse */}
+      {/* Settings + logout + collapse */}
       <div className="border-t border-slate-800 p-3">
         {collapsed ? (
           <NavLink href="/settings" icon={<SettingsIcon />} label="" />
         ) : (
           <NavLink href="/settings" icon={<SettingsIcon />} label="Settings" />
         )}
+        <button
+          onClick={async () => {
+            const supabase = createClient();
+            await supabase.auth.signOut();
+            router.push("/login");
+          }}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+          aria-label="Log out"
+        >
+          <span className="flex h-5 w-5 items-center justify-center">
+            <LogoutIcon />
+          </span>
+          {!collapsed && <span>Log out</span>}
+        </button>
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"

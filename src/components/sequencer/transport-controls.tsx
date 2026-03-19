@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, type ReactNode } from "react";
 import { cn } from "@/lib/utils/cn";
 import type { NoteName } from "@/lib/music/types";
 
@@ -11,6 +11,14 @@ interface TransportControlsProps {
   onBpmChange: (bpm: number) => void;
   onKeyChange: (key: string) => void;
   onTimeSignatureChange: (ts: string) => void;
+
+  /** Tone.js player state -- when provided, overrides local isPlaying */
+  isPlaying?: boolean;
+  onPlay?: () => void;
+  onStop?: () => void;
+
+  /** Optional slot rendered at the far-right of the transport bar */
+  trailing?: ReactNode;
 }
 
 const ALL_KEYS: NoteName[] = [
@@ -26,15 +34,31 @@ export function TransportControls({
   onBpmChange,
   onKeyChange,
   onTimeSignatureChange,
+  isPlaying: externalIsPlaying,
+  onPlay,
+  onStop,
+  trailing,
 }: TransportControlsProps) {
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [localIsPlaying, setLocalIsPlaying] = useState(false);
   const [isLooping, setIsLooping] = useState(false);
   const [showKeyDropdown, setShowKeyDropdown] = useState(false);
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
 
+  // Use external state when provided, otherwise fall back to local state
+  const isPlaying = externalIsPlaying ?? localIsPlaying;
+
   const togglePlay = useCallback(() => {
-    setIsPlaying((prev) => !prev);
-  }, []);
+    if (externalIsPlaying !== undefined) {
+      // Controlled externally via Tone.js
+      if (isPlaying) {
+        onStop?.();
+      } else {
+        onPlay?.();
+      }
+    } else {
+      setLocalIsPlaying((prev) => !prev);
+    }
+  }, [externalIsPlaying, isPlaying, onPlay, onStop]);
 
   const adjustBpm = useCallback(
     (delta: number) => {
@@ -219,6 +243,14 @@ export function TransportControls({
         </svg>
         <span className="text-xs font-medium">Loop</span>
       </button>
+
+      {/* Trailing slot (export button, etc.) */}
+      {trailing && (
+        <>
+          <div className="h-6 w-px bg-slate-800" />
+          {trailing}
+        </>
+      )}
     </div>
   );
 }
