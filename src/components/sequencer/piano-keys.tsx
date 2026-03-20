@@ -23,6 +23,8 @@ export interface PianoKeysProps {
   onKeyClick?: (pitch: Pitch) => void;
   /** Vertical scroll offset. */
   scrollY?: number;
+  /** Container height in px — must match piano roll height */
+  height?: number;
   className?: string;
 }
 
@@ -37,6 +39,7 @@ export function PianoKeys({
   scaleNotes,
   onKeyClick,
   scrollY = 0,
+  height,
   className,
 }: PianoKeysProps) {
   // Build the list of pitches from high to low
@@ -63,7 +66,7 @@ export function PianoKeys({
   return (
     <div
       className={cn("relative flex-shrink-0 overflow-hidden", className)}
-      style={{ width: 64, height: "100%" }}
+      style={{ width: 64, height: height ?? "100%" }}
     >
       <div
         className="absolute left-0 top-0 w-full"

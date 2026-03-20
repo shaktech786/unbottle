@@ -139,16 +139,22 @@ export function PianoRoll({
   });
 
   const [scrollX, setScrollX] = useState(0);
-  // Default scroll to center on C4 (middle C) region
-  const [scrollY, setScrollY] = useState(() => {
+  const [scrollY, setScrollY] = useState(0);
+  const hasCenteredRef = useRef(false);
+
+  // Center on C4 once we have real dimensions
+  useEffect(() => {
+    if (hasCenteredRef.current || height < 100) return;
     const pitchList = buildPitchList(minOctave, maxOctave);
     const c4Index = pitchList.indexOf("C4" as Pitch);
-    if (c4Index < 0) return 0;
-    // scrollY positions the top of the view; center C4 in the viewport
+    if (c4Index < 0) return;
     const c4Row = pitchList.length - 1 - c4Index;
-    const targetY = c4Row * ROW_HEIGHT - (height ?? 400) / 2;
-    return Math.max(0, targetY);
-  });
+    const targetY = c4Row * ROW_HEIGHT - height / 2;
+    const maxScroll = pitchList.length * ROW_HEIGHT - height;
+    const clamped = Math.max(0, Math.min(maxScroll, targetY));
+    setScrollY(clamped);
+    hasCenteredRef.current = true;
+  }, [height, minOctave, maxOctave]);
 
   // Notify parent when scrollY changes so PianoKeys stays aligned
   useEffect(() => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils/cn";
 import type {
   InstrumentType,
@@ -108,12 +108,28 @@ export function SequencerPanel({
   // Track list width and piano key width
   const TRACK_LIST_WIDTH = 200;
   const PIANO_KEY_WIDTH = 64;
-  // Reserve width for piano roll
-  const rollWidth =
-    typeof window !== "undefined"
-      ? Math.max(400, (containerRef.current?.clientWidth ?? 900) - TRACK_LIST_WIDTH - PIANO_KEY_WIDTH)
-      : 600;
-  const rollHeight = 400;
+
+  // Measure container for dynamic roll dimensions
+  const rollAreaRef = useRef<HTMLDivElement>(null);
+  const [rollDims, setRollDims] = useState({ width: 600, height: 400 });
+
+  useEffect(() => {
+    function measure() {
+      if (rollAreaRef.current) {
+        const rect = rollAreaRef.current.getBoundingClientRect();
+        setRollDims({
+          width: Math.max(200, rect.width - PIANO_KEY_WIDTH),
+          height: Math.max(200, rect.height),
+        });
+      }
+    }
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
+  const rollWidth = rollDims.width;
+  const rollHeight = rollDims.height;
 
   const selectedTrack = tracks.find((t) => t.id === selectedTrackId);
   const activeTrackColor = selectedTrack?.color ?? TRACK_COLORS[0];
@@ -248,12 +264,13 @@ export function SequencerPanel({
           </div>
 
           {/* Piano keys + Piano roll */}
-          <div className="flex flex-1 overflow-hidden">
+          <div ref={rollAreaRef} className="flex flex-1 overflow-hidden">
             <PianoKeys
               rowHeight={22}
               onKeyClick={undefined}
               scaleNotes={scaleNotes}
               scrollY={pianoScrollY}
+              height={rollHeight}
             />
             <PianoRoll
               notes={notes}
