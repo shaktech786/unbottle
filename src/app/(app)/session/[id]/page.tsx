@@ -153,7 +153,11 @@ export default function SessionWorkspacePage() {
     stop,
     setBpm,
     currentTick,
-  } = useTonePlayer(sequencer.notes, session?.bpm ?? 120);
+  } = useTonePlayer(
+    sequencer.notes,
+    session?.bpm ?? 120,
+    tracks[0]?.instrument ?? "piano",
+  );
 
   // ------- Hyperfocus guard -------
   const { shouldNudge, elapsedMinutes, dismiss: dismissNudge } =

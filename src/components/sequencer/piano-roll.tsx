@@ -134,7 +134,16 @@ export function PianoRoll({
   });
 
   const [scrollX, setScrollX] = useState(0);
-  const [scrollY, setScrollY] = useState(0);
+  // Default scroll to center on C4 (middle C) region
+  const [scrollY, setScrollY] = useState(() => {
+    const pitchList = buildPitchList(minOctave, maxOctave);
+    const c4Index = pitchList.indexOf("C4" as Pitch);
+    if (c4Index < 0) return 0;
+    // scrollY positions the top of the view; center C4 in the viewport
+    const c4Row = pitchList.length - 1 - c4Index;
+    const targetY = c4Row * ROW_HEIGHT - (height ?? 400) / 2;
+    return Math.max(0, targetY);
+  });
 
   const pitches = buildPitchList(minOctave, maxOctave);
   const totalRows = pitches.length;
