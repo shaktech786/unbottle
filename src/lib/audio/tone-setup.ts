@@ -82,7 +82,8 @@ export async function createInstrument(
     if (type === "drums") {
       return new Tone.MembraneSynth().connect(dest);
     }
-    return new Tone.Synth().connect(dest);
+    // PolySynth allows playing chords (multiple simultaneous notes)
+    return new Tone.PolySynth(Tone.Synth).connect(dest);
   }
 
   // Check the cache first

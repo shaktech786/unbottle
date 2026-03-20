@@ -38,7 +38,7 @@ interface DragState {
   startY: number;
 }
 
-const ROW_HEIGHT = 14;
+const ROW_HEIGHT = 22;
 
 // ── Props ────────────────────────────────────────────────────
 
@@ -62,6 +62,7 @@ export interface PianoRollProps {
   onClearSelection?: () => void;
   onMoveNote?: (noteId: string, newStartTick: number, newPitch: Pitch) => void;
   onResizeNote?: (noteId: string, newDuration: number) => void;
+  onRemoveNote?: (noteId: string) => void;
   /** Called when vertical scroll changes so parent can sync PianoKeys */
   onScrollY?: (scrollY: number) => void;
 
@@ -122,6 +123,7 @@ export function PianoRoll({
   onClearSelection,
   onMoveNote,
   onResizeNote,
+  onRemoveNote,
   onScrollY,
   className,
 }: PianoRollProps) {
@@ -197,10 +199,10 @@ export function PianoRoll({
     ctx.scale(dpr, dpr);
 
     // Background
-    ctx.fillStyle = "#0f172a";
+    ctx.fillStyle = "#0d0d0d";
     ctx.fillRect(0, 0, width, height);
 
-    // Row backgrounds
+    // Row backgrounds (warmer palette)
     for (let i = 0; i < totalRows; i++) {
       const pitchIdx = totalRows - 1 - i;
       const y = i * ROW_HEIGHT - scrollY;
@@ -208,17 +210,19 @@ export function PianoRoll({
 
       const noteName = NOTE_NAMES[pitchIdx % 12];
       const isBlack = BLACK_KEYS.has(noteName);
+      const isC = noteName === "C";
       const isInScale = scaleNotes?.has(noteName);
 
       if (isInScale) {
-        ctx.fillStyle = isBlack ? "#1e1b4b" : "#1e1b4b60";
+        ctx.fillStyle = isBlack ? "#1a1500" : "#1a150030";
       } else {
-        ctx.fillStyle = isBlack ? "#020617" : "#0f172a";
+        ctx.fillStyle = isBlack ? "#0a0a0a" : "#141414";
       }
       ctx.fillRect(0, y, width, ROW_HEIGHT);
 
-      ctx.strokeStyle = "#1e293b40";
-      ctx.lineWidth = 0.5;
+      // Stronger line on C notes for orientation
+      ctx.strokeStyle = isC ? "#333333" : "#1a1a1a";
+      ctx.lineWidth = isC ? 1 : 0.5;
       ctx.beginPath();
       ctx.moveTo(0, y + ROW_HEIGHT);
       ctx.lineTo(width, y + ROW_HEIGHT);
@@ -237,13 +241,13 @@ export function PianoRoll({
       const isBeat = tick % ticksPerBeat === 0;
 
       if (isBar) {
-        ctx.strokeStyle = "#334155";
+        ctx.strokeStyle = "#333333";
         ctx.lineWidth = 1;
       } else if (isBeat) {
-        ctx.strokeStyle = "#1e293b";
+        ctx.strokeStyle = "#222222";
         ctx.lineWidth = 0.75;
       } else {
-        ctx.strokeStyle = "#1e293b50";
+        ctx.strokeStyle = "#1a1a1a";
         ctx.lineWidth = 0.5;
       }
 
@@ -253,7 +257,7 @@ export function PianoRoll({
       ctx.stroke();
     }
 
-    // Notes
+    // Notes (bigger, rounder, more visible)
     for (const note of notes) {
       const pitchIdx = pitches.indexOf(note.pitch);
       if (pitchIdx === -1) continue;
@@ -261,23 +265,40 @@ export function PianoRoll({
       const x = tickToX(note.startTick, pxPerTick, scrollX);
       const y = pitchIndexToY(pitchIdx, scrollY, totalRows);
       const w = note.durationTicks * pxPerTick;
+      const pad = 2;
 
       if (x + w < 0 || x > width || y + ROW_HEIGHT < 0 || y > height) continue;
 
       const isSelected = selectedNotes.has(note.id);
+      const noteW = Math.max(4, w - pad * 2);
+      const noteH = ROW_HEIGHT - pad * 2;
 
-      ctx.fillStyle = isSelected ? "#818cf8" : activeTrackColor;
-      ctx.globalAlpha = 0.3 + (note.velocity / 127) * 0.7;
-      ctx.fillRect(x + 1, y + 1, Math.max(2, w - 2), ROW_HEIGHT - 2);
+      // Fill
+      ctx.fillStyle = isSelected ? "#fbbf24" : activeTrackColor;
+      ctx.globalAlpha = 0.5 + (note.velocity / 127) * 0.5;
+      ctx.beginPath();
+      ctx.roundRect(x + pad, y + pad, noteW, noteH, 3);
+      ctx.fill();
       ctx.globalAlpha = 1;
 
-      ctx.strokeStyle = isSelected ? "#a5b4fc" : activeTrackColor;
-      ctx.lineWidth = isSelected ? 1.5 : 1;
-      ctx.strokeRect(x + 1, y + 1, Math.max(2, w - 2), ROW_HEIGHT - 2);
+      // Border
+      ctx.strokeStyle = isSelected ? "#fcd34d" : activeTrackColor;
+      ctx.lineWidth = isSelected ? 2 : 1;
+      ctx.beginPath();
+      ctx.roundRect(x + pad, y + pad, noteW, noteH, 3);
+      ctx.stroke();
 
-      if (w > 8) {
-        ctx.fillStyle = isSelected ? "#c7d2fe" : "#ffffff40";
-        ctx.fillRect(x + w - 4, y + 3, 2, ROW_HEIGHT - 6);
+      // Resize handle (right edge)
+      if (noteW > 12) {
+        ctx.fillStyle = isSelected ? "#fef3c7" : "#ffffff50";
+        ctx.fillRect(x + pad + noteW - 4, y + pad + 4, 2, noteH - 8);
+      }
+
+      // Note label if wide enough
+      if (noteW > 30) {
+        ctx.fillStyle = isSelected ? "#451a03" : "#ffffff90";
+        ctx.font = "10px monospace";
+        ctx.fillText(note.pitch, x + pad + 4, y + pad + noteH / 2 + 3);
       }
     }
 
@@ -285,7 +306,7 @@ export function PianoRoll({
     const playX = tickToX(playheadTick, pxPerTick, scrollX);
     if (playX >= 0 && playX <= width) {
       ctx.strokeStyle = "#f97316";
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(playX, 0);
       ctx.lineTo(playX, height);
@@ -397,11 +418,13 @@ export function PianoRoll({
       const pitchIdx = yToPitchIndex(cy, scrollY, totalRows);
 
       if (pitchIdx >= 0 && pitchIdx < pitches.length) {
+        // Default to quarter note duration (more musical than snap-grid-sized)
+        const defaultDuration = Math.max(snapTicks, PPQ);
         onAddNote?.({
           trackId: activeTrackId,
           pitch: pitches[pitchIdx],
           startTick: tick,
-          durationTicks: snapTicks,
+          durationTicks: defaultDuration,
           velocity: 100,
         });
       }
@@ -448,6 +471,17 @@ export function PianoRoll({
     }
   }
 
+  function handleContextMenu(e: ReactMouseEvent<HTMLCanvasElement>) {
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
+    const hit = noteAtPosition(cx, cy);
+    if (hit && onRemoveNote) {
+      onRemoveNote(hit.note.id);
+    }
+  }
+
   return (
     <canvas
       ref={canvasRef}
@@ -461,6 +495,7 @@ export function PianoRoll({
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
       onWheel={handleWheel}
+      onContextMenu={handleContextMenu}
     />
   );
 }

@@ -92,7 +92,7 @@ export function useTonePlayer(
       } catch {
         // On failure, fall back to basic synth
         if (cancelled) return;
-        const fallback = new Tone.Synth().connect(Tone.getDestination());
+        const fallback = new Tone.PolySynth(Tone.Synth).connect(Tone.getDestination());
         instrumentRef.current = fallback;
         loadedTypeRef.current = "synth";
       }

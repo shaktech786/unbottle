@@ -443,6 +443,7 @@ export default function SessionWorkspacePage() {
               onClearSelection={sequencer.clearSelection}
               onMoveNote={sequencer.moveNote}
               onResizeNote={sequencer.resizeNote}
+              onRemoveNote={sequencer.removeNote}
               selectedNotes={sequencer.selectedNotes}
               onTrackInstrumentChange={handleTrackInstrumentChange}
               onClearAll={sequencer.clearAll}

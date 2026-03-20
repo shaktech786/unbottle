@@ -43,6 +43,7 @@ export interface SequencerPanelProps {
   onClearSelection?: () => void;
   onMoveNote?: (noteId: string, newStartTick: number, newPitch: Pitch) => void;
   onResizeNote?: (noteId: string, newDuration: number) => void;
+  onRemoveNote?: (noteId: string) => void;
   selectedNotes?: Set<string>;
 
   // Track operations
@@ -80,6 +81,7 @@ export function SequencerPanel({
   onClearSelection,
   onMoveNote,
   onResizeNote,
+  onRemoveNote,
   selectedNotes = new Set(),
   onAddTrack,
   onSelectTrack,
@@ -248,7 +250,7 @@ export function SequencerPanel({
           {/* Piano keys + Piano roll */}
           <div className="flex flex-1 overflow-hidden">
             <PianoKeys
-              rowHeight={14}
+              rowHeight={22}
               onKeyClick={undefined}
               scaleNotes={scaleNotes}
               scrollY={pianoScrollY}
@@ -269,6 +271,7 @@ export function SequencerPanel({
               onClearSelection={onClearSelection}
               onMoveNote={onMoveNote}
               onResizeNote={onResizeNote}
+              onRemoveNote={onRemoveNote}
               onScrollY={setPianoScrollY}
             />
           </div>
