@@ -14,42 +14,33 @@ export interface UseTonePlayerReturn {
   setPosition: (tick: number) => void;
   currentTick: number;
   isReady: boolean;
-  /** True while instrument samples are being downloaded */
   isLoadingSamples: boolean;
 }
 
-/**
- * React hook for Tone.js playback.
- *
- * Manages Transport state, schedules notes for playback, and
- * reports the current playhead position.
- *
- * Handles both sample-based instruments (Tone.Sampler) and basic synths.
- * Exposes `isLoadingSamples` so the UI can show loading state.
- *
- * @param notes - Array of notes to schedule
- * @param bpm - Initial tempo
- * @param instrumentType - Instrument type for playback
- */
 export function useTonePlayer(
   notes: Note[],
   bpm: number,
-  instrumentType: InstrumentType = "synth",
+  instrumentType: InstrumentType = "piano",
 ): UseTonePlayerReturn {
   const toneRef = useRef<ToneModule | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const instrumentRef = useRef<any>(null);
   const scheduledIdsRef = useRef<number[]>([]);
   const rafRef = useRef<number>(0);
-  /** Track which instrument type is currently loaded to detect changes */
   const loadedTypeRef = useRef<InstrumentType | null>(null);
+  const bpmRef = useRef(bpm);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTick, setCurrentTick] = useState(0);
   const [isReady, setIsReady] = useState(false);
   const [isLoadingSamples, setIsLoadingSamples] = useState(false);
 
-  // Load Tone.js and create the instrument
+  // Keep BPM ref current without triggering instrument re-creation
+  useEffect(() => {
+    bpmRef.current = bpm;
+  }, [bpm]);
+
+  // Load Tone.js and create the instrument — ONLY when instrumentType changes
   useEffect(() => {
     let cancelled = false;
 
@@ -58,19 +49,22 @@ export function useTonePlayer(
       if (cancelled) return;
       toneRef.current = Tone;
 
-      const { createInstrument } = await import("@/lib/audio/tone-setup");
+      const transport = Tone.getTransport();
+      transport.bpm.value = bpmRef.current;
+      transport.PPQ = PPQ;
 
-      // Dispose old instrument if switching types
-      if (
-        instrumentRef.current &&
-        loadedTypeRef.current !== instrumentType &&
-        instrumentRef.current.dispose
-      ) {
-        // Don't dispose -- it's cached by tone-setup. Just disconnect.
+      // Only recreate instrument if the type actually changed
+      if (loadedTypeRef.current === instrumentType && instrumentRef.current) {
+        if (!cancelled) setIsReady(true);
+        return;
+      }
+
+      // Disconnect old instrument (don't dispose — it's cached)
+      if (instrumentRef.current) {
         try {
           instrumentRef.current.disconnect();
         } catch {
-          // ignore if already disconnected
+          // ignore
         }
         instrumentRef.current = null;
       }
@@ -78,6 +72,7 @@ export function useTonePlayer(
       setIsLoadingSamples(true);
 
       try {
+        const { createInstrument } = await import("@/lib/audio/tone-setup");
         const instrument = await createInstrument(
           instrumentType,
           (loading: boolean) => {
@@ -86,23 +81,20 @@ export function useTonePlayer(
         );
 
         if (cancelled) return;
-
         instrumentRef.current = instrument;
         loadedTypeRef.current = instrumentType;
       } catch {
-        // On failure, fall back to basic synth
         if (cancelled) return;
-        const fallback = new Tone.PolySynth(Tone.Synth).connect(Tone.getDestination());
+        // Fall back to PolySynth
+        const Tone2 = toneRef.current!;
+        const fallback = new Tone2.PolySynth(Tone2.Synth).connect(
+          Tone2.getDestination(),
+        );
         instrumentRef.current = fallback;
         loadedTypeRef.current = "synth";
       }
 
       setIsLoadingSamples(false);
-
-      const transport = Tone.getTransport();
-      transport.bpm.value = bpm;
-      transport.PPQ = PPQ;
-
       if (!cancelled) setIsReady(true);
     }
 
@@ -110,18 +102,15 @@ export function useTonePlayer(
     return () => {
       cancelled = true;
     };
-  }, [instrumentType, bpm]);
+  }, [instrumentType]); // Only instrumentType — NOT bpm
 
-  // Update BPM when it changes
-  const setBpm = useCallback(
-    (newBpm: number) => {
-      if (!toneRef.current) return;
-      toneRef.current.getTransport().bpm.value = newBpm;
-    },
-    [],
-  );
+  // Update BPM on the transport without recreating anything
+  const setBpm = useCallback((newBpm: number) => {
+    bpmRef.current = newBpm;
+    if (!toneRef.current) return;
+    toneRef.current.getTransport().bpm.value = newBpm;
+  }, []);
 
-  // Set playhead position
   const setPosition = useCallback((tick: number) => {
     if (!toneRef.current) return;
     const transport = toneRef.current.getTransport();
@@ -153,16 +142,14 @@ export function useTonePlayer(
 
       const id = transport.schedule((time: number) => {
         try {
-          if (typeof instrument.triggerAttackRelease === "function") {
-            instrument.triggerAttackRelease(
-              note.pitch,
-              durationSec,
-              time,
-              note.velocity / 127,
-            );
-          }
+          instrument.triggerAttackRelease(
+            note.pitch,
+            durationSec,
+            time,
+            note.velocity / 127,
+          );
         } catch {
-          // Ignore playback errors for individual notes
+          // Ignore individual note errors
         }
       }, startSec);
 
@@ -170,7 +157,7 @@ export function useTonePlayer(
     }
   }, [notes]);
 
-  // Track playhead position with requestAnimationFrame
+  // Track playhead position
   const startPositionTracking = useCallback(() => {
     const Tone = toneRef.current;
     if (!Tone) return;
@@ -192,9 +179,7 @@ export function useTonePlayer(
     const Tone = toneRef.current;
     if (!Tone || isLoadingSamples) return;
 
-    // Ensure context is running (autoplay policy)
     await Tone.start();
-
     scheduleNotes();
 
     const transport = Tone.getTransport();
@@ -208,8 +193,24 @@ export function useTonePlayer(
     if (!Tone) return;
 
     const transport = Tone.getTransport();
+
+    // Stop transport and cancel all scheduled events
     transport.stop();
+    transport.cancel();
     transport.position = 0;
+
+    // Release any currently sounding notes
+    const instrument = instrumentRef.current;
+    if (instrument) {
+      try {
+        if (typeof instrument.releaseAll === "function") {
+          instrument.releaseAll();
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     setIsPlaying(false);
     setCurrentTick(0);
 
@@ -230,9 +231,11 @@ export function useTonePlayer(
         transport.stop();
         transport.cancel();
       }
-      // Disconnect (don't dispose -- cached instruments are reusable)
       if (instrumentRef.current) {
         try {
+          if (typeof instrumentRef.current.releaseAll === "function") {
+            instrumentRef.current.releaseAll();
+          }
           instrumentRef.current.disconnect();
         } catch {
           // ignore
