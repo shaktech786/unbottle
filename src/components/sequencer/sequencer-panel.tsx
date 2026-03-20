@@ -109,6 +109,7 @@ export function SequencerPanel({
   const [manualBars, setManualBars] = useState(16);
   const totalBars = Math.max(manualBars, barsNeeded, 16);
   const [pianoScrollY, setPianoScrollY] = useState(0);
+  const [pianoScrollX, setPianoScrollX] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const PIANO_KEY_WIDTH = 64;
@@ -263,6 +264,7 @@ export function SequencerPanel({
               totalTicks={totalBars * 4 * PPQ}
               playheadTick={playheadTick}
               onSetPlayhead={onSetPlayhead}
+              scrollX={pianoScrollX}
               width={rollWidth}
             />
           </div>
@@ -294,6 +296,7 @@ export function SequencerPanel({
               onResizeNote={onResizeNote}
               onRemoveNote={onRemoveNote}
               onScrollY={setPianoScrollY}
+              onScrollX={setPianoScrollX}
             />
           </div>
         </div>

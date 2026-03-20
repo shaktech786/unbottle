@@ -108,6 +108,8 @@ export interface PianoRollProps {
   onRemoveNote?: (noteId: string) => void;
   /** Called when vertical scroll changes so parent can sync PianoKeys */
   onScrollY?: (scrollY: number) => void;
+  /** Called when horizontal scroll changes so parent can sync Timeline */
+  onScrollX?: (scrollX: number) => void;
 
   className?: string;
 }
@@ -182,6 +184,7 @@ export function PianoRoll({
   onResizeNote,
   onRemoveNote,
   onScrollY,
+  onScrollX,
   className,
 }: PianoRollProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -215,10 +218,14 @@ export function PianoRoll({
   const contentHeight = totalRows * ROW_HEIGHT;
   const contentWidth = totalTicks * activePxPerTick;
 
-  // Notify parent when scrollY changes
+  // Notify parent when scroll changes
   useEffect(() => {
     onScrollY?.(scrollY);
   }, [scrollY, onScrollY]);
+
+  useEffect(() => {
+    onScrollX?.(scrollX);
+  }, [scrollX, onScrollX]);
 
   // ── Hit-test ───────────────────────────────────────────────
 

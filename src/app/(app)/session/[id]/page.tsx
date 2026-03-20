@@ -121,7 +121,8 @@ export default function SessionWorkspacePage() {
       if (saveTimerRef.current) {
         clearTimeout(saveTimerRef.current);
       }
-      if (session?.id && pendingNotesRef.current.length > 0) {
+      if (session?.id) {
+        // Always flush on unmount — including empty arrays (clears)
         fetch(`/api/session/${session.id}/notes`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },

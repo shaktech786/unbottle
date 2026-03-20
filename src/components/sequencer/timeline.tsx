@@ -62,11 +62,11 @@ export function Timeline({
     ctx.scale(dpr, dpr);
 
     // Background
-    ctx.fillStyle = "#0f172a"; // slate-950
+    ctx.fillStyle = "#0d0d0d";
     ctx.fillRect(0, 0, width, HEIGHT);
 
     // Bottom border
-    ctx.strokeStyle = "#1e293b"; // slate-800
+    ctx.strokeStyle = "#222222";
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, HEIGHT - 0.5);
@@ -77,10 +77,10 @@ export function Timeline({
     if (loopStart !== undefined && loopEnd !== undefined) {
       const x1 = loopStart * pxPerTick - scrollX;
       const x2 = loopEnd * pxPerTick - scrollX;
-      ctx.fillStyle = "#6366f120"; // indigo-500 very transparent
+      ctx.fillStyle = "#f59e0b20"; // amber very transparent
       ctx.fillRect(x1, 0, x2 - x1, HEIGHT);
 
-      ctx.strokeStyle = "#6366f1";
+      ctx.strokeStyle = "#f59e0b";
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(x1, 0);
@@ -103,7 +103,7 @@ export function Timeline({
 
       if (isBar) {
         // Bar line
-        ctx.strokeStyle = "#475569"; // slate-600
+        ctx.strokeStyle = "#444444";
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(x, 0);
@@ -111,11 +111,11 @@ export function Timeline({
         ctx.stroke();
 
         // Bar number
-        ctx.fillStyle = "#94a3b8"; // slate-400
+        ctx.fillStyle = "#999999";
         ctx.fillText(`${barNumber}`, x + 4, HEIGHT / 2);
       } else {
         // Beat tick
-        ctx.strokeStyle = "#334155"; // slate-700
+        ctx.strokeStyle = "#2a2a2a";
         ctx.lineWidth = 0.5;
         ctx.beginPath();
         ctx.moveTo(x, HEIGHT * 0.6);
