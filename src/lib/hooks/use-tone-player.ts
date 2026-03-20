@@ -112,11 +112,25 @@ export function useTonePlayer(
   }, []);
 
   const setPosition = useCallback((tick: number) => {
-    if (!toneRef.current) return;
-    const transport = toneRef.current.getTransport();
+    // Always update visual playhead even if Tone isn't loaded yet
+    setCurrentTick(tick);
+
+    const Tone = toneRef.current;
+    if (!Tone) return;
+
+    const transport = Tone.getTransport();
+    const wasPlaying = transport.state === "started";
+
+    // Stop, seek, reschedule, restart
+    if (wasPlaying) {
+      transport.pause();
+    }
     const seconds = ticksToSeconds(tick, transport.bpm.value);
     transport.seconds = seconds;
-    setCurrentTick(tick);
+
+    if (wasPlaying) {
+      transport.start();
+    }
   }, []);
 
   // Schedule all notes on the transport
