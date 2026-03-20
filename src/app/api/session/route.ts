@@ -70,8 +70,8 @@ export async function POST(request: NextRequest) {
   };
 
   const defaultTrack = {
-    name: "Track 1",
-    instrument: "synth" as const,
+    name: "Piano",
+    instrument: "piano" as const,
     volume: 0.8,
     pan: 0,
     muted: false,

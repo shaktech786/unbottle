@@ -6,6 +6,7 @@ import type { Note, Pitch } from "@/lib/music/types";
 export interface UseSequencerReturn {
   notes: Note[];
   addNote: (note: Omit<Note, "id">) => Note;
+  addBulkNotes: (newNotes: Note[]) => void;
   removeNote: (noteId: string) => void;
   moveNote: (noteId: string, newStartTick: number, newPitch: Pitch) => void;
   resizeNote: (noteId: string, newDurationTicks: number) => void;
@@ -77,6 +78,15 @@ export function useSequencer(initialNotes: Note[] = []): UseSequencerReturn {
       const next = [...notes, note];
       applyNotes(next);
       return note;
+    },
+    [notes, applyNotes],
+  );
+
+  const addBulkNotes = useCallback(
+    (newNotes: Note[]) => {
+      if (newNotes.length === 0) return;
+      const next = [...notes, ...newNotes];
+      applyNotes(next);
     },
     [notes, applyNotes],
   );
@@ -192,6 +202,7 @@ export function useSequencer(initialNotes: Note[] = []): UseSequencerReturn {
   return {
     notes,
     addNote,
+    addBulkNotes,
     removeNote,
     moveNote,
     resizeNote,

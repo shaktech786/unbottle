@@ -10,6 +10,7 @@ interface ArrangementPanelProps {
   onDeleteSection?: (sectionId: string) => void;
   onUpdateSection?: (sectionId: string, updates: Partial<Section>) => void;
   onRequestAIGenerate?: () => void;
+  onAddChordsToSequencer?: () => void;
 }
 
 export function ArrangementPanel({
@@ -18,14 +19,40 @@ export function ArrangementPanel({
   onDeleteSection,
   onUpdateSection,
   onRequestAIGenerate,
+  onAddChordsToSequencer,
 }: ArrangementPanelProps) {
+  const hasChords = sections.some((s) => s.chordProgression?.length > 0);
   return (
     <div className="flex flex-col rounded-xl border border-neutral-800 bg-neutral-900/30 p-4">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-neutral-200">Arrangement</h2>
-        <span className="font-mono text-xs text-neutral-500">
-          {sections.length} section{sections.length !== 1 ? "s" : ""}
-        </span>
+        <div className="flex items-center gap-2">
+          {onAddChordsToSequencer && hasChords && (
+            <button
+              onClick={onAddChordsToSequencer}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-400 transition-colors duration-200 hover:bg-emerald-500/20"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M9 18V5l12-2v13" />
+                <circle cx="6" cy="18" r="3" />
+                <circle cx="18" cy="16" r="3" />
+              </svg>
+              Add Chords to Sequencer
+            </button>
+          )}
+          <span className="font-mono text-xs text-neutral-500">
+            {sections.length} section{sections.length !== 1 ? "s" : ""}
+          </span>
+        </div>
       </div>
 
       {sections.length === 0 ? (

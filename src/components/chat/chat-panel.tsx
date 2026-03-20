@@ -19,6 +19,8 @@ interface ChatPanelProps {
   decisionContext?: string;
   apiKey?: string | null;
   onGenerateArrangement?: (sections: Omit<Section, "id" | "sessionId">[]) => void;
+  /** Called when user wants to place chord notes into the sequencer */
+  onAddChordsToSequencer?: () => void;
   /** Ref that parent can use to programmatically send messages */
   sendMessageRef?: MutableRefObject<((msg: string) => void) | null>;
   className?: string;
@@ -27,21 +29,21 @@ interface ChatPanelProps {
 const DEFAULT_SUGGESTIONS: Suggestion[] = [
   {
     id: "starter-1",
-    label: "Help me find a chord progression",
-    action: "I want to find a chord progression that fits my vibe",
+    label: "Generate a chord progression for me",
+    action: "Generate a chord progression for me. Pick a key, pick a vibe, and give me something I can use right away. Include the chords in a structured arrangement so I can add them to the sequencer.",
     category: "arrangement",
   },
   {
     id: "starter-2",
-    label: "Suggest a song structure",
-    action: "Can you suggest a song structure for me?",
+    label: "Build me a 4-section arrangement",
+    action: "Build me a complete 4-section arrangement with chord progressions for each section. Pick a genre and vibe that sounds good together. Make it ready to use.",
     category: "structure",
   },
   {
     id: "starter-3",
-    label: "What instrument should I start with?",
-    action: "What instrument should I lay down first?",
-    category: "instrument",
+    label: "Pick everything for me",
+    action: "Pick everything for me -- genre, mood, key, BPM, and build a full arrangement with chord progressions. I want to hear something playing in 30 seconds. Make all the decisions.",
+    category: "general",
   },
 ];
 
@@ -52,6 +54,7 @@ export function ChatPanel({
   decisionContext,
   apiKey,
   onGenerateArrangement,
+  onAddChordsToSequencer,
   sendMessageRef,
   className,
 }: ChatPanelProps) {
@@ -138,6 +141,11 @@ export function ChatPanel({
       };
       if (data.sections?.length) {
         onGenerateArrangement(data.sections);
+        // After arrangement is generated, auto-place chords in sequencer
+        // (small delay to allow sections to propagate through state)
+        if (onAddChordsToSequencer) {
+          setTimeout(() => onAddChordsToSequencer(), 500);
+        }
       }
     } catch (err) {
       addToast({
@@ -147,7 +155,7 @@ export function ChatPanel({
     } finally {
       setIsGenerating(false);
     }
-  }, [messages, onGenerateArrangement, isGenerating, apiKey, context, addToast]);
+  }, [messages, onGenerateArrangement, onAddChordsToSequencer, isGenerating, apiKey, context, addToast]);
 
   return (
     <div
@@ -192,9 +200,9 @@ export function ChatPanel({
         </div>
       )}
 
-      {/* Generate Arrangement from Chat */}
+      {/* Generate Arrangement from Chat + Add Chords to Sequencer */}
       {onGenerateArrangement && messages.length > 0 && !isStreaming && (
-        <div className="flex justify-center border-t border-neutral-800/50 px-4 py-2">
+        <div className="flex flex-col items-center gap-2 border-t border-neutral-800/50 px-4 py-2">
           <button
             onClick={handleGenerateArrangement}
             disabled={isGenerating}
@@ -212,6 +220,21 @@ export function ChatPanel({
             </svg>
             {isGenerating ? "Generating..." : "Generate Arrangement from Chat"}
           </button>
+
+          {/* Show "Add Chords to Sequencer" when sections with chords already exist */}
+          {onAddChordsToSequencer && context?.sections && context.sections.length > 0 &&
+            context.sections.some((s) => s.chordProgression?.length > 0) && (
+            <button
+              onClick={onAddChordsToSequencer}
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-300 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 5v14" />
+                <path d="M5 12h14" />
+              </svg>
+              Add Chords to Sequencer
+            </button>
+          )}
         </div>
       )}
 

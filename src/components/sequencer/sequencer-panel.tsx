@@ -105,8 +105,6 @@ export function SequencerPanel({
   const [pianoScrollY, setPianoScrollY] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Track list width and piano key width
-  const TRACK_LIST_WIDTH = 200;
   const PIANO_KEY_WIDTH = 64;
 
   // Measure container for dynamic roll dimensions

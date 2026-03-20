@@ -20,6 +20,7 @@ import { useToast } from "@/components/ui/toast-provider";
 import { Tooltip } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
+import { chordProgressionToNotes } from "@/lib/music/chord-to-notes";
 import type { ChatContext } from "@/lib/hooks/use-chat";
 import type { Bookmark, InstrumentType, Note, Section } from "@/lib/music/types";
 
@@ -146,6 +147,29 @@ export default function SessionWorkspacePage() {
   // ------- Chat sendMessage ref (so captures can send to chat) -------
   const chatSendRef = useRef<((msg: string) => void) | null>(null);
 
+  // ------- Auto-kickoff for fresh sessions -------
+  // When a user lands on a brand-new session (no sections, no notes),
+  // auto-send a kickoff message to the AI so they get immediate guidance.
+  const hasAutoKicked = useRef(false);
+  useEffect(() => {
+    if (
+      session &&
+      !hasAutoKicked.current &&
+      sections.length === 0 &&
+      contextNotes.length === 0 &&
+      chatSendRef.current
+    ) {
+      hasAutoKicked.current = true;
+      // Small delay so the UI renders first and the user sees something happening
+      const timer = setTimeout(() => {
+        chatSendRef.current?.(
+          "I just started a new session. Pick a genre, mood, and chord progression for me and build an arrangement I can use right away."
+        );
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [session, sections.length, contextNotes.length]);
+
   // ------- Tone.js player (uses sequencer notes, not empty context) -------
   const {
     isPlaying,
@@ -231,6 +255,34 @@ export default function SessionWorkspacePage() {
     },
     [addSections, addToast],
   );
+
+  // ------- Chord-to-sequencer handler -------
+  const handleAddChordsToSequencer = useCallback(() => {
+    if (sections.length === 0 || tracks.length === 0) {
+      addToast({ message: "No arrangement sections to add", variant: "default" });
+      return;
+    }
+
+    const trackId = tracks[0].id;
+    const chordNotes = chordProgressionToNotes(
+      sections,
+      trackId,
+      session?.bpm ?? 120,
+      session?.timeSignature ?? "4/4",
+    );
+
+    if (chordNotes.length === 0) {
+      addToast({ message: "No chords found in the arrangement", variant: "default" });
+      return;
+    }
+
+    sequencer.addBulkNotes(chordNotes);
+    addToast({
+      message: `${chordNotes.length} chord notes added to the sequencer`,
+      variant: "success",
+      duration: 3000,
+    });
+  }, [sections, tracks, session?.bpm, session?.timeSignature, sequencer, addToast]);
 
   // ------- Callbacks -------
   const handleBpmChange = useCallback(
@@ -431,6 +483,7 @@ export default function SessionWorkspacePage() {
               onDeleteSection={handleDeleteSection}
               onUpdateSection={handleUpdateSection}
               onRequestAIGenerate={handleRequestAIGenerate}
+              onAddChordsToSequencer={handleAddChordsToSequencer}
             />
             <SequencerPanel
               tracks={tracks}
@@ -463,6 +516,7 @@ export default function SessionWorkspacePage() {
               apiKey={apiKey}
               sendMessageRef={chatSendRef}
               onGenerateArrangement={handleGenerateArrangement}
+              onAddChordsToSequencer={handleAddChordsToSequencer}
               className="flex-1"
             />
             <div className="border-t border-neutral-800 p-3">
@@ -490,6 +544,7 @@ export default function SessionWorkspacePage() {
             apiKey={apiKey}
             sendMessageRef={chatSendRef}
             onGenerateArrangement={handleGenerateArrangement}
+            onAddChordsToSequencer={handleAddChordsToSequencer}
             className="min-h-0 flex-1"
           />
 
@@ -505,6 +560,7 @@ export default function SessionWorkspacePage() {
           <ArrangementPanel
             sections={sections}
             onAddSection={handleAddSection}
+            onAddChordsToSequencer={handleAddChordsToSequencer}
           />
 
           {/* Sequencer */}
