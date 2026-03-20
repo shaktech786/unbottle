@@ -101,7 +101,13 @@ export function SequencerPanel({
     tracks[0]?.id ?? null,
   );
   const [snap, setSnap] = useState<SnapValue>("1/16");
-  const [totalBars, setTotalBars] = useState(16);
+  // Auto-expand bars to fit notes (4 beats per bar, PPQ ticks per beat)
+  const maxNoteTick = notes.length > 0
+    ? Math.max(...notes.map((n) => n.startTick + n.durationTicks))
+    : 0;
+  const barsNeeded = Math.ceil(maxNoteTick / (4 * PPQ)) + 4; // +4 buffer bars
+  const [manualBars, setManualBars] = useState(16);
+  const totalBars = Math.max(manualBars, barsNeeded, 16);
   const [pianoScrollY, setPianoScrollY] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -204,10 +210,10 @@ export function SequencerPanel({
             type="number"
             value={totalBars}
             onChange={(e) =>
-              setTotalBars(Math.max(1, Math.min(64, Number(e.target.value))))
+              setManualBars(Math.max(1, Math.min(256, Number(e.target.value))))
             }
             min={1}
-            max={64}
+            max={256}
             className="w-12 h-7 rounded bg-slate-800 text-center text-xs text-slate-200 border border-slate-700 focus:border-indigo-500 outline-none"
           />
         </div>

@@ -18,7 +18,7 @@ interface ChatPanelProps {
   suggestions?: Suggestion[];
   decisionContext?: string;
   apiKey?: string | null;
-  onGenerateArrangement?: (sections: Omit<Section, "id" | "sessionId">[]) => void;
+  onGenerateArrangement?: (sections: Omit<Section, "id" | "sessionId">[], meta?: { key?: string; bpm?: number }) => void;
   /** Called when user wants to place chord notes into the sequencer */
   onAddChordsToSequencer?: () => void;
   /** Ref that parent can use to programmatically send messages */
@@ -138,9 +138,11 @@ export function ChatPanel({
 
       const data = (await res.json()) as {
         sections: Omit<Section, "id" | "sessionId">[];
+        key?: string;
+        bpm?: number;
       };
       if (data.sections?.length) {
-        onGenerateArrangement(data.sections);
+        onGenerateArrangement(data.sections, { key: data.key, bpm: data.bpm });
         // After arrangement is generated, auto-place chords in sequencer
         // (small delay to allow sections to propagate through state)
         if (onAddChordsToSequencer) {

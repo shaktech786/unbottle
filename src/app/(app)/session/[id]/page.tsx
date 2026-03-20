@@ -244,7 +244,16 @@ export default function SessionWorkspacePage() {
 
   // ------- Arrangement generation handler -------
   const handleGenerateArrangement = useCallback(
-    (newSections: Omit<Section, "id" | "sessionId">[]) => {
+    (newSections: Omit<Section, "id" | "sessionId">[], meta?: { key?: string; bpm?: number }) => {
+      // Apply key/BPM from arrangement generation to session
+      if (meta?.key) {
+        updateSession({ keySignature: meta.key });
+      }
+      if (meta?.bpm) {
+        updateSession({ bpm: meta.bpm });
+        setBpm(meta.bpm);
+      }
+
       void addSections(newSections).then(() => {
         addToast({
           message: `Arrangement generated -- ${newSections.length} section${newSections.length === 1 ? "" : "s"} added`,
@@ -253,7 +262,7 @@ export default function SessionWorkspacePage() {
         });
       });
     },
-    [addSections, addToast],
+    [addSections, addToast, updateSession, setBpm],
   );
 
   // ------- Chord-to-sequencer handler -------

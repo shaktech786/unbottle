@@ -96,7 +96,7 @@ export async function POST(request: Request) {
       .replace(/\s*```\s*$/m, "")
       .trim();
 
-    let parsed: { sections?: RawSection[]; suggestions?: string[] };
+    let parsed: { sections?: RawSection[]; suggestions?: string[]; key?: string; bpm?: number };
     try {
       parsed = JSON.parse(cleaned);
     } catch {
@@ -159,7 +159,12 @@ export async function POST(request: Request) {
         )
       : [];
 
-    return Response.json({ sections: sectionsWithStart, suggestions });
+    return Response.json({
+      sections: sectionsWithStart,
+      suggestions,
+      key: parsed.key,
+      bpm: parsed.bpm,
+    });
   } catch (err) {
     const errorMessage =
       err instanceof Error ? err.message : "Internal server error";
