@@ -4,15 +4,27 @@ import { useState } from "react";
 import type { Section } from "@/lib/music/types";
 import { SectionCard } from "./section-card";
 import { ChordDisplay } from "./chord-display";
+import { SectionQuickAdd } from "./section-quick-add";
 
 interface SectionTimelineProps {
   sections: Section[];
-  onAddSection?: () => void;
+  onAddSection: (section: Omit<Section, "id" | "sessionId">) => void;
+  onDeleteSection?: (sectionId: string) => void;
+  onUpdateSection?: (sectionId: string, updates: Partial<Section>) => void;
 }
 
-export function SectionTimeline({ sections, onAddSection }: SectionTimelineProps) {
+export function SectionTimeline({
+  sections,
+  onAddSection,
+  onDeleteSection,
+  onUpdateSection,
+}: SectionTimelineProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = sections.find((s) => s.id === selectedId);
+
+  const handleRename = (sectionId: string, name: string) => {
+    onUpdateSection?.(sectionId, { name });
+  };
 
   return (
     <div className="flex flex-col gap-3">
@@ -26,29 +38,16 @@ export function SectionTimeline({ sections, onAddSection }: SectionTimelineProps
             onClick={() =>
               setSelectedId(section.id === selectedId ? null : section.id)
             }
+            onDelete={onDeleteSection}
+            onRename={handleRename}
           />
         ))}
 
-        {/* Add Section button */}
-        <button
-          onClick={onAddSection}
-          className="flex h-[68px] w-[80px] shrink-0 flex-col items-center justify-center rounded-lg border border-dashed border-neutral-700 text-neutral-500 transition-colors duration-300 hover:border-neutral-600 hover:text-neutral-300"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          <span className="mt-1 text-[10px]">Add</span>
-        </button>
+        {/* Add Section quick-add */}
+        <SectionQuickAdd
+          existingSections={sections}
+          onAdd={onAddSection}
+        />
       </div>
 
       {/* Chord display for selected section */}
@@ -57,6 +56,9 @@ export function SectionTimeline({ sections, onAddSection }: SectionTimelineProps
           <div className="mb-2 flex items-center justify-between">
             <p className="text-xs font-medium text-neutral-300">
               {selected.name} — Chords
+            </p>
+            <p className="font-mono text-[10px] text-neutral-600">
+              {selected.chordProgression.length} chord{selected.chordProgression.length !== 1 ? "s" : ""}
             </p>
           </div>
           <ChordDisplay chordProgression={selected.chordProgression} />

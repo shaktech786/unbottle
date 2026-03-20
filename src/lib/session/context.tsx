@@ -20,6 +20,8 @@ interface SessionContextValue {
   notes: Note[];
   setNotes: (notes: Note[]) => void;
   addSections: (newSections: Omit<Section, "id" | "sessionId">[]) => Promise<void>;
+  deleteSection: (sectionId: string) => Promise<void>;
+  updateSection: (sectionId: string, updates: Partial<Omit<Section, "id" | "sessionId">>) => Promise<void>;
   isLoading: boolean;
   error: string | null;
   updateSession: (updates: Partial<Session>) => void;
@@ -133,6 +135,60 @@ export function SessionProvider({ sessionId, children }: SessionProviderProps) {
     [sessionId],
   );
 
+  const deleteSection = useCallback(
+    async (sectionId: string) => {
+      // Optimistic removal
+      setSections((prev) => prev.filter((s) => s.id !== sectionId));
+      try {
+        const res = await fetch(`/api/session/${sessionId}/sections`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sectionId }),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error ?? "Failed to delete section");
+        }
+      } catch (e) {
+        // Revert on failure by re-fetching
+        setError(e instanceof Error ? e.message : "Failed to delete section");
+        try {
+          const res = await fetch(`/api/session/${sessionId}/sections`);
+          if (res.ok) {
+            const data = (await res.json()) as { sections: Section[] };
+            setSections(data.sections);
+          }
+        } catch {
+          // Best effort revert
+        }
+      }
+    },
+    [sessionId],
+  );
+
+  const updateSection = useCallback(
+    async (sectionId: string, updates: Partial<Omit<Section, "id" | "sessionId">>) => {
+      // Optimistic update
+      setSections((prev) =>
+        prev.map((s) => (s.id === sectionId ? { ...s, ...updates } : s)),
+      );
+      try {
+        const res = await fetch(`/api/session/${sessionId}/sections`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sectionId, updates }),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error ?? "Failed to update section");
+        }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to update section");
+      }
+    },
+    [sessionId],
+  );
+
   // Flush on unmount
   useEffect(() => {
     return () => {
@@ -232,6 +288,8 @@ export function SessionProvider({ sessionId, children }: SessionProviderProps) {
         notes,
         setNotes,
         addSections,
+        deleteSection,
+        updateSection,
         isLoading,
         error,
         updateSession,

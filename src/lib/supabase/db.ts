@@ -328,6 +328,52 @@ export async function addSection(
   return mapSectionRow(inserted as SectionRow);
 }
 
+/**
+ * Delete a section by id. Returns true if deleted.
+ */
+export async function deleteSection(
+  client: SupabaseClient,
+  sectionId: string,
+): Promise<boolean> {
+  const { error, count } = await client
+    .from("sections")
+    .delete({ count: "exact" })
+    .eq("id", sectionId);
+
+  if (error) throw error;
+  return (count ?? 0) > 0;
+}
+
+/**
+ * Update a section by id. Returns updated section or null if not found.
+ */
+export async function updateSection(
+  client: SupabaseClient,
+  sectionId: string,
+  updates: Partial<Omit<Section, "id" | "sessionId">>,
+): Promise<Section | null> {
+  // Map camelCase fields to snake_case column names
+  const row: Record<string, unknown> = {};
+  if (updates.name !== undefined) row.name = updates.name;
+  if (updates.type !== undefined) row.type = updates.type;
+  if (updates.startBar !== undefined) row.start_bar = updates.startBar;
+  if (updates.lengthBars !== undefined) row.length_bars = updates.lengthBars;
+  if (updates.chordProgression !== undefined) row.chord_progression = updates.chordProgression;
+  if (updates.sortOrder !== undefined) row.sort_order = updates.sortOrder;
+  if (updates.color !== undefined) row.color = updates.color;
+
+  const { data, error } = await client
+    .from("sections")
+    .update(row)
+    .eq("id", sectionId)
+    .select("*")
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+  return mapSectionRow(data as SectionRow);
+}
+
 // ---------------------------------------------------------------------------
 // Chat Messages
 // ---------------------------------------------------------------------------

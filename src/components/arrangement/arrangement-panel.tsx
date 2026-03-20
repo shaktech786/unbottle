@@ -2,15 +2,22 @@
 
 import type { Section } from "@/lib/music/types";
 import { SectionTimeline } from "./section-timeline";
+import { SectionQuickAdd } from "./section-quick-add";
 
 interface ArrangementPanelProps {
   sections: Section[];
-  onAddSection?: () => void;
+  onAddSection: (section: Omit<Section, "id" | "sessionId">) => void;
+  onDeleteSection?: (sectionId: string) => void;
+  onUpdateSection?: (sectionId: string, updates: Partial<Section>) => void;
+  onRequestAIGenerate?: () => void;
 }
 
 export function ArrangementPanel({
   sections,
   onAddSection,
+  onDeleteSection,
+  onUpdateSection,
+  onRequestAIGenerate,
 }: ArrangementPanelProps) {
   return (
     <div className="flex flex-col rounded-xl border border-neutral-800 bg-neutral-900/30 p-4">
@@ -22,24 +29,68 @@ export function ArrangementPanel({
       </div>
 
       {sections.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-8">
+        <div className="flex flex-col items-center justify-center py-10">
+          {/* Empty state icon */}
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-neutral-800">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-neutral-500"
+            >
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <line x1="9" y1="3" x2="9" y2="21" />
+              <line x1="15" y1="3" x2="15" y2="21" />
+            </svg>
+          </div>
           <p className="text-sm text-neutral-400">
             Your arrangement starts here
           </p>
           <p className="mt-1 text-xs text-neutral-600">
-            Add a section to begin building your track.
+            Build your track structure section by section.
           </p>
-          {onAddSection && (
-            <button
-              onClick={onAddSection}
-              className="mt-3 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-medium text-white transition-colors duration-300 hover:bg-amber-400"
-            >
-              Add First Section
-            </button>
-          )}
+
+          {/* Two options */}
+          <div className="mt-5 flex items-center gap-3">
+            <SectionQuickAdd
+              existingSections={sections}
+              onAdd={onAddSection}
+              compact
+            />
+            {onRequestAIGenerate && (
+              <button
+                onClick={onRequestAIGenerate}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-xs font-medium text-neutral-300 transition-colors duration-200 hover:border-neutral-600 hover:text-neutral-100"
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                </svg>
+                Ask AI to Generate
+              </button>
+            )}
+          </div>
         </div>
       ) : (
-        <SectionTimeline sections={sections} onAddSection={onAddSection} />
+        <SectionTimeline
+          sections={sections}
+          onAddSection={onAddSection}
+          onDeleteSection={onDeleteSection}
+          onUpdateSection={onUpdateSection}
+        />
       )}
     </div>
   );

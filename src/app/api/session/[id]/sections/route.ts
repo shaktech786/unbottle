@@ -2,12 +2,16 @@ import { type NextRequest } from "next/server";
 import {
   getSections as getSectionsMemory,
   addSection as addSectionMemory,
+  deleteSection as deleteSectionMemory,
+  updateSection as updateSectionMemory,
 } from "@/lib/session/store";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/supabase/auth";
 import {
   getSections as getSectionsDB,
   addSection as addSectionDB,
+  deleteSection as deleteSectionDB,
+  updateSection as updateSectionDB,
 } from "@/lib/supabase/db";
 import type { Section } from "@/lib/music/types";
 
@@ -86,4 +90,93 @@ export async function POST(
     created.push(section);
   }
   return Response.json({ sections: created }, { status: 201 });
+}
+
+// DELETE /api/session/[id]/sections -- delete a section by sectionId in body
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  const body = (await request.json()) as { sectionId?: string };
+
+  if (!body.sectionId) {
+    return Response.json(
+      { error: "sectionId is required" },
+      { status: 400 },
+    );
+  }
+
+  if (supabaseConfigured) {
+    try {
+      const client = await createClient();
+      await requireAuth(client);
+      const deleted = await deleteSectionDB(client, body.sectionId);
+      if (!deleted) {
+        return Response.json({ error: "Section not found" }, { status: 404 });
+      }
+      return Response.json({ success: true });
+    } catch (err) {
+      if (err instanceof Error && err.message.includes("Not authenticated")) {
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      return Response.json(
+        { error: "Failed to delete section" },
+        { status: 500 },
+      );
+    }
+  }
+
+  // In-memory fallback
+  const deleted = deleteSectionMemory(id, body.sectionId);
+  if (!deleted) {
+    return Response.json({ error: "Section not found" }, { status: 404 });
+  }
+  return Response.json({ success: true });
+}
+
+// PATCH /api/session/[id]/sections -- update a section
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  const body = (await request.json()) as {
+    sectionId?: string;
+    updates?: Partial<Omit<Section, "id" | "sessionId">>;
+  };
+
+  if (!body.sectionId || !body.updates) {
+    return Response.json(
+      { error: "sectionId and updates are required" },
+      { status: 400 },
+    );
+  }
+
+  if (supabaseConfigured) {
+    try {
+      const client = await createClient();
+      await requireAuth(client);
+      const updated = await updateSectionDB(client, body.sectionId, body.updates);
+      if (!updated) {
+        return Response.json({ error: "Section not found" }, { status: 404 });
+      }
+      return Response.json({ section: updated });
+    } catch (err) {
+      if (err instanceof Error && err.message.includes("Not authenticated")) {
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      return Response.json(
+        { error: "Failed to update section" },
+        { status: 500 },
+      );
+    }
+  }
+
+  // In-memory fallback
+  const updated = updateSectionMemory(id, body.sectionId, body.updates);
+  if (!updated) {
+    return Response.json({ error: "Section not found" }, { status: 404 });
+  }
+  return Response.json({ section: updated });
 }

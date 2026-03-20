@@ -12,7 +12,7 @@ interface ChordDisplayProps {
 export function ChordDisplay({ chordProgression, className }: ChordDisplayProps) {
   if (chordProgression.length === 0) {
     return (
-      <p className={cn("text-xs italic text-slate-500", className)}>
+      <p className={cn("text-xs italic text-neutral-500", className)}>
         No chords yet
       </p>
     );
@@ -23,12 +23,12 @@ export function ChordDisplay({ chordProgression, className }: ChordDisplayProps)
       {chordProgression.map((event, i) => (
         <span
           key={i}
-          className="inline-flex items-center gap-1 rounded bg-slate-800 px-2 py-0.5 text-xs font-mono"
+          className="inline-flex items-center gap-1 rounded bg-neutral-800 px-2 py-0.5 text-xs font-mono"
         >
-          <span className="font-semibold text-indigo-300">
+          <span className="font-semibold text-amber-300">
             {chordToString(event.chord)}
           </span>
-          <span className="text-slate-500">
+          <span className="text-neutral-500">
             {event.durationBars}b
           </span>
         </span>

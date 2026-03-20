@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { useSessionContext } from "@/lib/session/context";
 import { TransportControls } from "@/components/sequencer/transport-controls";
 import { ArrangementPanel } from "@/components/arrangement/arrangement-panel";
@@ -43,6 +42,8 @@ export default function SessionWorkspacePage() {
     notes: contextNotes,
     setNotes: setContextNotes,
     addSections,
+    deleteSection,
+    updateSection,
     updateSession,
   } = useSessionContext();
 
@@ -245,8 +246,45 @@ export default function SessionWorkspacePage() {
     [updateSession],
   );
 
-  const handleAddSection = useCallback(() => {
-    // Sections are added via chat or arrangement panel actions
+  const handleAddSection = useCallback(
+    (section: Omit<Section, "id" | "sessionId">) => {
+      void addSections([section]).then(() => {
+        addToast({
+          message: `${section.name} added`,
+          variant: "success",
+          duration: 2000,
+        });
+      });
+    },
+    [addSections, addToast],
+  );
+
+  const handleDeleteSection = useCallback(
+    (sectionId: string) => {
+      const sectionName = sections.find((s) => s.id === sectionId)?.name ?? "Section";
+      void deleteSection(sectionId).then(() => {
+        addToast({
+          message: `${sectionName} removed`,
+          variant: "default",
+          duration: 2000,
+        });
+      });
+    },
+    [deleteSection, sections, addToast],
+  );
+
+  const handleUpdateSection = useCallback(
+    (sectionId: string, updates: Partial<Section>) => {
+      void updateSection(sectionId, updates);
+    },
+    [updateSection],
+  );
+
+  // Trigger "Ask AI to Generate" by sending a prompt to chat
+  const handleRequestAIGenerate = useCallback(() => {
+    if (chatSendRef.current) {
+      chatSendRef.current("Generate an arrangement for this track");
+    }
   }, []);
 
   const handlePlay = useCallback(() => {
@@ -378,6 +416,9 @@ export default function SessionWorkspacePage() {
             <ArrangementPanel
               sections={sections}
               onAddSection={handleAddSection}
+              onDeleteSection={handleDeleteSection}
+              onUpdateSection={handleUpdateSection}
+              onRequestAIGenerate={handleRequestAIGenerate}
             />
             <SequencerPanel
               tracks={tracks}

@@ -186,6 +186,28 @@ export function getSections(sessionId: string): Section[] {
   );
 }
 
+export function deleteSection(sessionId: string, sectionId: string): boolean {
+  const sections = sectionsBySession.get(sessionId);
+  if (!sections) return false;
+  const idx = sections.findIndex((s) => s.id === sectionId);
+  if (idx === -1) return false;
+  sections.splice(idx, 1);
+  return true;
+}
+
+export function updateSection(
+  sessionId: string,
+  sectionId: string,
+  updates: Partial<Omit<Section, "id" | "sessionId">>,
+): Section | undefined {
+  const sections = sectionsBySession.get(sessionId);
+  if (!sections) return undefined;
+  const idx = sections.findIndex((s) => s.id === sectionId);
+  if (idx === -1) return undefined;
+  sections[idx] = { ...sections[idx], ...updates };
+  return sections[idx];
+}
+
 // --- ChatMessage helpers ---
 
 export function addChatMessage(
