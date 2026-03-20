@@ -268,20 +268,9 @@ export default function SessionWorkspacePage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[#0a0a0a]">
-      {/* API key missing banners */}
-      {!apiKey && (
-        <div className="shrink-0 border-b border-amber-500/20 bg-amber-500/5 px-4 py-2">
-          <p className="text-xs text-amber-400">
-            Chat is offline -- add an API key in{" "}
-            <Link
-              href="/settings"
-              className="font-medium underline underline-offset-2 hover:text-amber-300"
-            >
-              Settings
-            </Link>
-          </p>
-        </div>
-      )}
+      {/* Chat/AI key errors are handled by ChatPanel's error banners,
+          which only show when requests actually fail — no preemptive banner
+          needed since the server may have its own key configured */}
 
       {/* Hyperfocus nudge (overlay at top) */}
       {shouldNudge && (
