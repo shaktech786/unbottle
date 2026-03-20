@@ -7,13 +7,13 @@ import type {
   Note,
   Section,
   SectionType,
-  InstrumentType,
   ChatMessage,
   CaptureData,
   Bookmark,
   ChordEvent,
   Pitch,
 } from "@/lib/music/types";
+import { normalizeInstrumentType } from "@/lib/music/types";
 
 // ---------------------------------------------------------------------------
 // DB row types (what Supabase returns)
@@ -135,7 +135,7 @@ export function mapTrackRow(row: TrackRow): Track {
     id: row.id,
     sessionId: row.session_id,
     name: row.name,
-    instrument: row.instrument as InstrumentType,
+    instrument: normalizeInstrumentType(row.instrument),
     volume: row.volume,
     pan: row.pan,
     muted: row.muted,

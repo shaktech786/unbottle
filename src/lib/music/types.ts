@@ -40,15 +40,49 @@ export interface Section {
 }
 
 export type InstrumentType =
-  | "synth"
-  | "am_synth"
-  | "fm_synth"
-  | "membrane_synth"
-  | "metal_synth"
-  | "mono_synth"
-  | "pluck_synth"
-  | "poly_synth"
-  | "sampler";
+  | "piano"
+  | "electric_piano"
+  | "bass_electric"
+  | "bass_synth"
+  | "guitar_acoustic"
+  | "guitar_electric"
+  | "strings"
+  | "pad"
+  | "organ"
+  | "brass"
+  | "flute"
+  | "saxophone"
+  | "drums"
+  | "synth";
+
+/**
+ * Legacy instrument types that may exist in the database.
+ * Maps old values to the closest new InstrumentType.
+ */
+const LEGACY_INSTRUMENT_MAP: Record<string, InstrumentType> = {
+  am_synth: "synth",
+  fm_synth: "electric_piano",
+  membrane_synth: "drums",
+  metal_synth: "drums",
+  mono_synth: "bass_synth",
+  pluck_synth: "guitar_acoustic",
+  poly_synth: "pad",
+  sampler: "piano",
+};
+
+/**
+ * Normalizes an instrument value from the DB (which may contain legacy types)
+ * into a valid current InstrumentType.
+ */
+export function normalizeInstrumentType(raw: string): InstrumentType {
+  const VALID_TYPES: Set<string> = new Set([
+    "piano", "electric_piano", "bass_electric", "bass_synth",
+    "guitar_acoustic", "guitar_electric", "strings", "pad",
+    "organ", "brass", "flute", "saxophone", "drums", "synth",
+  ]);
+  if (VALID_TYPES.has(raw)) return raw as InstrumentType;
+  return LEGACY_INSTRUMENT_MAP[raw] ?? "synth";
+}
 
 export interface Track {
   id: string;

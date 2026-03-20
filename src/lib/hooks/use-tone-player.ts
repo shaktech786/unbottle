@@ -14,6 +14,8 @@ export interface UseTonePlayerReturn {
   setPosition: (tick: number) => void;
   currentTick: number;
   isReady: boolean;
+  /** True while instrument samples are being downloaded */
+  isLoadingSamples: boolean;
 }
 
 /**
@@ -22,9 +24,12 @@ export interface UseTonePlayerReturn {
  * Manages Transport state, schedules notes for playback, and
  * reports the current playhead position.
  *
+ * Handles both sample-based instruments (Tone.Sampler) and basic synths.
+ * Exposes `isLoadingSamples` so the UI can show loading state.
+ *
  * @param notes - Array of notes to schedule
  * @param bpm - Initial tempo
- * @param instrumentType - Synth type for playback
+ * @param instrumentType - Instrument type for playback
  */
 export function useTonePlayer(
   notes: Note[],
@@ -36,12 +41,15 @@ export function useTonePlayer(
   const instrumentRef = useRef<any>(null);
   const scheduledIdsRef = useRef<number[]>([]);
   const rafRef = useRef<number>(0);
+  /** Track which instrument type is currently loaded to detect changes */
+  const loadedTypeRef = useRef<InstrumentType | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTick, setCurrentTick] = useState(0);
   const [isReady, setIsReady] = useState(false);
+  const [isLoadingSamples, setIsLoadingSamples] = useState(false);
 
-  // Load Tone.js lazily
+  // Load Tone.js and create the instrument
   useEffect(() => {
     let cancelled = false;
 
@@ -51,13 +59,51 @@ export function useTonePlayer(
       toneRef.current = Tone;
 
       const { createInstrument } = await import("@/lib/audio/tone-setup");
-      instrumentRef.current = await createInstrument(instrumentType);
+
+      // Dispose old instrument if switching types
+      if (
+        instrumentRef.current &&
+        loadedTypeRef.current !== instrumentType &&
+        instrumentRef.current.dispose
+      ) {
+        // Don't dispose -- it's cached by tone-setup. Just disconnect.
+        try {
+          instrumentRef.current.disconnect();
+        } catch {
+          // ignore if already disconnected
+        }
+        instrumentRef.current = null;
+      }
+
+      setIsLoadingSamples(true);
+
+      try {
+        const instrument = await createInstrument(
+          instrumentType,
+          (loading: boolean) => {
+            if (!cancelled) setIsLoadingSamples(loading);
+          },
+        );
+
+        if (cancelled) return;
+
+        instrumentRef.current = instrument;
+        loadedTypeRef.current = instrumentType;
+      } catch {
+        // On failure, fall back to basic synth
+        if (cancelled) return;
+        const fallback = new Tone.Synth().connect(Tone.getDestination());
+        instrumentRef.current = fallback;
+        loadedTypeRef.current = "synth";
+      }
+
+      setIsLoadingSamples(false);
 
       const transport = Tone.getTransport();
       transport.bpm.value = bpm;
       transport.PPQ = PPQ;
 
-      setIsReady(true);
+      if (!cancelled) setIsReady(true);
     }
 
     void init();
@@ -144,7 +190,7 @@ export function useTonePlayer(
 
   const play = useCallback(async () => {
     const Tone = toneRef.current;
-    if (!Tone) return;
+    if (!Tone || isLoadingSamples) return;
 
     // Ensure context is running (autoplay policy)
     await Tone.start();
@@ -155,7 +201,7 @@ export function useTonePlayer(
     transport.start();
     setIsPlaying(true);
     startPositionTracking();
-  }, [scheduleNotes, startPositionTracking]);
+  }, [scheduleNotes, startPositionTracking, isLoadingSamples]);
 
   const stop = useCallback(() => {
     const Tone = toneRef.current;
@@ -184,8 +230,13 @@ export function useTonePlayer(
         transport.stop();
         transport.cancel();
       }
-      if (instrumentRef.current?.dispose) {
-        instrumentRef.current.dispose();
+      // Disconnect (don't dispose -- cached instruments are reusable)
+      if (instrumentRef.current) {
+        try {
+          instrumentRef.current.disconnect();
+        } catch {
+          // ignore
+        }
       }
     };
   }, []);
@@ -198,5 +249,6 @@ export function useTonePlayer(
     setPosition,
     currentTick,
     isReady,
+    isLoadingSamples,
   };
 }

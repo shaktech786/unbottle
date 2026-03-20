@@ -3,31 +3,8 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils/cn";
 import type { InstrumentType, Track } from "@/lib/music/types";
+import { INSTRUMENT_LABELS, INSTRUMENT_OPTIONS } from "@/lib/audio/instruments";
 import { Slider } from "@/components/ui/slider";
-
-const INSTRUMENT_LABELS: Record<InstrumentType, string> = {
-  synth: "Synth",
-  am_synth: "AM Synth",
-  fm_synth: "FM Synth",
-  membrane_synth: "Membrane",
-  metal_synth: "Metal",
-  mono_synth: "Mono",
-  pluck_synth: "Pluck",
-  poly_synth: "Poly",
-  sampler: "Sampler",
-};
-
-const INSTRUMENT_OPTIONS: InstrumentType[] = [
-  "synth",
-  "am_synth",
-  "fm_synth",
-  "membrane_synth",
-  "metal_synth",
-  "mono_synth",
-  "pluck_synth",
-  "poly_synth",
-  "sampler",
-];
 
 export interface TrackRowProps {
   track: Track;

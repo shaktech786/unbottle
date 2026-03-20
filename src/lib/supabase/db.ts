@@ -12,7 +12,6 @@ import type {
   ChatMessage,
   CaptureData,
   Bookmark,
-  InstrumentType,
 } from "@/lib/music/types";
 import {
   mapSessionRow,
@@ -535,7 +534,7 @@ export async function branchSession(
   for (const track of originalTracks) {
     const newTrack = await addTrack(client, newSession.id, {
       name: track.name,
-      instrument: track.instrument as InstrumentType,
+      instrument: track.instrument,
       volume: track.volume,
       pan: track.pan,
       muted: track.muted,
