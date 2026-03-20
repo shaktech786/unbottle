@@ -21,7 +21,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 import type { ChatContext } from "@/lib/hooks/use-chat";
-import type { Bookmark, Note, Section } from "@/lib/music/types";
+import type { Bookmark, InstrumentType, Note, Section } from "@/lib/music/types";
 
 type MobileTab = "arrange" | "chat" | "capture";
 
@@ -44,6 +44,7 @@ export default function SessionWorkspacePage() {
     addSections,
     deleteSection,
     updateSection,
+    updateTrack,
     updateSession,
   } = useSessionContext();
 
@@ -287,6 +288,13 @@ export default function SessionWorkspacePage() {
     }
   }, []);
 
+  const handleTrackInstrumentChange = useCallback(
+    (trackId: string, instrument: InstrumentType) => {
+      updateTrack(trackId, { instrument });
+    },
+    [updateTrack],
+  );
+
   const handlePlay = useCallback(() => {
     void play();
   }, [play]);
@@ -432,6 +440,7 @@ export default function SessionWorkspacePage() {
               onMoveNote={sequencer.moveNote}
               onResizeNote={sequencer.resizeNote}
               selectedNotes={sequencer.selectedNotes}
+              onTrackInstrumentChange={handleTrackInstrumentChange}
               onPlay={handlePlay}
               onStop={stop}
               onSetBpm={handleBpmChange}
@@ -505,6 +514,7 @@ export default function SessionWorkspacePage() {
             onMoveNote={sequencer.moveNote}
             onResizeNote={sequencer.resizeNote}
             selectedNotes={sequencer.selectedNotes}
+            onTrackInstrumentChange={handleTrackInstrumentChange}
             onPlay={handlePlay}
             onStop={stop}
             onSetBpm={handleBpmChange}

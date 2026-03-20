@@ -101,6 +101,19 @@ export function addTrack(
   return track;
 }
 
+export function updateTrack(
+  trackId: string,
+  sessionId: string,
+  updates: Record<string, unknown>,
+): Track | undefined {
+  const sessionTracks = tracksBySession.get(sessionId);
+  if (!sessionTracks) return undefined;
+  const idx = sessionTracks.findIndex((t) => t.id === trackId);
+  if (idx === -1) return undefined;
+  sessionTracks[idx] = { ...sessionTracks[idx], ...updates } as Track;
+  return sessionTracks[idx];
+}
+
 export function getTracks(sessionId: string): Track[] {
   return tracksBySession.get(sessionId) ?? [];
 }

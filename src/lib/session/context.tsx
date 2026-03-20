@@ -22,6 +22,7 @@ interface SessionContextValue {
   addSections: (newSections: Omit<Section, "id" | "sessionId">[]) => Promise<void>;
   deleteSection: (sectionId: string) => Promise<void>;
   updateSection: (sectionId: string, updates: Partial<Omit<Section, "id" | "sessionId">>) => Promise<void>;
+  updateTrack: (trackId: string, updates: Partial<Track>) => void;
   isLoading: boolean;
   error: string | null;
   updateSession: (updates: Partial<Session>) => void;
@@ -93,6 +94,26 @@ export function SessionProvider({ sessionId, children }: SessionProviderProps) {
       setError(e instanceof Error ? e.message : "Failed to save");
     }
   }, [sessionId]);
+
+  const updateTrack = useCallback(
+    (trackId: string, updates: Partial<Track>) => {
+      // Optimistic update
+      setTracks((prev) =>
+        prev.map((t) => (t.id === trackId ? { ...t, ...updates } : t))
+      );
+
+      // Persist via API (fire-and-forget)
+      fetch(`/api/session/${sessionId}/tracks`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trackId, updates }),
+      }).catch(() => {
+        // Revert on failure — refetch
+        fetchSession();
+      });
+    },
+    [sessionId], // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   const updateSession = useCallback(
     (updates: Partial<Session>) => {
@@ -290,6 +311,7 @@ export function SessionProvider({ sessionId, children }: SessionProviderProps) {
         addSections,
         deleteSection,
         updateSection,
+        updateTrack,
         isLoading,
         error,
         updateSession,
