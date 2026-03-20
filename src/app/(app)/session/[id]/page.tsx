@@ -267,7 +267,7 @@ export default function SessionWorkspacePage() {
   ];
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-[#0a0a0a]">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[#0a0a0a]">
       {/* API key missing banners */}
       {!apiKey && (
         <div className="shrink-0 border-b border-amber-500/20 bg-amber-500/5 px-4 py-2">
@@ -438,18 +438,18 @@ export default function SessionWorkspacePage() {
       {/* Desktop workspace (3-column layout) */}
       <div className="hidden md:flex flex-1 overflow-hidden">
         {/* Left Panel: Chat */}
-        <div className="flex w-[380px] shrink-0 flex-col border-r border-neutral-800">
+        <div className="flex w-[380px] shrink-0 flex-col overflow-hidden border-r border-neutral-800">
           <ChatPanel
             sessionId={session.id}
             context={chatContext}
             apiKey={apiKey}
             sendMessageRef={chatSendRef}
             onGenerateArrangement={handleGenerateArrangement}
-            className="flex-1"
+            className="min-h-0 flex-1"
           />
 
           {/* Bookmarks section below chat */}
-          <div className="border-t border-neutral-800 p-3">
+          <div className="shrink-0 border-t border-neutral-800 p-3">
             <BookmarkList bookmarks={bookmarks} />
           </div>
         </div>

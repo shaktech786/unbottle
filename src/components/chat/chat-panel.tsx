@@ -152,7 +152,7 @@ export function ChatPanel({
   return (
     <div
       className={cn(
-        "flex h-full flex-col bg-neutral-950",
+        "flex flex-col overflow-hidden bg-neutral-950",
         className,
       )}
     >
