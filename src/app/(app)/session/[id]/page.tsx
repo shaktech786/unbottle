@@ -176,6 +176,7 @@ export default function SessionWorkspacePage() {
     play,
     stop,
     setBpm,
+    setPosition,
     currentTick,
   } = useTonePlayer(
     sequencer.notes,
@@ -511,6 +512,7 @@ export default function SessionWorkspacePage() {
               onClearAll={sequencer.clearAll}
               onPlay={handlePlay}
               onStop={stop}
+              onSetPlayhead={setPosition}
               onSetBpm={handleBpmChange}
               className="flex-1 min-h-[300px]"
             />
