@@ -20,6 +20,7 @@ export interface UseSequencerReturn {
   canUndo: boolean;
   canRedo: boolean;
   setNotes: (notes: Note[]) => void;
+  clearAll: () => void;
 }
 
 function generateId(): string {
@@ -184,6 +185,10 @@ export function useSequencer(initialNotes: Note[] = []): UseSequencerReturn {
     [applyNotes],
   );
 
+  const clearAll = useCallback(() => {
+    applyNotes([]);
+  }, [applyNotes]);
+
   return {
     notes,
     addNote,
@@ -201,5 +206,6 @@ export function useSequencer(initialNotes: Note[] = []): UseSequencerReturn {
     canUndo: history.index > 0,
     canRedo: history.index < history.stack.length - 1,
     setNotes,
+    clearAll,
   };
 }

@@ -77,7 +77,7 @@ export function TransportControls({
   );
 
   return (
-    <div className="flex h-14 shrink-0 items-center gap-2 border-b border-neutral-800/50 bg-[#0a0a0a] px-3 overflow-x-auto sm:gap-4 sm:px-4">
+    <div className="relative z-10 flex h-14 shrink-0 items-center gap-2 border-b border-neutral-800/50 bg-[#0a0a0a] px-3 overflow-x-auto sm:gap-4 sm:px-4">
       {/* Play/Stop group */}
       <div className="flex items-center gap-1.5">
         <button

@@ -62,6 +62,8 @@ export interface PianoRollProps {
   onClearSelection?: () => void;
   onMoveNote?: (noteId: string, newStartTick: number, newPitch: Pitch) => void;
   onResizeNote?: (noteId: string, newDuration: number) => void;
+  /** Called when vertical scroll changes so parent can sync PianoKeys */
+  onScrollY?: (scrollY: number) => void;
 
   className?: string;
 }
@@ -120,6 +122,7 @@ export function PianoRoll({
   onClearSelection,
   onMoveNote,
   onResizeNote,
+  onScrollY,
   className,
 }: PianoRollProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -144,6 +147,11 @@ export function PianoRoll({
     const targetY = c4Row * ROW_HEIGHT - (height ?? 400) / 2;
     return Math.max(0, targetY);
   });
+
+  // Notify parent when scrollY changes so PianoKeys stays aligned
+  useEffect(() => {
+    onScrollY?.(scrollY);
+  }, [scrollY, onScrollY]);
 
   const pitches = buildPitchList(minOctave, maxOctave);
   const totalRows = pitches.length;

@@ -62,6 +62,8 @@ export interface SequencerPanelProps {
   onStop?: () => void;
   onSetPlayhead?: (tick: number) => void;
   onSetBpm?: (bpm: number) => void;
+  /** Clear all notes */
+  onClearAll?: () => void;
 
   className?: string;
 }
@@ -90,6 +92,7 @@ export function SequencerPanel({
   onStop,
   onSetPlayhead,
   onSetBpm,
+  onClearAll,
   className,
 }: SequencerPanelProps) {
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(
@@ -97,6 +100,7 @@ export function SequencerPanel({
   );
   const [snap, setSnap] = useState<SnapValue>("1/16");
   const [totalBars, setTotalBars] = useState(16);
+  const [pianoScrollY, setPianoScrollY] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Track list width and piano key width
@@ -192,11 +196,22 @@ export function SequencerPanel({
           />
         </div>
 
-        {/* Playhead position */}
-        <div className="ml-auto text-xs font-mono text-slate-500">
-          {Math.floor(playheadTick / (PPQ * 4)) + 1}:
-          {(Math.floor(playheadTick / PPQ) % 4) + 1}:
-          {Math.floor((playheadTick % PPQ) / (PPQ / 4))}
+        {/* Clear + Playhead position */}
+        <div className="ml-auto flex items-center gap-3">
+          {onClearAll && (
+            <button
+              onClick={onClearAll}
+              className="h-7 rounded bg-neutral-800 px-2 text-[10px] font-medium text-neutral-400 transition-colors hover:bg-red-900/40 hover:text-red-400"
+              title="Clear all notes"
+            >
+              Clear
+            </button>
+          )}
+          <span className="text-xs font-mono text-slate-500">
+            {Math.floor(playheadTick / (PPQ * 4)) + 1}:
+            {(Math.floor(playheadTick / PPQ) % 4) + 1}:
+            {Math.floor((playheadTick % PPQ) / (PPQ / 4))}
+          </span>
         </div>
       </div>
 
@@ -236,6 +251,7 @@ export function SequencerPanel({
               rowHeight={14}
               onKeyClick={undefined}
               scaleNotes={scaleNotes}
+              scrollY={pianoScrollY}
             />
             <PianoRoll
               notes={notes}
@@ -253,6 +269,7 @@ export function SequencerPanel({
               onClearSelection={onClearSelection}
               onMoveNote={onMoveNote}
               onResizeNote={onResizeNote}
+              onScrollY={setPianoScrollY}
             />
           </div>
         </div>

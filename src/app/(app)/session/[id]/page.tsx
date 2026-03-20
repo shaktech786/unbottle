@@ -445,6 +445,7 @@ export default function SessionWorkspacePage() {
               onResizeNote={sequencer.resizeNote}
               selectedNotes={sequencer.selectedNotes}
               onTrackInstrumentChange={handleTrackInstrumentChange}
+              onClearAll={sequencer.clearAll}
               onPlay={handlePlay}
               onStop={stop}
               onSetBpm={handleBpmChange}
@@ -519,6 +520,7 @@ export default function SessionWorkspacePage() {
             onResizeNote={sequencer.resizeNote}
             selectedNotes={sequencer.selectedNotes}
             onTrackInstrumentChange={handleTrackInstrumentChange}
+            onClearAll={sequencer.clearAll}
             onPlay={handlePlay}
             onStop={stop}
             onSetBpm={handleBpmChange}
