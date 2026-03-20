@@ -34,7 +34,7 @@ export function Dialog({ open, onClose, title, children, className }: DialogProp
       ref={dialogRef}
       onClose={handleClose}
       className={cn(
-        "w-[calc(100%-2rem)] max-w-lg rounded-xl border border-slate-700 bg-slate-900 p-0 text-slate-50 shadow-2xl sm:w-full",
+        "w-[calc(100%-2rem)] max-w-lg rounded-xl border border-neutral-700 bg-neutral-900 p-0 text-neutral-50 shadow-2xl sm:w-full",
         "backdrop:bg-black/60 backdrop:backdrop-blur-sm",
         "open:animate-in open:fade-in-0 open:zoom-in-95",
         className,
@@ -43,11 +43,11 @@ export function Dialog({ open, onClose, title, children, className }: DialogProp
       <div className="p-4 sm:p-6">
         {title && (
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-50">{title}</h2>
+            <h2 className="text-lg font-semibold text-neutral-50">{title}</h2>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors"
+              className="rounded-md p-1 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-200 transition-colors"
               aria-label="Close"
             >
               <svg

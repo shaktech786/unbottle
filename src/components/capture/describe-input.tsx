@@ -69,7 +69,7 @@ export function DescribeInput({ onSubmit, className }: DescribeInputProps) {
 
       {/* Quick tags */}
       <div>
-        <span className="text-xs text-slate-500 mb-2 block">Quick tags</span>
+        <span className="text-xs text-neutral-500 mb-2 block">Quick tags</span>
         <div className="flex flex-wrap gap-1.5">
           {QUICK_TAGS.map((tag) => (
             <button
@@ -98,7 +98,7 @@ export function DescribeInput({ onSubmit, className }: DescribeInputProps) {
         Submit to AI
       </Button>
 
-      <p className="text-xs text-slate-600 text-center">
+      <p className="text-xs text-neutral-500 text-center">
         Cmd+Enter to submit
       </p>
     </div>

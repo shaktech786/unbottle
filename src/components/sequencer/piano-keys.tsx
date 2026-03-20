@@ -86,13 +86,13 @@ export function PianoKeys({
               type="button"
               onClick={() => handleKeyClick(pitch)}
               className={cn(
-                "flex w-full items-center border-b border-slate-800/50 transition-colors",
+                "flex w-full items-center border-b border-neutral-800/50 transition-colors",
                 "text-[10px] leading-none select-none",
                 isBlack
-                  ? "bg-slate-900 text-slate-500 hover:bg-slate-800"
-                  : "bg-slate-800/30 text-slate-400 hover:bg-slate-700/50",
-                isInScale && !isBlack && "bg-indigo-950/30",
-                isInScale && isBlack && "bg-indigo-950/50",
+                  ? "bg-neutral-900 text-neutral-500 hover:bg-neutral-800"
+                  : "bg-neutral-800/30 text-neutral-400 hover:bg-neutral-700/50",
+                isInScale && !isBlack && "bg-amber-950/30",
+                isInScale && isBlack && "bg-amber-950/50",
               )}
               style={{ height: rowHeight }}
               title={pitch}
@@ -102,7 +102,7 @@ export function PianoKeys({
               </span>
               {isBlack && (
                 <span
-                  className="ml-auto mr-1 h-[60%] w-6 rounded-sm bg-slate-700"
+                  className="ml-auto mr-1 h-[60%] w-6 rounded-sm bg-neutral-700"
                   aria-hidden="true"
                 />
               )}

@@ -18,8 +18,8 @@ export function ScrollArea({
         "overflow-y-auto",
         "[&::-webkit-scrollbar]:w-1.5",
         "[&::-webkit-scrollbar-track]:bg-transparent",
-        "[&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-700",
-        "[&::-webkit-scrollbar-thumb]:hover:bg-slate-600",
+        "[&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-neutral-700",
+        "[&::-webkit-scrollbar-thumb]:hover:bg-neutral-500",
         className,
       )}
       style={{ maxHeight, ...style }}

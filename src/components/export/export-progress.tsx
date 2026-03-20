@@ -54,12 +54,12 @@ export function ExportProgress({
   return (
     <div className={cn("flex flex-col items-center gap-2 py-2", className)}>
       {/* Spinner */}
-      <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-600 border-t-indigo-500" />
-      <span className="text-xs text-slate-400">Generating file...</span>
+      <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-500 border-t-amber-500" />
+      <span className="text-xs text-neutral-400">Generating file...</span>
 
       {/* Indeterminate progress bar */}
-      <div className="w-full h-1 rounded-full bg-slate-800 overflow-hidden">
-        <div className="h-full w-1/3 rounded-full bg-indigo-500 animate-pulse" />
+      <div className="w-full h-1 rounded-full bg-neutral-800 overflow-hidden">
+        <div className="h-full w-1/3 rounded-full bg-amber-500 animate-pulse" />
       </div>
     </div>
   );

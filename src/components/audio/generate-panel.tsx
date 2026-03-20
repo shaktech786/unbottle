@@ -123,7 +123,7 @@ export function GeneratePanel({
 
         {/* Prompt textarea */}
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="music-prompt" className="text-sm font-medium text-slate-300">
+          <label htmlFor="music-prompt" className="text-sm font-medium text-neutral-300">
             Prompt
           </label>
           <textarea
@@ -134,14 +134,14 @@ export function GeneratePanel({
             rows={3}
             disabled={isGenerating}
             className={cn(
-              "w-full resize-none rounded-lg border bg-slate-900 px-3 py-2 text-sm text-slate-50",
-              "border-slate-700 placeholder:text-slate-500",
-              "focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20",
+              "w-full resize-none rounded-lg border bg-neutral-900 px-3 py-2 text-sm text-neutral-50",
+              "border-neutral-700 placeholder:text-neutral-500",
+              "focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20",
               "disabled:cursor-not-allowed disabled:opacity-50",
             )}
           />
           {!promptOverride && (
-            <p className="text-[10px] text-slate-600">
+            <p className="text-[10px] text-neutral-500">
               Leave blank to use the auto-generated prompt from session context
             </p>
           )}
@@ -150,10 +150,10 @@ export function GeneratePanel({
         {/* Duration slider */}
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
-            <label htmlFor="duration-slider" className="text-sm font-medium text-slate-300">
+            <label htmlFor="duration-slider" className="text-sm font-medium text-neutral-300">
               Duration
             </label>
-            <span className="font-mono text-xs text-slate-400 tabular-nums">
+            <span className="font-mono text-xs text-neutral-400 tabular-nums">
               {duration}s
             </span>
           </div>
@@ -166,9 +166,9 @@ export function GeneratePanel({
             value={duration}
             onChange={(e) => setDuration(Number(e.target.value))}
             disabled={isGenerating}
-            className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-slate-700 accent-indigo-500"
+            className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-neutral-700 accent-amber-500"
           />
-          <div className="flex justify-between text-[10px] text-slate-600">
+          <div className="flex justify-between text-[10px] text-neutral-500">
             <span>5s</span>
             <span>120s</span>
           </div>
@@ -177,10 +177,10 @@ export function GeneratePanel({
         {/* Force Instrumental toggle */}
         <div className="flex items-center justify-between">
           <div>
-            <span className="text-sm font-medium text-slate-300">
+            <span className="text-sm font-medium text-neutral-300">
               Force Instrumental
             </span>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-neutral-500">
               Suppress vocal content in generated audio
             </p>
           </div>
@@ -192,9 +192,9 @@ export function GeneratePanel({
             disabled={isGenerating}
             className={cn(
               "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]",
               "disabled:cursor-not-allowed disabled:opacity-50",
-              forceInstrumental ? "bg-indigo-600" : "bg-slate-700",
+              forceInstrumental ? "bg-amber-500" : "bg-neutral-700",
             )}
           >
             <span
@@ -208,7 +208,7 @@ export function GeneratePanel({
 
         {/* Quick presets */}
         <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-300">Quick Generate</span>
+          <span className="text-sm font-medium text-neutral-300">Quick Generate</span>
           <div className="flex gap-2">
             {SECTION_PRESETS.map((preset) => (
               <Button

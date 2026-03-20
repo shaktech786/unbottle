@@ -50,9 +50,9 @@ export function TrackRow({
   return (
     <div
       className={cn(
-        "flex flex-col gap-1.5 border-b border-slate-800 px-3 py-2",
+        "flex flex-col gap-1.5 border-b border-neutral-800 px-3 py-2",
         "transition-colors cursor-pointer",
-        isSelected ? "bg-slate-800/60" : "bg-slate-900/30 hover:bg-slate-800/30",
+        isSelected ? "bg-neutral-800/60" : "bg-neutral-900/30 hover:bg-neutral-800/30",
         className,
       )}
       onClick={() => onSelect?.(track.id)}
@@ -79,13 +79,13 @@ export function TrackRow({
                 setEditName(track.name);
               }
             }}
-            className="flex-1 bg-transparent text-xs text-slate-200 border-b border-indigo-500 outline-none px-0 py-0"
+            className="flex-1 bg-transparent text-xs text-neutral-200 border-b border-amber-500 outline-none px-0 py-0"
             autoFocus
             onClick={(e) => e.stopPropagation()}
           />
         ) : (
           <span
-            className="flex-1 text-xs font-medium text-slate-300 truncate"
+            className="flex-1 text-xs font-medium text-neutral-300 truncate"
             onDoubleClick={handleNameDoubleClick}
           >
             {track.name}
@@ -103,7 +103,7 @@ export function TrackRow({
             "h-5 w-5 rounded text-[10px] font-bold transition-colors",
             track.muted
               ? "bg-red-600 text-white"
-              : "bg-slate-700 text-slate-400 hover:bg-slate-600",
+              : "bg-neutral-700 text-neutral-400 hover:bg-neutral-500",
           )}
           title="Mute"
         >
@@ -120,8 +120,8 @@ export function TrackRow({
           className={cn(
             "h-5 w-5 rounded text-[10px] font-bold transition-colors",
             track.solo
-              ? "bg-amber-500 text-slate-900"
-              : "bg-slate-700 text-slate-400 hover:bg-slate-600",
+              ? "bg-amber-500 text-neutral-900"
+              : "bg-neutral-700 text-neutral-400 hover:bg-neutral-500",
           )}
           title="Solo"
         >
@@ -138,7 +138,7 @@ export function TrackRow({
             onInstrumentChange?.(track.id, e.target.value as InstrumentType)
           }
           onClick={(e) => e.stopPropagation()}
-          className="h-5 flex-1 rounded bg-slate-800 text-[10px] text-slate-400 border-none outline-none cursor-pointer"
+          className="h-5 flex-1 rounded bg-neutral-800 text-[10px] text-neutral-400 border-none outline-none cursor-pointer"
         >
           {INSTRUMENT_OPTIONS.map((inst) => (
             <option key={inst} value={inst}>

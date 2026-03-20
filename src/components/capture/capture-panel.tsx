@@ -93,14 +93,14 @@ export function CapturePanel({
     return (
       <div
         className={cn(
-          "flex h-full w-12 flex-col items-center border-l border-slate-800 bg-slate-950 pt-4",
+          "flex h-full w-12 flex-col items-center border-l border-neutral-800 bg-[#0a0a0a] pt-4",
           className,
         )}
       >
         <button
           type="button"
           onClick={onToggleCollapse}
-          className="rounded-md p-2 text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors"
+          className="rounded-md p-2 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-200 transition-colors"
           aria-label="Expand capture panel"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -115,18 +115,18 @@ export function CapturePanel({
   return (
     <div
       className={cn(
-        "flex h-full w-80 flex-col border-l border-slate-800 bg-slate-950",
+        "flex h-full w-80 flex-col border-l border-neutral-800 bg-[#0a0a0a]",
         className,
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
-        <h2 className="text-sm font-semibold text-slate-200">Capture</h2>
+      <div className="flex items-center justify-between border-b border-neutral-800 px-4 py-3">
+        <h2 className="text-sm font-semibold text-neutral-200">Capture</h2>
         {onToggleCollapse && (
           <button
             type="button"
             onClick={onToggleCollapse}
-            className="rounded-md p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors"
+            className="rounded-md p-1 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-200 transition-colors"
             aria-label="Collapse panel"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -137,7 +137,7 @@ export function CapturePanel({
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-800">
+      <div className="flex border-b border-neutral-800">
         {tabs.map((tab) => (
           <button
             key={tab.key}
@@ -146,8 +146,8 @@ export function CapturePanel({
             className={cn(
               "flex-1 py-2.5 text-xs font-medium transition-colors",
               activeTab === tab.key
-                ? "border-b-2 border-indigo-500 text-indigo-400"
-                : "text-slate-400 hover:text-slate-200",
+                ? "border-b-2 border-amber-500 text-amber-400"
+                : "text-neutral-400 hover:text-neutral-200",
             )}
           >
             {tab.label}
@@ -186,22 +186,22 @@ export function CapturePanel({
         {/* Recent captures */}
         {captures.length > 0 && (
           <div className="mt-6">
-            <h3 className="mb-2 text-xs font-medium text-slate-500 uppercase tracking-wider">
+            <h3 className="mb-2 text-xs font-medium text-neutral-500 uppercase tracking-wider">
               Recent Captures
             </h3>
             <div className="space-y-2">
               {captures.slice(0, 10).map((cap) => (
                 <div
                   key={cap.id}
-                  className="rounded-lg border border-slate-800 bg-slate-900/50 px-3 py-2"
+                  className="rounded-lg border border-neutral-800 bg-neutral-900/50 px-3 py-2"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-slate-300">
+                    <span className="text-xs font-medium text-neutral-300">
                       {cap.type === "record" && "Audio Recording"}
                       {cap.type === "tap" && `Tap: ${cap.bpm} BPM`}
                       {cap.type === "describe" && "Text Description"}
                     </span>
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-neutral-500">
                       {cap.createdAt.toLocaleTimeString([], {
                         hour: "2-digit",
                         minute: "2-digit",
@@ -209,7 +209,7 @@ export function CapturePanel({
                     </span>
                   </div>
                   {cap.textDescription && (
-                    <p className="mt-1 text-xs text-slate-400 line-clamp-2">
+                    <p className="mt-1 text-xs text-neutral-400 line-clamp-2">
                       {cap.textDescription}
                     </p>
                   )}

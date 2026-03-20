@@ -16,8 +16,8 @@ export function BookmarkChip({ bookmark, isActive, onClick }: BookmarkChipProps)
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
         isActive
-          ? "border-indigo-500 bg-indigo-600/20 text-indigo-300"
-          : "border-slate-700 bg-slate-800/50 text-slate-300 hover:border-slate-600 hover:bg-slate-800",
+          ? "border-amber-500 bg-amber-500/20 text-amber-300"
+          : "border-neutral-700 bg-neutral-800/50 text-neutral-300 hover:border-neutral-500 hover:bg-neutral-800",
       )}
       title={bookmark.description ?? bookmark.label}
     >

@@ -92,15 +92,15 @@ export function ExportDialog({
     <Dialog open={open} onClose={handleClose} title="Export" className={className}>
       <div className="flex flex-col gap-4">
         {/* MIDI export */}
-        <div className="rounded-lg border border-slate-700 p-4">
+        <div className="rounded-lg border border-neutral-700 p-4">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <h3 className="text-sm font-medium text-slate-200">MIDI File</h3>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <h3 className="text-sm font-medium text-neutral-200">MIDI File</h3>
+              <p className="text-xs text-neutral-400 mt-0.5">
                 Standard MIDI file (.mid) compatible with any DAW
               </p>
             </div>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-slate-500">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-neutral-500">
               <rect x="2" y="3" width="20" height="18" rx="2" />
               <rect x="5" y="10" width="2" height="8" fill="currentColor" />
               <rect x="9" y="8" width="2" height="10" fill="currentColor" />
@@ -146,15 +146,15 @@ export function ExportDialog({
         </div>
 
         {/* AI Audio generation */}
-        <div className="rounded-lg border border-slate-700 p-4">
+        <div className="rounded-lg border border-neutral-700 p-4">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <h3 className="text-sm font-medium text-slate-200">AI Audio</h3>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <h3 className="text-sm font-medium text-neutral-200">AI Audio</h3>
+              <p className="text-xs text-neutral-400 mt-0.5">
                 Generate MP3 audio via ElevenLabs
               </p>
             </div>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-slate-500">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-neutral-500">
               <path d="M9 18V5l12-2v13" />
               <circle cx="6" cy="18" r="3" />
               <circle cx="18" cy="16" r="3" />
@@ -174,12 +174,12 @@ export function ExportDialog({
 
           {isAudioGenerating && (
             <div className="flex flex-col items-center gap-2 py-2">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-600 border-t-indigo-500" />
-              <span className="text-xs text-slate-400">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-500 border-t-amber-500" />
+              <span className="text-xs text-neutral-400">
                 {audioProgress || "Generating..."}
               </span>
-              <div className="w-full h-1 rounded-full bg-slate-800 overflow-hidden">
-                <div className="h-full w-1/3 rounded-full bg-indigo-500 animate-pulse" />
+              <div className="w-full h-1 rounded-full bg-neutral-800 overflow-hidden">
+                <div className="h-full w-1/3 rounded-full bg-amber-500 animate-pulse" />
               </div>
             </div>
           )}

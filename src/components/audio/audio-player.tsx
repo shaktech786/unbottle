@@ -82,7 +82,7 @@ export function AudioPlayer({
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className={cn("flex flex-col gap-2 rounded-lg border border-slate-700 bg-slate-800/50 p-3", className)}>
+    <div className={cn("flex flex-col gap-2 rounded-lg border border-neutral-700 bg-neutral-800/50 p-3", className)}>
       {/* Hidden audio element */}
       <audio ref={audioRef} src={src} preload="metadata" />
 
@@ -94,7 +94,7 @@ export function AudioPlayer({
             "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors",
             isPlaying
               ? "bg-red-500/20 text-red-400 hover:bg-red-500/30"
-              : "bg-indigo-600 text-white hover:bg-indigo-500",
+              : "bg-amber-500 text-white hover:bg-amber-500",
           )}
           aria-label={isPlaying ? "Pause" : "Play"}
         >
@@ -115,24 +115,24 @@ export function AudioPlayer({
           <div
             ref={progressRef}
             onClick={handleProgressClick}
-            className="h-1.5 w-full cursor-pointer rounded-full bg-slate-700"
+            className="h-1.5 w-full cursor-pointer rounded-full bg-neutral-700"
             role="progressbar"
             aria-valuenow={currentTime}
             aria-valuemin={0}
             aria-valuemax={duration}
           >
             <div
-              className="h-full rounded-full bg-indigo-500 transition-[width] duration-100"
+              className="h-full rounded-full bg-amber-500 transition-[width] duration-100"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
 
           {/* Time display */}
           <div className="flex justify-between">
-            <span className="font-mono text-[10px] text-slate-500 tabular-nums">
+            <span className="font-mono text-[10px] text-neutral-500 tabular-nums">
               {formatTime(currentTime)}
             </span>
-            <span className="font-mono text-[10px] text-slate-500 tabular-nums">
+            <span className="font-mono text-[10px] text-neutral-500 tabular-nums">
               {formatTime(duration)}
             </span>
           </div>
@@ -142,7 +142,7 @@ export function AudioPlayer({
         <a
           href={src}
           download={filename}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-700 hover:text-slate-200"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-700 hover:text-neutral-200"
           aria-label="Download"
         >
           <svg

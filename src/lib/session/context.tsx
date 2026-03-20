@@ -240,7 +240,7 @@ export function SessionProvider({ sessionId, children }: SessionProviderProps) {
       error.toLowerCase().includes("404");
 
     return (
-      <div className="flex h-full items-center justify-center bg-slate-950">
+      <div className="flex h-full items-center justify-center bg-[#0a0a0a]">
         <div className="mx-auto max-w-sm text-center">
           {/* Icon */}
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-500/10">
@@ -333,9 +333,9 @@ export function useSessionContext(): SessionContextValue {
 
 function SessionLoadingSkeleton() {
   return (
-    <div className="flex h-full flex-col bg-slate-950">
+    <div className="flex h-full flex-col bg-[#0a0a0a]">
       {/* Top bar skeleton */}
-      <div className="flex h-14 items-center gap-4 border-b border-slate-800 px-4">
+      <div className="flex h-14 items-center gap-4 border-b border-neutral-800 px-4">
         <Skeleton className="h-8 w-8 rounded-full" />
         <Skeleton className="h-6 w-24" />
         <Skeleton className="h-6 w-16" />
@@ -345,7 +345,7 @@ function SessionLoadingSkeleton() {
 
       <div className="flex flex-1">
         {/* Left panel skeleton */}
-        <div className="flex w-[380px] flex-col gap-3 border-r border-slate-800 p-4">
+        <div className="flex w-[380px] flex-col gap-3 border-r border-neutral-800 p-4">
           <Skeleton className="h-8 w-full" />
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-32 w-full" />
@@ -359,7 +359,7 @@ function SessionLoadingSkeleton() {
         </div>
 
         {/* Right panel skeleton */}
-        <div className="flex w-[320px] flex-col gap-3 border-l border-slate-800 p-4">
+        <div className="flex w-[320px] flex-col gap-3 border-l border-neutral-800 p-4">
           <Skeleton className="h-8 w-full" />
           <Skeleton className="h-48 w-full" />
         </div>

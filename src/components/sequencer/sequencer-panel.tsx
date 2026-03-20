@@ -10,7 +10,6 @@ import type {
   Track,
 } from "@/lib/music/types";
 import { PPQ } from "@/lib/music/types";
-import { Button } from "@/components/ui/button";
 import { PianoRoll } from "./piano-roll";
 import { PianoKeys } from "./piano-keys";
 import { Timeline } from "./timeline";
@@ -72,9 +71,7 @@ export interface SequencerPanelProps {
 export function SequencerPanel({
   tracks,
   notes,
-  bpm = 120,
   playheadTick = 0,
-  isPlaying = false,
   scaleNotes,
   onAddNote,
   onSelectNote,
@@ -90,10 +87,7 @@ export function SequencerPanel({
   onVolumeChange,
   onTrackNameChange,
   onTrackInstrumentChange,
-  onPlay,
-  onStop,
   onSetPlayhead,
-  onSetBpm,
   onClearAll,
   className,
 }: SequencerPanelProps) {
@@ -152,50 +146,19 @@ export function SequencerPanel({
     <div
       ref={containerRef}
       className={cn(
-        "flex flex-col border border-slate-800 rounded-xl bg-slate-950 overflow-hidden",
+        "flex flex-col border border-neutral-800 rounded-xl bg-[#0a0a0a] overflow-hidden",
         className,
       )}
     >
-      {/* Transport bar */}
-      <div className="flex items-center gap-3 border-b border-slate-800 px-4 py-2">
-        {/* Play/Stop */}
-        <Button
-          variant={isPlaying ? "danger" : "primary"}
-          size="sm"
-          onClick={isPlaying ? onStop : onPlay}
-        >
-          {isPlaying ? (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-              <rect x="6" y="4" width="12" height="16" rx="2" />
-            </svg>
-          ) : (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-              <polygon points="5,3 19,12 5,21" />
-            </svg>
-          )}
-          {isPlaying ? "Stop" : "Play"}
-        </Button>
-
-        {/* BPM */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs text-slate-500">BPM</span>
-          <input
-            type="number"
-            value={bpm}
-            onChange={(e) => onSetBpm?.(Number(e.target.value))}
-            min={20}
-            max={300}
-            className="w-14 h-7 rounded bg-slate-800 text-center text-xs text-slate-200 border border-slate-700 focus:border-indigo-500 outline-none"
-          />
-        </div>
-
+      {/* Toolbar */}
+      <div className="flex items-center gap-3 border-b border-neutral-800 px-4 py-2">
         {/* Snap */}
         <div className="flex items-center gap-1.5">
-          <span className="hidden sm:inline text-xs text-slate-500">Snap</span>
+          <span className="hidden sm:inline text-xs text-neutral-500">Snap</span>
           <select
             value={snap}
             onChange={(e) => setSnap(e.target.value as SnapValue)}
-            className="h-7 rounded bg-slate-800 text-xs text-slate-300 border border-slate-700 outline-none cursor-pointer"
+            className="h-7 rounded bg-neutral-800 text-xs text-neutral-300 border border-neutral-700 outline-none cursor-pointer"
           >
             <option value="1/4">1/4</option>
             <option value="1/8">1/8</option>
@@ -206,7 +169,7 @@ export function SequencerPanel({
 
         {/* Bars */}
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-slate-500">Bars</span>
+          <span className="text-xs text-neutral-500">Bars</span>
           <input
             type="number"
             value={totalBars}
@@ -215,7 +178,7 @@ export function SequencerPanel({
             }
             min={1}
             max={256}
-            className="w-12 h-7 rounded bg-slate-800 text-center text-xs text-slate-200 border border-slate-700 focus:border-indigo-500 outline-none"
+            className="w-12 h-7 rounded bg-neutral-800 text-center text-xs text-neutral-200 border border-neutral-700 focus:border-amber-500 outline-none"
           />
         </div>
 
@@ -230,7 +193,7 @@ export function SequencerPanel({
               Clear
             </button>
           )}
-          <span className="text-xs font-mono text-slate-500">
+          <span className="text-xs font-mono text-neutral-500">
             {Math.floor(playheadTick / (PPQ * 4)) + 1}:
             {(Math.floor(playheadTick / PPQ) % 4) + 1}:
             {Math.floor((playheadTick % PPQ) / (PPQ / 4))}

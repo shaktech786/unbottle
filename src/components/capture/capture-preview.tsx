@@ -45,12 +45,12 @@ export function CapturePreview({
   return (
     <div
       className={cn(
-        "rounded-xl border border-slate-700 bg-slate-900/80 p-4",
+        "rounded-xl border border-neutral-700 bg-neutral-900/80 p-4",
         className,
       )}
     >
       <div className="mb-3 flex items-center justify-between">
-        <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+        <h4 className="text-xs font-semibold text-neutral-300 uppercase tracking-wider">
           Preview
         </h4>
       </div>
@@ -73,8 +73,8 @@ export function CapturePreview({
           disabled={!audioUrl}
           className={cn(
             "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
-            "bg-indigo-600 text-white transition-colors",
-            "hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed",
+            "bg-amber-500 text-white transition-colors",
+            "hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed",
           )}
           aria-label={isPlaying ? "Pause" : "Play"}
         >
@@ -100,11 +100,11 @@ export function CapturePreview({
 
       {/* AI transcription */}
       {transcription && (
-        <div className="mb-3 rounded-lg bg-slate-800/50 p-2">
-          <span className="text-xs text-slate-500 block mb-1">
+        <div className="mb-3 rounded-lg bg-neutral-800/50 p-2">
+          <span className="text-xs text-neutral-500 block mb-1">
             AI Transcription
           </span>
-          <p className="text-xs text-slate-300">{transcription}</p>
+          <p className="text-xs text-neutral-300">{transcription}</p>
         </div>
       )}
 

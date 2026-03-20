@@ -34,8 +34,8 @@ export function Toggle({
         onClick={() => onChange(!checked)}
         className={cn(
           "relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950",
-          checked ? "bg-indigo-600" : "bg-slate-700",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]",
+          checked ? "bg-amber-500" : "bg-neutral-700",
         )}
       >
         <span
@@ -46,7 +46,7 @@ export function Toggle({
         />
       </button>
       {label && (
-        <span className="text-sm text-slate-300">{label}</span>
+        <span className="text-sm text-neutral-300">{label}</span>
       )}
     </label>
   );

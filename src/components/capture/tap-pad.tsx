@@ -106,16 +106,16 @@ export function TapPad({ onTempoConfirmed, className }: TapPadProps) {
         }}
         className={cn(
           "relative flex h-40 items-center justify-center overflow-hidden rounded-xl",
-          "border border-slate-700 bg-slate-900/80 select-none cursor-pointer",
-          "transition-colors hover:border-slate-600 active:bg-slate-800/80",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500",
+          "border border-neutral-700 bg-neutral-900/80 select-none cursor-pointer",
+          "transition-colors hover:border-neutral-500 active:bg-neutral-800/80",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500",
         )}
       >
         {/* Ripple animations */}
         {ripples.map((ripple) => (
           <span
             key={ripple.id}
-            className="absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 animate-ping rounded-full bg-indigo-400/40"
+            className="absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 animate-ping rounded-full bg-amber-400/40"
             style={{ left: ripple.x, top: ripple.y }}
           />
         ))}
@@ -123,17 +123,17 @@ export function TapPad({ onTempoConfirmed, className }: TapPadProps) {
         <div className="flex flex-col items-center gap-1 pointer-events-none">
           {bpm > 0 ? (
             <>
-              <span className="text-3xl font-bold text-slate-100 font-mono">
+              <span className="text-3xl font-bold text-stone-100 font-mono">
                 {bpm}
               </span>
-              <span className="text-xs text-slate-400">BPM</span>
+              <span className="text-xs text-neutral-400">BPM</span>
             </>
           ) : (
             <>
-              <span className="text-sm text-slate-400">
+              <span className="text-sm text-neutral-400">
                 Tap here to set tempo
               </span>
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-neutral-500">
                 {tapTimes.length > 0
                   ? `${tapTimes.length} tap${tapTimes.length > 1 ? "s" : ""}`
                   : "At least 3 taps needed"}
@@ -146,8 +146,8 @@ export function TapPad({ onTempoConfirmed, className }: TapPadProps) {
       {/* Confidence bar */}
       {bpm > 0 && (
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500 shrink-0">Confidence</span>
-          <div className="flex-1 h-1.5 rounded-full bg-slate-800 overflow-hidden">
+          <span className="text-xs text-neutral-500 shrink-0">Confidence</span>
+          <div className="flex-1 h-1.5 rounded-full bg-neutral-800 overflow-hidden">
             <div
               className={cn(
                 "h-full rounded-full transition-all duration-300",
@@ -164,7 +164,7 @@ export function TapPad({ onTempoConfirmed, className }: TapPadProps) {
       )}
 
       {/* Tap count */}
-      <div className="text-center text-xs text-slate-500">
+      <div className="text-center text-xs text-neutral-500">
         {tapTimes.length} tap{tapTimes.length !== 1 ? "s" : ""}
       </div>
 

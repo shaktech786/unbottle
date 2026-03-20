@@ -34,10 +34,10 @@ export default function Error({
           <line x1="12" x2="12.01" y1="16" y2="16" />
         </svg>
       </div>
-      <h1 className="text-2xl font-semibold text-slate-50">
+      <h1 className="text-2xl font-semibold text-neutral-50">
         Something went wrong
       </h1>
-      <p className="max-w-sm text-slate-400">
+      <p className="max-w-sm text-neutral-400">
         An unexpected error occurred. You can try again or head back to the home
         page.
       </p>

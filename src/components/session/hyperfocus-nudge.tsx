@@ -45,7 +45,7 @@ export function HyperfocusNudge({
           <p className="text-sm font-medium text-amber-200">
             You&apos;ve been in the zone for {elapsedMinutes} minutes
           </p>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-neutral-400">
             Want to take a step back and listen to what you&apos;ve got?
           </p>
           <div className="mt-3 flex gap-2">
@@ -59,7 +59,7 @@ export function HyperfocusNudge({
             )}
             <button
               onClick={onDismiss}
-              className="rounded-lg px-3 py-1 text-xs text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+              className="rounded-lg px-3 py-1 text-xs text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-200"
             >
               Keep going
             </button>

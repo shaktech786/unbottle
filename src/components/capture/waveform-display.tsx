@@ -52,11 +52,11 @@ export function WaveformDisplay({
 
       analyserNode.getByteTimeDomainData(dataArray);
 
-      ctx2.fillStyle = "rgba(15, 23, 42, 1)"; // slate-950
+      ctx2.fillStyle = "rgba(10, 10, 10, 1)"; // neutral-950
       ctx2.fillRect(0, 0, canvas.width, canvas.height);
 
       ctx2.lineWidth = 2;
-      ctx2.strokeStyle = "#6366f1"; // indigo-500
+      ctx2.strokeStyle = "#f59e0b"; // amber-500
       ctx2.beginPath();
 
       const sliceWidth = canvas.width / bufferLength;
@@ -101,10 +101,10 @@ export function WaveformDisplay({
         const data = audioBuffer.getChannelData(0);
         const step = Math.ceil(data.length / canvas.width);
 
-        ctx.fillStyle = "rgba(15, 23, 42, 1)";
+        ctx.fillStyle = "rgba(10, 10, 10, 1)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        ctx.fillStyle = "#6366f1";
+        ctx.fillStyle = "#f59e0b";
         const mid = canvas.height / 2;
 
         for (let i = 0; i < canvas.width; i++) {
@@ -127,9 +127,9 @@ export function WaveformDisplay({
         }
       } catch {
         // If decoding fails, draw a flat line
-        ctx.fillStyle = "rgba(15, 23, 42, 1)";
+        ctx.fillStyle = "rgba(10, 10, 10, 1)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.strokeStyle = "#334155";
+        ctx.strokeStyle = "#404040";
         ctx.beginPath();
         ctx.moveTo(0, canvas.height / 2);
         ctx.lineTo(canvas.width, canvas.height / 2);
@@ -151,9 +151,9 @@ export function WaveformDisplay({
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
-      ctx.fillStyle = "rgba(15, 23, 42, 1)";
+      ctx.fillStyle = "rgba(10, 10, 10, 1)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.strokeStyle = "#334155";
+      ctx.strokeStyle = "#404040";
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
       ctx.moveTo(0, canvas.height / 2);

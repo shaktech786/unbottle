@@ -16,7 +16,7 @@ export const Slider = forwardRef<HTMLInputElement, SliderProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="text-sm font-medium text-slate-300"
+            className="text-sm font-medium text-neutral-300"
           >
             {label}
           </label>
@@ -26,14 +26,14 @@ export const Slider = forwardRef<HTMLInputElement, SliderProps>(
           id={inputId}
           type="range"
           className={cn(
-            "h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-700",
+            "h-2 w-full cursor-pointer appearance-none rounded-full bg-neutral-700",
             "[&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4",
             "[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full",
-            "[&::-webkit-slider-thumb]:bg-indigo-500 [&::-webkit-slider-thumb]:shadow-md",
-            "[&::-webkit-slider-thumb]:transition-colors [&::-webkit-slider-thumb]:hover:bg-indigo-400",
+            "[&::-webkit-slider-thumb]:bg-amber-500 [&::-webkit-slider-thumb]:shadow-md",
+            "[&::-webkit-slider-thumb]:transition-colors [&::-webkit-slider-thumb]:hover:bg-amber-400",
             "[&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4",
             "[&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0",
-            "[&::-moz-range-thumb]:bg-indigo-500 [&::-moz-range-thumb]:shadow-md",
+            "[&::-moz-range-thumb]:bg-amber-500 [&::-moz-range-thumb]:shadow-md",
             "disabled:cursor-not-allowed disabled:opacity-50",
             className,
           )}

@@ -56,7 +56,7 @@ export function RecordButton({
         onClick={handleClick}
         className={cn(
           "relative flex h-20 w-20 items-center justify-center rounded-full transition-all",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]",
           isRecording
             ? "bg-red-600 shadow-lg shadow-red-600/30"
             : "bg-red-600/80 hover:bg-red-600 hover:shadow-lg hover:shadow-red-600/20",
@@ -95,7 +95,7 @@ export function RecordButton({
 
       {/* Status text */}
       {!isRecording && !error && (
-        <span className="text-xs text-slate-500">
+        <span className="text-xs text-neutral-500">
           {permissionState === "denied"
             ? "Microphone access denied"
             : "Tap to record"}

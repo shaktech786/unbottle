@@ -67,7 +67,7 @@ export function NoteGrid({
     ctx.scale(dpr, dpr);
 
     // Clear
-    ctx.fillStyle = "#0f172a"; // slate-950
+    ctx.fillStyle = "#0a0a0a"; // neutral-950
     ctx.fillRect(0, 0, width, height);
 
     // Draw row backgrounds
@@ -81,20 +81,20 @@ export function NoteGrid({
       const isScaleNote = scaleNotes?.has(noteName);
 
       if (isScaleNote) {
-        ctx.fillStyle = isBlackKey ? "#1e1b4b" : "#1e1b4b80"; // indigo-950 variants
+        ctx.fillStyle = isBlackKey ? "#451a0380" : "#451a0340"; // amber-950 variants
       } else {
-        ctx.fillStyle = isBlackKey ? "#0f172a" : "#0f172a80"; // slate-950 variants
+        ctx.fillStyle = isBlackKey ? "#0a0a0a" : "#0a0a0a80"; // neutral-950 variants
       }
 
       // Slightly lighter for black keys to visually distinguish
       if (isBlackKey && !isScaleNote) {
-        ctx.fillStyle = "#020617"; // slate-950 darker
+        ctx.fillStyle = "#050505"; // neutral-950 darker
       }
 
       ctx.fillRect(0, y, width, rowHeight);
 
       // Horizontal row divider
-      ctx.strokeStyle = "#1e293b40"; // slate-800 semi-transparent
+      ctx.strokeStyle = "#26262640"; // neutral-800 semi-transparent
       ctx.lineWidth = 0.5;
       ctx.beginPath();
       ctx.moveTo(0, y + rowHeight);
@@ -114,13 +114,13 @@ export function NoteGrid({
       const isBeat = tick % ticksPerBeat === 0;
 
       if (isBar) {
-        ctx.strokeStyle = "#334155"; // slate-700
+        ctx.strokeStyle = "#404040"; // neutral-700
         ctx.lineWidth = 1;
       } else if (isBeat) {
-        ctx.strokeStyle = "#1e293b"; // slate-800
+        ctx.strokeStyle = "#262626"; // neutral-800
         ctx.lineWidth = 0.75;
       } else {
-        ctx.strokeStyle = "#1e293b60"; // slate-800 semi-transparent
+        ctx.strokeStyle = "#26262660"; // neutral-800 semi-transparent
         ctx.lineWidth = 0.5;
       }
 

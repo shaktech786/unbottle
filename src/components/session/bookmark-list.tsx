@@ -12,9 +12,9 @@ interface BookmarkListProps {
 export function BookmarkList({ bookmarks, activeId, onSelect }: BookmarkListProps) {
   if (bookmarks.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-slate-800 p-4 text-center">
-        <p className="text-xs text-slate-500">No bookmarks yet</p>
-        <p className="mt-1 text-[10px] text-slate-600">
+      <div className="rounded-lg border border-dashed border-neutral-800 p-4 text-center">
+        <p className="text-xs text-neutral-500">No bookmarks yet</p>
+        <p className="mt-1 text-[10px] text-neutral-500">
           Save your place when you step away.
         </p>
       </div>
@@ -23,7 +23,7 @@ export function BookmarkList({ bookmarks, activeId, onSelect }: BookmarkListProp
 
   return (
     <div className="flex flex-col gap-2">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+      <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
         Bookmarks
       </h3>
       <div className="flex flex-wrap gap-1.5">

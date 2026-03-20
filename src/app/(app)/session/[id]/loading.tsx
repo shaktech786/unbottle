@@ -2,9 +2,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function SessionLoading() {
   return (
-    <div className="flex h-full flex-col bg-slate-950">
+    <div className="flex h-full flex-col bg-[#0a0a0a]">
       {/* Transport bar skeleton */}
-      <div className="flex h-14 items-center gap-4 border-b border-slate-800 px-4">
+      <div className="flex h-14 items-center gap-4 border-b border-neutral-800 px-4">
         <Skeleton className="h-10 w-10 rounded-full" />
         <Skeleton className="h-6 w-px" />
         <Skeleton className="h-8 w-20" />
@@ -18,7 +18,7 @@ export default function SessionLoading() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Chat panel skeleton */}
-        <div className="flex w-[380px] shrink-0 flex-col gap-3 border-r border-slate-800 p-4">
+        <div className="flex w-[380px] shrink-0 flex-col gap-3 border-r border-neutral-800 p-4">
           <Skeleton className="h-8 w-full" />
           <div className="flex flex-1 flex-col gap-2">
             <Skeleton className="h-16 w-3/4" />
@@ -35,7 +35,7 @@ export default function SessionLoading() {
         </div>
 
         {/* Right panel skeleton */}
-        <div className="flex w-[320px] shrink-0 flex-col gap-3 border-l border-slate-800 p-4">
+        <div className="flex w-[320px] shrink-0 flex-col gap-3 border-l border-neutral-800 p-4">
           <Skeleton className="h-8 w-full" />
           <Skeleton className="h-48 w-full rounded-xl" />
         </div>

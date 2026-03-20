@@ -39,17 +39,17 @@ export function TrackList({
   return (
     <div
       className={cn(
-        "flex flex-col border-r border-slate-800 bg-slate-950",
+        "flex flex-col border-r border-neutral-800 bg-[#0a0a0a]",
         className,
       )}
       style={{ width: 200 }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-800 px-3 py-2">
-        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+      <div className="flex items-center justify-between border-b border-neutral-800 px-3 py-2">
+        <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">
           Tracks
         </span>
-        <span className="text-xs text-slate-600">{tracks.length}</span>
+        <span className="text-xs text-neutral-500">{tracks.length}</span>
       </div>
 
       {/* Track rows */}
@@ -69,14 +69,14 @@ export function TrackList({
         ))}
 
         {tracks.length === 0 && (
-          <div className="p-4 text-center text-xs text-slate-600">
+          <div className="p-4 text-center text-xs text-neutral-500">
             No tracks yet
           </div>
         )}
       </ScrollArea>
 
       {/* Add track button */}
-      <div className="border-t border-slate-800 p-2">
+      <div className="border-t border-neutral-800 p-2">
         <Button
           variant="ghost"
           size="sm"

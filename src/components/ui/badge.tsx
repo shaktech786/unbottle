@@ -9,10 +9,10 @@ export type BadgeProps = {
 };
 
 const variantClasses: Record<BadgeVariant, string> = {
-  default: "bg-slate-700 text-slate-200",
+  default: "bg-neutral-700 text-neutral-200",
   success: "bg-emerald-900/60 text-emerald-300 border-emerald-800",
   warning: "bg-amber-900/60 text-amber-300 border-amber-800",
-  info: "bg-indigo-900/60 text-indigo-300 border-indigo-800",
+  info: "bg-amber-900/60 text-amber-300 border-amber-800",
 };
 
 export function Badge({ variant = "default", className, children }: BadgeProps) {
