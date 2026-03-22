@@ -5,7 +5,7 @@
  */
 export function WorkspacePreview() {
   return (
-    <div className="relative rounded-2xl border border-white/5 bg-surface/80 p-3 sm:p-4 backdrop-blur-sm shadow-[0_0_60px_rgba(245,158,11,0.04)]">
+    <div className="relative rounded-2xl border border-white/10 bg-white/[0.04] p-3 sm:p-4 backdrop-blur-sm shadow-[0_0_60px_rgba(245,158,11,0.08)]">
       {/* Window chrome */}
       <div className="flex items-center gap-2 mb-3 sm:mb-4">
         <div className="h-2.5 w-2.5 rounded-full bg-white/10" />
@@ -17,7 +17,7 @@ export function WorkspacePreview() {
       {/* Two-column layout suggestion */}
       <div className="flex gap-3 sm:gap-4 min-h-[200px] sm:min-h-[280px]">
         {/* Chat/conversation panel */}
-        <div className="flex-1 rounded-xl bg-surface-raised/80 border border-white/[0.03] p-3 sm:p-4 flex flex-col gap-3">
+        <div className="flex-1 rounded-xl bg-white/[0.03] border border-white/[0.06] p-3 sm:p-4 flex flex-col gap-3">
           {/* User message */}
           <div className="self-end max-w-[75%]">
             <div className="rounded-lg bg-amber-glow/10 border border-amber-glow/10 px-3 py-2">
@@ -52,7 +52,7 @@ export function WorkspacePreview() {
         </div>
 
         {/* Arrangement/tracks panel */}
-        <div className="flex-1 rounded-xl bg-surface-raised/80 border border-white/[0.03] p-3 sm:p-4 flex flex-col gap-2">
+        <div className="flex-1 rounded-xl bg-white/[0.03] border border-white/[0.06] p-3 sm:p-4 flex flex-col gap-2">
           {/* Track labels */}
           <div className="flex items-center gap-2 mb-1">
             <div className="h-2 w-10 rounded-full bg-white/8" />

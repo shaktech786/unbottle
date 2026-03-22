@@ -18,9 +18,16 @@ export interface UseChatOptions {
   sessionId: string;
   context?: ChatContext;
   apiKey?: string | null;
+  onAction?: (action: ChatAction) => void;
 }
 
 export type ChatErrorType = "auth" | "network" | "server" | null;
+
+/** An action the AI wants to perform on the workspace */
+export interface ChatAction {
+  toolName: string;
+  toolInput: Record<string, unknown>;
+}
 
 export interface UseChatReturn {
   messages: ChatMessage[];
@@ -28,20 +35,20 @@ export interface UseChatReturn {
   isStreaming: boolean;
   clearMessages: () => void;
   isLoadingHistory: boolean;
-  /** The most recent error type, or null if no error. Resets on next successful send. */
   chatError: ChatErrorType;
 }
 
 interface SSEEvent {
-  type: "token" | "done" | "error";
+  type: "token" | "done" | "error" | "action";
   content?: string;
+  toolName?: string;
+  toolInput?: Record<string, unknown>;
 }
 
 function createId(): string {
   return `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-// Persist a completed message pair to the server
 async function persistMessages(sessionId: string, userMsg: ChatMessage, assistantMsg: ChatMessage) {
   try {
     await fetch(`/api/session/${sessionId}/messages`, {
@@ -50,18 +57,19 @@ async function persistMessages(sessionId: string, userMsg: ChatMessage, assistan
       body: JSON.stringify({ messages: [userMsg, assistantMsg] }),
     });
   } catch {
-    // Non-critical — messages are still in client state
+    // Non-critical
   }
 }
 
-export function useChat({ sessionId, context, apiKey }: UseChatOptions): UseChatReturn {
+export function useChat({ sessionId, context, apiKey, onAction }: UseChatOptions): UseChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [chatError, setChatError] = useState<ChatErrorType>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const onActionRef = useRef(onAction);
+  onActionRef.current = onAction;
 
-  // Load chat history on mount
   useEffect(() => {
     let cancelled = false;
     setIsLoadingHistory(true);
@@ -87,7 +95,6 @@ export function useChat({ sessionId, context, apiKey }: UseChatOptions): UseChat
     async (content: string) => {
       if (!content.trim() || isStreaming) return;
 
-      // Abort any in-flight request
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
@@ -114,9 +121,6 @@ export function useChat({ sessionId, context, apiKey }: UseChatOptions): UseChat
       setChatError(null);
 
       try {
-        // Build conversation history from prior messages (exclude the
-        // placeholder assistant message we just appended). Limit to
-        // the last 20 messages to stay within token budgets.
         const priorMessages = messages
           .filter((m) => m.role === "user" || (m.role === "assistant" && m.content))
           .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
@@ -139,10 +143,9 @@ export function useChat({ sessionId, context, apiKey }: UseChatOptions): UseChat
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => null);
-          // Classify error type for the UI
           if (response.status === 401 || response.status === 403) {
             setChatError("auth");
-            throw new Error("AI chat requires an API key. Add one in Settings.");
+            throw new Error("AI is not available right now.");
           } else if (response.status >= 500) {
             setChatError("server");
             throw new Error("Something went wrong. Try again.");
@@ -167,8 +170,6 @@ export function useChat({ sessionId, context, apiKey }: UseChatOptions): UseChat
 
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split("\n");
-
-          // Keep the last incomplete line in the buffer
           buffer = lines.pop() ?? "";
 
           for (const line of lines) {
@@ -192,6 +193,12 @@ export function useChat({ sessionId, context, apiKey }: UseChatOptions): UseChat
                     : msg,
                 ),
               );
+            } else if (event.type === "action" && event.toolName) {
+              // AI is calling a tool — dispatch to parent
+              onActionRef.current?.({
+                toolName: event.toolName,
+                toolInput: event.toolInput ?? {},
+              });
             } else if (event.type === "error") {
               setMessages((prev) =>
                 prev.map((msg) =>
@@ -208,7 +215,6 @@ export function useChat({ sessionId, context, apiKey }: UseChatOptions): UseChat
           }
         }
 
-        // Persist both messages to server after stream completes
         if (fullContent) {
           const finalAssistant = { ...assistantMessage, content: fullContent };
           persistMessages(sessionId, userMessage, finalAssistant);
@@ -216,16 +222,12 @@ export function useChat({ sessionId, context, apiKey }: UseChatOptions): UseChat
       } catch (err) {
         if ((err as Error).name === "AbortError") return;
 
-        // Classify network-level failures (TypeError: Failed to fetch)
         if (
           err instanceof TypeError &&
           (err.message.includes("fetch") || err.message.includes("network") || err.message === "Failed to fetch")
         ) {
           setChatError("network");
         } else {
-          // If we already set a specific error type (auth/server) in the response
-          // handler above, setChatError was already called -- this covers the
-          // generic catch case.
           setChatError((prev) => prev ?? "server");
         }
 

@@ -15,14 +15,13 @@ import { useTonePlayer } from "@/lib/hooks/use-tone-player";
 import { useSequencer } from "@/lib/hooks/use-sequencer";
 import { useHyperfocusGuard } from "@/lib/hooks/use-hyperfocus-guard";
 import { useApiKey } from "@/lib/hooks/use-api-key";
-import { useElevenLabsKey } from "@/lib/hooks/use-elevenlabs-key";
 import { useToast } from "@/components/ui/toast-provider";
 import { Tooltip } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 import { chordProgressionToNotes } from "@/lib/music/chord-to-notes";
-import type { ChatContext } from "@/lib/hooks/use-chat";
-import type { Bookmark, InstrumentType, Note, Section } from "@/lib/music/types";
+import type { ChatAction, ChatContext } from "@/lib/hooks/use-chat";
+import type { Bookmark, InstrumentType, Note, Section, SectionType, ChordEvent } from "@/lib/music/types";
 
 type MobileTab = "arrange" | "chat" | "capture";
 
@@ -34,6 +33,17 @@ interface CaptureEntry {
 }
 
 const NOTES_SAVE_DEBOUNCE_MS = 2000;
+
+const SECTION_COLORS: Record<string, string> = {
+  intro: "#6366f1",
+  verse: "#8b5cf6",
+  pre_chorus: "#a855f7",
+  chorus: "#ec4899",
+  bridge: "#f97316",
+  outro: "#64748b",
+  breakdown: "#14b8a6",
+  custom: "#94a3b8",
+};
 
 export default function SessionWorkspacePage() {
   const {
@@ -135,15 +145,28 @@ export default function SessionWorkspacePage() {
   }, [session?.id]);
 
   // ------- State -------
-  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
+  const [captureOpen, setCaptureOpen] = useState(false);
+  const [sequencerVisible, setSequencerVisible] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [generateOpen, setGenerateOpen] = useState(false);
-  const [bookmarks] = useState<Bookmark[]>([]);
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [mobileTab, setMobileTab] = useState<MobileTab>("arrange");
+
+  // Load bookmarks from API
+  useEffect(() => {
+    if (!session?.id) return;
+    fetch(`/api/session/${session.id}/bookmark`)
+      .then((res) => (res.ok ? res.json() : { bookmarks: [] }))
+      .then((data: { bookmarks?: Bookmark[] }) => {
+        if (data.bookmarks?.length) {
+          setBookmarks(data.bookmarks);
+        }
+      })
+      .catch(() => {});
+  }, [session?.id]);
 
   // ------- API keys -------
   const { apiKey } = useApiKey();
-  const { apiKey: elevenLabsKey } = useElevenLabsKey();
 
   // ------- Chat sendMessage ref (so captures can send to chat) -------
   const chatSendRef = useRef<((msg: string) => void) | null>(null);
@@ -161,10 +184,20 @@ export default function SessionWorkspacePage() {
       chatSendRef.current
     ) {
       hasAutoKicked.current = true;
-      // Small delay so the UI renders first and the user sees something happening
       const timer = setTimeout(() => {
+        // Build a contextual kickoff message based on what the user already set
+        const parts: string[] = [];
+        if (session.genre) parts.push(`genre is ${session.genre}`);
+        if (session.mood) parts.push(`mood is ${session.mood}`);
+        if (session.bpm !== 120) parts.push(`BPM is ${session.bpm}`);
+        if (session.keySignature && session.keySignature !== "C") parts.push(`key is ${session.keySignature}`);
+
+        const context = parts.length > 0
+          ? `I've set up: ${parts.join(", ")}.`
+          : "I just started a fresh session.";
+
         chatSendRef.current?.(
-          "I just started a new session. Pick a genre, mood, and chord progression for me and build an arrangement I can use right away."
+          `${context} Build me a full arrangement with chord progressions I can hear right away. Pick anything I haven't chosen yet.`
         );
       }, 800);
       return () => clearTimeout(timer);
@@ -244,7 +277,111 @@ export default function SessionWorkspacePage() {
     [session, updateSession, setBpm, addToast],
   );
 
-  // ------- Arrangement generation handler -------
+  // ------- AI tool action handler -------
+  const handleChatAction = useCallback(
+    (action: ChatAction) => {
+      if (action.toolName === "generate_arrangement") {
+        const input = action.toolInput as {
+          sections?: Array<{
+            name: string;
+            type: string;
+            lengthBars: number;
+            chordProgression: Array<{
+              chord: { root: string; quality: string; bass?: string };
+              durationBars: number;
+            }>;
+          }>;
+          key?: string;
+          bpm?: number;
+        };
+
+        if (input.key) {
+          updateSession({ keySignature: input.key });
+        }
+        if (input.bpm) {
+          updateSession({ bpm: input.bpm });
+          setBpm(input.bpm);
+        }
+
+        if (input.sections?.length) {
+          let currentBar = 0;
+          const newSections: Omit<Section, "id" | "sessionId">[] = input.sections.map(
+            (raw, index) => {
+              const sectionType = raw.type as SectionType;
+              const section: Omit<Section, "id" | "sessionId"> = {
+                name: raw.name,
+                type: sectionType,
+                startBar: currentBar,
+                lengthBars: raw.lengthBars,
+                chordProgression: (raw.chordProgression ?? []).map((ce) => ({
+                  chord: {
+                    root: ce.chord.root as ChordEvent["chord"]["root"],
+                    quality: ce.chord.quality as ChordEvent["chord"]["quality"],
+                    ...(ce.chord.bass
+                      ? { bass: ce.chord.bass as ChordEvent["chord"]["root"] }
+                      : {}),
+                  },
+                  durationBars: ce.durationBars,
+                })),
+                sortOrder: index,
+                color: SECTION_COLORS[sectionType] ?? SECTION_COLORS.custom,
+              };
+              currentBar += raw.lengthBars;
+              return section;
+            },
+          );
+
+          void addSections(newSections).then(() => {
+            addToast({
+              message: `${newSections.length} section${newSections.length === 1 ? "" : "s"} added`,
+              variant: "success",
+              duration: 3000,
+            });
+
+            // Auto-place chords in sequencer and auto-play
+            setTimeout(() => {
+              if (tracks.length > 0) {
+                const trackId = tracks[0].id;
+                const chordNotes = chordProgressionToNotes(
+                  newSections as Section[],
+                  trackId,
+                  input.bpm ?? session?.bpm ?? 120,
+                  session?.timeSignature ?? "4/4",
+                );
+                if (chordNotes.length > 0) {
+                  sequencer.addBulkNotes(chordNotes);
+                  // Show sequencer and auto-play so user hears music immediately
+                  setSequencerVisible(true);
+                  setTimeout(() => void play(), 300);
+                }
+              }
+            }, 500);
+          });
+        }
+      } else if (action.toolName === "update_session") {
+        const input = action.toolInput as {
+          bpm?: number;
+          keySignature?: string;
+          genre?: string;
+          mood?: string;
+        };
+        const updates: Record<string, unknown> = {};
+        if (input.bpm) {
+          updates.bpm = input.bpm;
+          setBpm(input.bpm);
+        }
+        if (input.keySignature) updates.keySignature = input.keySignature;
+        if (input.genre) updates.genre = input.genre;
+        if (input.mood) updates.mood = input.mood;
+        if (Object.keys(updates).length > 0) {
+          updateSession(updates);
+        }
+      }
+    },
+    [addSections, addToast, updateSession, setBpm, tracks, session?.bpm, session?.timeSignature, sequencer, play],
+  );
+
+  // ------- Arrangement generation handler (manual fallback) -------
   const handleGenerateArrangement = useCallback(
     (newSections: Omit<Section, "id" | "sessionId">[], meta?: { key?: string; bpm?: number }) => {
       // Apply key/BPM from arrangement generation to session
@@ -348,6 +485,35 @@ export default function SessionWorkspacePage() {
     [updateSection],
   );
 
+  // ------- Bookmark creation -------
+  const handleAddBookmark = useCallback(() => {
+    if (!session?.id) return;
+    const label = `Checkpoint ${bookmarks.length + 1}`;
+    fetch(`/api/session/${session.id}/bookmark`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        label,
+        contextSnapshot: {
+          bpm: session.bpm,
+          keySignature: session.keySignature,
+          sectionCount: sections.length,
+          noteCount: sequencer.notes.length,
+        },
+      }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.bookmark) {
+          setBookmarks((prev) => [...prev, data.bookmark]);
+          addToast({ message: "Bookmark saved", variant: "success", duration: 2000 });
+        }
+      })
+      .catch(() => {
+        addToast({ message: "Failed to save bookmark", variant: "error" });
+      });
+  }, [session, bookmarks.length, sections.length, sequencer.notes.length, addToast]);
+
   // Trigger "Ask AI to Generate" by sending a prompt to chat
   const handleRequestAIGenerate = useCallback(() => {
     if (chatSendRef.current) {
@@ -409,19 +575,11 @@ export default function SessionWorkspacePage() {
           onStop={stop}
           trailing={
             <div className="flex items-center gap-2">
-              <Tooltip
-                content={
-                  !elevenLabsKey
-                    ? "Add an ElevenLabs key in Settings to enable"
-                    : "Generate audio with AI"
-                }
-              >
+              <Tooltip content="Generate audio with AI">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setGenerateOpen(true)}
-                  disabled={!elevenLabsKey}
-                  className={cn(!elevenLabsKey && "opacity-50")}
                 >
                   <svg
                     width="14"
@@ -529,10 +687,11 @@ export default function SessionWorkspacePage() {
               sendMessageRef={chatSendRef}
               onGenerateArrangement={handleGenerateArrangement}
               onAddChordsToSequencer={handleAddChordsToSequencer}
+              onAction={handleChatAction}
               className="flex-1"
             />
             <div className="border-t border-neutral-800 p-3">
-              <BookmarkList bookmarks={bookmarks} />
+              <BookmarkList bookmarks={bookmarks} onAdd={handleAddBookmark} />
             </div>
           </div>
         )}
@@ -546,7 +705,7 @@ export default function SessionWorkspacePage() {
         )}
       </div>
 
-      {/* Desktop workspace (3-column layout) */}
+      {/* Desktop workspace (2-column: Chat | Arrangement + optional Sequencer) */}
       <div className="hidden md:flex flex-1 overflow-hidden">
         {/* Left Panel: Chat */}
         <div className="flex w-[380px] shrink-0 flex-col overflow-hidden border-r border-neutral-800">
@@ -557,52 +716,111 @@ export default function SessionWorkspacePage() {
             sendMessageRef={chatSendRef}
             onGenerateArrangement={handleGenerateArrangement}
             onAddChordsToSequencer={handleAddChordsToSequencer}
+            onAction={handleChatAction}
             className="min-h-0 flex-1"
           />
 
           {/* Bookmarks section below chat */}
           <div className="shrink-0 border-t border-neutral-800 p-3">
-            <BookmarkList bookmarks={bookmarks} />
+            <BookmarkList bookmarks={bookmarks} onAdd={handleAddBookmark} />
           </div>
         </div>
 
-        {/* Center: Arrangement + Sequencer */}
-        <div className="flex min-w-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
+        {/* Center: Arrangement + collapsible Sequencer */}
+        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto p-3">
           {/* Arrangement panel */}
           <ArrangementPanel
             sections={sections}
             onAddSection={handleAddSection}
+            onDeleteSection={handleDeleteSection}
+            onUpdateSection={handleUpdateSection}
+            onRequestAIGenerate={handleRequestAIGenerate}
             onAddChordsToSequencer={handleAddChordsToSequencer}
           />
 
-          {/* Sequencer */}
-          <SequencerPanel
-            tracks={tracks}
-            notes={sequencer.notes}
-            bpm={session.bpm}
-            playheadTick={currentTick}
-            isPlaying={isPlaying}
-            onAddNote={sequencer.addNote}
-            onSelectNote={sequencer.selectNote}
-            onClearSelection={sequencer.clearSelection}
-            onMoveNote={sequencer.moveNote}
-            onResizeNote={sequencer.resizeNote}
-            selectedNotes={sequencer.selectedNotes}
-            onTrackInstrumentChange={handleTrackInstrumentChange}
-            onClearAll={sequencer.clearAll}
-            onPlay={handlePlay}
-            onStop={stop}
-            onSetBpm={handleBpmChange}
-            className="flex-1 min-h-[400px]"
-          />
-        </div>
+          {/* Sequencer toggle */}
+          <button
+            onClick={() => setSequencerVisible((v) => !v)}
+            className={cn(
+              "mt-3 flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition-colors",
+              sequencerVisible
+                ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
+                : "border-neutral-700 text-neutral-400 hover:border-neutral-600 hover:text-neutral-300",
+            )}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={cn("transition-transform", sequencerVisible && "rotate-90")}
+            >
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+            {sequencerVisible ? "Hide Piano Roll" : "Show Piano Roll"}
+            {sequencer.notes.length > 0 && (
+              <span className="rounded-full bg-neutral-700 px-1.5 py-0.5 text-[10px] text-neutral-300">
+                {sequencer.notes.length} notes
+              </span>
+            )}
+          </button>
 
-        {/* Right Panel: Capture */}
-        <CapturePanel
-          collapsed={rightPanelCollapsed}
-          onToggleCollapse={() => setRightPanelCollapsed((prev) => !prev)}
-          onAddToSession={handleCaptureAddToSession}
-        />
+          {/* Collapsible Sequencer */}
+          {sequencerVisible && (
+            <div className="mt-3 flex-1 min-h-[400px]">
+              <SequencerPanel
+                tracks={tracks}
+                notes={sequencer.notes}
+                bpm={session.bpm}
+                playheadTick={currentTick}
+                isPlaying={isPlaying}
+                onAddNote={sequencer.addNote}
+                onSelectNote={sequencer.selectNote}
+                onClearSelection={sequencer.clearSelection}
+                onMoveNote={sequencer.moveNote}
+                onResizeNote={sequencer.resizeNote}
+                onRemoveNote={sequencer.removeNote}
+                selectedNotes={sequencer.selectedNotes}
+                onTrackInstrumentChange={handleTrackInstrumentChange}
+                onClearAll={sequencer.clearAll}
+                onPlay={handlePlay}
+                onStop={stop}
+                onSetPlayhead={setPosition}
+                onSetBpm={handleBpmChange}
+                className="h-full"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Floating Capture Button (desktop) */}
+      <div className="hidden md:block">
+        <button
+          onClick={() => setCaptureOpen((v) => !v)}
+          className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-amber-500 text-[#0a0a0a] shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-400 hover:shadow-amber-500/30 active:scale-95"
+          aria-label="Capture idea"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <circle cx="12" cy="12" r="3" fill="currentColor" />
+          </svg>
+        </button>
+
+        {/* Capture panel popover */}
+        {captureOpen && (
+          <div className="fixed bottom-24 right-6 z-40 w-80 rounded-2xl border border-neutral-700 bg-[#0a0a0a] shadow-2xl shadow-black/50">
+            <CapturePanel
+              collapsed={false}
+              onAddToSession={handleCaptureAddToSession}
+              className="border-l-0 rounded-2xl"
+            />
+          </div>
+        )}
       </div>
 
       {/* Export Dialog */}

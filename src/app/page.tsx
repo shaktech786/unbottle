@@ -78,7 +78,7 @@ export default function Home() {
               className="sm:col-span-7"
               delay={300}
             >
-              <div className="rounded-2xl border border-white/5 bg-surface/80 p-6 sm:p-8 backdrop-blur-sm">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 sm:p-8 backdrop-blur-sm">
                 <p className="text-lg leading-relaxed text-warm-gray">
                   Twenty minutes choosing a kick drum. Another twenty on a synth
                   preset. The melody you heard so clearly is already fading.
@@ -90,7 +90,7 @@ export default function Home() {
               className="sm:col-start-4 sm:col-span-9"
               delay={400}
             >
-              <div className="rounded-2xl border border-white/5 bg-surface/80 p-6 sm:p-8 backdrop-blur-sm">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 sm:p-8 backdrop-blur-sm">
                 <p className="text-lg leading-relaxed text-warm-gray">
                   You watch a 40-minute tutorial on sidechain compression.
                   By the time you get back to your project, you have forgotten
@@ -103,7 +103,7 @@ export default function Home() {
               className="sm:col-span-8"
               delay={500}
             >
-              <div className="rounded-2xl border border-white/5 bg-surface/80 p-6 sm:p-8 backdrop-blur-sm">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 sm:p-8 backdrop-blur-sm">
                 <p className="text-lg leading-relaxed text-warm-gray">
                   A hundred project files. Zero finished tracks.
                   Not because you lack talent, but because the tools were not
@@ -223,7 +223,7 @@ export default function Home() {
             <ScrollReveal className="flex-1" delay={100}>
               <div className="flex flex-col items-center text-center px-4">
                 {/* Visual element: sound waves */}
-                <div className="mb-6 flex items-center justify-center h-16 w-16 rounded-2xl bg-surface-raised border border-white/5">
+                <div className="mb-6 flex items-center justify-center h-16 w-16 rounded-2xl bg-white/[0.05] border border-white/10">
                   <div className="flex items-end gap-[3px] h-8">
                     {[0.5, 0.8, 1, 0.7, 0.4].map((scale, i) => (
                       <div
@@ -256,7 +256,7 @@ export default function Home() {
             <ScrollReveal className="flex-1" delay={250}>
               <div className="flex flex-col items-center text-center px-4">
                 {/* Visual element: blocks/arrangement */}
-                <div className="mb-6 flex items-center justify-center h-16 w-16 rounded-2xl bg-surface-raised border border-white/5">
+                <div className="mb-6 flex items-center justify-center h-16 w-16 rounded-2xl bg-white/[0.05] border border-white/10">
                   <div className="flex flex-col gap-1">
                     <div className="flex gap-1">
                       <div className="h-2 w-5 rounded-sm bg-teal-accent/50" />
@@ -294,7 +294,7 @@ export default function Home() {
             <ScrollReveal className="flex-1" delay={400}>
               <div className="flex flex-col items-center text-center px-4">
                 {/* Visual element: export/file */}
-                <div className="mb-6 flex items-center justify-center h-16 w-16 rounded-2xl bg-surface-raised border border-white/5">
+                <div className="mb-6 flex items-center justify-center h-16 w-16 rounded-2xl bg-white/[0.05] border border-white/10">
                   <div className="flex flex-col items-center gap-0.5">
                     <div className="h-5 w-5 rounded-t-sm border border-amber-glow/30 border-b-0 bg-amber-glow/5" />
                     <div className="h-1.5 w-7 rounded-b-sm bg-amber-glow/20" />

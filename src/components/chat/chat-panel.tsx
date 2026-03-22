@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type MutableRefObject } from "react";
 import { cn } from "@/lib/utils/cn";
-import { useChat, type ChatContext, type ChatErrorType } from "@/lib/hooks/use-chat";
+import { useChat, type ChatContext, type ChatErrorType, type ChatAction } from "@/lib/hooks/use-chat";
 import { getAuthHeaders } from "@/lib/hooks/use-api-key";
 import { useToast } from "@/components/ui/toast-provider";
 import type { Suggestion, Section } from "@/lib/music/types";
@@ -19,9 +19,9 @@ interface ChatPanelProps {
   decisionContext?: string;
   apiKey?: string | null;
   onGenerateArrangement?: (sections: Omit<Section, "id" | "sessionId">[], meta?: { key?: string; bpm?: number }) => void;
-  /** Called when user wants to place chord notes into the sequencer */
   onAddChordsToSequencer?: () => void;
-  /** Ref that parent can use to programmatically send messages */
+  /** Called when the AI uses a tool to perform an action */
+  onAction?: (action: ChatAction) => void;
   sendMessageRef?: MutableRefObject<((msg: string) => void) | null>;
   className?: string;
 }
@@ -55,6 +55,7 @@ export function ChatPanel({
   apiKey,
   onGenerateArrangement,
   onAddChordsToSequencer,
+  onAction,
   sendMessageRef,
   className,
 }: ChatPanelProps) {
@@ -62,6 +63,7 @@ export function ChatPanel({
     sessionId,
     context,
     apiKey,
+    onAction,
   });
   const { addToast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
@@ -255,12 +257,12 @@ function ChatErrorBanner({ errorType }: { errorType: ChatErrorType }) {
     return (
       <div className="mx-3 mt-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
         <p className="text-xs text-amber-400">
-          AI chat requires an API key.{" "}
+          AI is not available right now.{" "}
           <Link
             href="/settings"
             className="font-medium underline underline-offset-2 hover:text-amber-300"
           >
-            Add one in Settings
+            Try adding your own API key in Settings
           </Link>
         </p>
       </div>

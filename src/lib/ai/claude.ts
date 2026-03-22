@@ -10,7 +10,7 @@ const clientCache = new Map<string, Anthropic>();
 export function getClaudeClient(userApiKey?: string): Anthropic {
   const key = userApiKey || process.env.ANTHROPIC_API_KEY;
   if (!key) {
-    throw new Error("No Anthropic API key available. Please provide your own key in Settings.");
+    throw new Error("AI features are not configured on this server. Please add an API key in Settings to enable AI chat.");
   }
 
   const cached = clientCache.get(key);
