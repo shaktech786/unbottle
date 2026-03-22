@@ -2,6 +2,7 @@ import { getClaudeClient, getUserApiKey } from "@/lib/ai/claude";
 import { buildProducerSystemPrompt } from "@/lib/ai/prompts/producer";
 import { PRODUCER_TOOLS } from "@/lib/ai/tools";
 import type { Section, Track } from "@/lib/music/types";
+import type Anthropic from "@anthropic-ai/sdk";
 
 export const dynamic = "force-dynamic";
 
@@ -58,10 +59,16 @@ export async function POST(request: Request) {
 
     const encoder = new TextEncoder();
 
+    function sendSSE(controller: ReadableStreamDefaultController, data: Record<string, unknown>) {
+      const event = `data: ${JSON.stringify(data)}\n\n`;
+      controller.enqueue(encoder.encode(event));
+    }
+
     const readable = new ReadableStream({
       async start(controller) {
         try {
-          const stream = claude.messages.stream({
+          // First API call — may return text, tool_use, or both
+          const response = await claude.messages.create({
             model: "claude-sonnet-4-20250514",
             max_tokens: 4096,
             system: systemPrompt,
@@ -69,79 +76,65 @@ export async function POST(request: Request) {
             tools: PRODUCER_TOOLS,
           });
 
-          stream.on("text", (textDelta) => {
-            const event = `data: ${JSON.stringify({ type: "token", content: textDelta })}\n\n`;
-            controller.enqueue(encoder.encode(event));
-          });
-
-          // Handle tool use - when the AI calls a tool, send it as an action event
-          stream.on("contentBlock", (block) => {
-            if (block.type === "tool_use") {
-              const event = `data: ${JSON.stringify({
+          // Process all content blocks from the response
+          for (const block of response.content) {
+            if (block.type === "text" && block.text) {
+              sendSSE(controller, { type: "token", content: block.text });
+            } else if (block.type === "tool_use") {
+              sendSSE(controller, {
                 type: "action",
                 toolName: block.name,
                 toolInput: block.input,
-              })}\n\n`;
-              controller.enqueue(encoder.encode(event));
+              });
             }
-          });
+          }
 
-          stream.on("error", (error) => {
-            const event = `data: ${JSON.stringify({ type: "error", content: error.message })}\n\n`;
-            controller.enqueue(encoder.encode(event));
-            controller.close();
-          });
+          // If the model called tools, do a follow-up to get the summary text
+          if (response.stop_reason === "tool_use") {
+            const toolUseBlocks = response.content.filter(
+              (block): block is Anthropic.Messages.ToolUseBlock => block.type === "tool_use",
+            );
 
-          // Wait for the stream to finish, then check if we need a follow-up
-          const finalMessage = await stream.finalMessage();
-
-          // If the response ended with tool_use, we need to send back tool results
-          // and get the AI's follow-up text response
-          const toolUseBlocks = finalMessage.content.filter(
-            (block) => block.type === "tool_use",
-          );
-
-          if (toolUseBlocks.length > 0 && finalMessage.stop_reason === "tool_use") {
-            // Build tool results (all succeed since client handles them)
-            const toolResults = toolUseBlocks.map((block) => ({
+            const toolResultContent: Anthropic.Messages.ToolResultBlockParam[] = toolUseBlocks.map((block) => ({
               type: "tool_result" as const,
-              tool_use_id: (block as { id: string }).id,
+              tool_use_id: block.id,
               content: "Done. The changes have been applied to the workspace.",
             }));
 
-            // Get follow-up response from Claude
-            const followUp = claude.messages.stream({
-              model: "claude-sonnet-4-20250514",
-              max_tokens: 2048,
-              system: systemPrompt,
-              messages: [
-                ...messages,
-                { role: "assistant", content: finalMessage.content },
-                { role: "user", content: toolResults },
-              ],
-            });
+            try {
+              const followUp = await claude.messages.create({
+                model: "claude-sonnet-4-20250514",
+                max_tokens: 2048,
+                system: systemPrompt,
+                messages: [
+                  ...messages,
+                  { role: "assistant" as const, content: response.content },
+                  { role: "user" as const, content: toolResultContent },
+                ],
+              });
 
-            followUp.on("text", (textDelta) => {
-              const event = `data: ${JSON.stringify({ type: "token", content: textDelta })}\n\n`;
-              controller.enqueue(encoder.encode(event));
-            });
-
-            followUp.on("error", (error) => {
-              const event = `data: ${JSON.stringify({ type: "error", content: error.message })}\n\n`;
-              controller.enqueue(encoder.encode(event));
-            });
-
-            await followUp.finalMessage();
+              for (const block of followUp.content) {
+                if (block.type === "text" && block.text) {
+                  sendSSE(controller, { type: "token", content: block.text });
+                }
+              }
+            } catch (followUpErr) {
+              // Follow-up failed but tools already executed — send a fallback message
+              const fallback = followUpErr instanceof Error ? followUpErr.message : "Follow-up failed";
+              console.error("Chat follow-up error:", fallback);
+              sendSSE(controller, {
+                type: "token",
+                content: "\n\nI've set everything up for you. Hit play to hear it!",
+              });
+            }
           }
 
-          const doneEvent = `data: ${JSON.stringify({ type: "done" })}\n\n`;
-          controller.enqueue(encoder.encode(doneEvent));
+          sendSSE(controller, { type: "done" });
           controller.close();
         } catch (err) {
           const errorMessage =
             err instanceof Error ? err.message : "Stream setup failed";
-          const event = `data: ${JSON.stringify({ type: "error", content: errorMessage })}\n\n`;
-          controller.enqueue(encoder.encode(event));
+          sendSSE(controller, { type: "error", content: errorMessage });
           controller.close();
         }
       },

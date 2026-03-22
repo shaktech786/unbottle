@@ -180,26 +180,34 @@ export default function SessionWorkspacePage() {
       session &&
       !hasAutoKicked.current &&
       sections.length === 0 &&
-      contextNotes.length === 0 &&
-      chatSendRef.current
+      contextNotes.length === 0
     ) {
       hasAutoKicked.current = true;
-      const timer = setTimeout(() => {
-        // Build a contextual kickoff message based on what the user already set
-        const parts: string[] = [];
-        if (session.genre) parts.push(`genre is ${session.genre}`);
-        if (session.mood) parts.push(`mood is ${session.mood}`);
-        if (session.bpm !== 120) parts.push(`BPM is ${session.bpm}`);
-        if (session.keySignature && session.keySignature !== "C") parts.push(`key is ${session.keySignature}`);
 
-        const context = parts.length > 0
-          ? `I've set up: ${parts.join(", ")}.`
-          : "I just started a fresh session.";
+      // Build a contextual kickoff message based on what the user already set
+      const parts: string[] = [];
+      if (session.genre) parts.push(`genre is ${session.genre}`);
+      if (session.mood) parts.push(`mood is ${session.mood}`);
+      if (session.bpm !== 120) parts.push(`BPM is ${session.bpm}`);
+      if (session.keySignature && session.keySignature !== "C") parts.push(`key is ${session.keySignature}`);
 
-        chatSendRef.current?.(
-          `${context} Build me a full arrangement with chord progressions I can hear right away. Pick anything I haven't chosen yet.`
-        );
-      }, 800);
+      const ctx = parts.length > 0
+        ? `I've set up: ${parts.join(", ")}.`
+        : "I just started a fresh session.";
+
+      const msg = `${ctx} Build me a full arrangement with chord progressions I can hear right away. Pick anything I haven't chosen yet.`;
+
+      // Wait for chatSendRef to be populated by ChatPanel, with retries
+      let attempts = 0;
+      const tryKick = () => {
+        attempts++;
+        if (chatSendRef.current) {
+          chatSendRef.current(msg);
+        } else if (attempts < 10) {
+          setTimeout(tryKick, 500);
+        }
+      };
+      const timer = setTimeout(tryKick, 1000);
       return () => clearTimeout(timer);
     }
   }, [session, sections.length, contextNotes.length]);
