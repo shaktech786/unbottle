@@ -150,7 +150,7 @@ export default function SessionWorkspacePage() {
   const [exportOpen, setExportOpen] = useState(false);
   const [generateOpen, setGenerateOpen] = useState(false);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
-  const [mobileTab, setMobileTab] = useState<MobileTab>("arrange");
+  const [mobileTab, setMobileTab] = useState<MobileTab>("chat");
 
   // Load bookmarks from API
   useEffect(() => {
@@ -175,6 +175,7 @@ export default function SessionWorkspacePage() {
   // When a user lands on a brand-new session (no sections, no notes),
   // auto-send a kickoff message to the AI so they get immediate guidance.
   const hasAutoKicked = useRef(false);
+  const [isAutoKicking, setIsAutoKicking] = useState(false);
   useEffect(() => {
     if (
       session &&
@@ -183,8 +184,8 @@ export default function SessionWorkspacePage() {
       contextNotes.length === 0
     ) {
       hasAutoKicked.current = true;
+      setIsAutoKicking(true);
 
-      // Build a contextual kickoff message based on what the user already set
       const parts: string[] = [];
       if (session.genre) parts.push(`genre is ${session.genre}`);
       if (session.mood) parts.push(`mood is ${session.mood}`);
@@ -197,14 +198,17 @@ export default function SessionWorkspacePage() {
 
       const msg = `${ctx} Build me a full arrangement with chord progressions I can hear right away. Pick anything I haven't chosen yet.`;
 
-      // Wait for chatSendRef to be populated by ChatPanel, with retries
       let attempts = 0;
       const tryKick = () => {
         attempts++;
         if (chatSendRef.current) {
           chatSendRef.current(msg);
+          // Clear auto-kick indicator after a delay (AI will respond)
+          setTimeout(() => setIsAutoKicking(false), 2000);
         } else if (attempts < 10) {
           setTimeout(tryKick, 500);
+        } else {
+          setIsAutoKicking(false);
         }
       };
       const timer = setTimeout(tryKick, 1000);
@@ -389,29 +393,6 @@ export default function SessionWorkspacePage() {
     [addSections, addToast, updateSession, setBpm, tracks, session?.bpm, session?.timeSignature, sequencer, play],
   );
 
-  // ------- Arrangement generation handler (manual fallback) -------
-  const handleGenerateArrangement = useCallback(
-    (newSections: Omit<Section, "id" | "sessionId">[], meta?: { key?: string; bpm?: number }) => {
-      // Apply key/BPM from arrangement generation to session
-      if (meta?.key) {
-        updateSession({ keySignature: meta.key });
-      }
-      if (meta?.bpm) {
-        updateSession({ bpm: meta.bpm });
-        setBpm(meta.bpm);
-      }
-
-      void addSections(newSections).then(() => {
-        addToast({
-          message: `Arrangement generated -- ${newSections.length} section${newSections.length === 1 ? "" : "s"} added`,
-          variant: "success",
-          duration: 3000,
-        });
-      });
-    },
-    [addSections, addToast, updateSession, setBpm],
-  );
-
   // ------- Chord-to-sequencer handler -------
   const handleAddChordsToSequencer = useCallback(() => {
     if (sections.length === 0 || tracks.length === 0) {
@@ -548,8 +529,8 @@ export default function SessionWorkspacePage() {
   if (!session) return null;
 
   const mobileTabs: { key: MobileTab; label: string }[] = [
-    { key: "arrange", label: "Arrange" },
     { key: "chat", label: "Chat" },
+    { key: "arrange", label: "Arrange" },
     { key: "capture", label: "Capture" },
   ];
 
@@ -653,7 +634,7 @@ export default function SessionWorkspacePage() {
       {/* Mobile content area */}
       <div className="flex flex-1 flex-col overflow-hidden md:hidden">
         {mobileTab === "arrange" && (
-          <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-3">
+          <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-3">
             <ArrangementPanel
               sections={sections}
               onAddSection={handleAddSection}
@@ -662,27 +643,48 @@ export default function SessionWorkspacePage() {
               onRequestAIGenerate={handleRequestAIGenerate}
               onAddChordsToSequencer={handleAddChordsToSequencer}
             />
-            <SequencerPanel
-              tracks={tracks}
-              notes={sequencer.notes}
-              bpm={session.bpm}
-              playheadTick={currentTick}
-              isPlaying={isPlaying}
-              onAddNote={sequencer.addNote}
-              onSelectNote={sequencer.selectNote}
-              onClearSelection={sequencer.clearSelection}
-              onMoveNote={sequencer.moveNote}
-              onResizeNote={sequencer.resizeNote}
-              onRemoveNote={sequencer.removeNote}
-              selectedNotes={sequencer.selectedNotes}
-              onTrackInstrumentChange={handleTrackInstrumentChange}
-              onClearAll={sequencer.clearAll}
-              onPlay={handlePlay}
-              onStop={stop}
-              onSetPlayhead={setPosition}
-              onSetBpm={handleBpmChange}
-              className="flex-1 min-h-[300px]"
-            />
+            <button
+              onClick={() => setSequencerVisible((v) => !v)}
+              className={cn(
+                "flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition-colors",
+                sequencerVisible
+                  ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
+                  : "border-neutral-700 text-neutral-400 hover:border-neutral-600 hover:text-neutral-300",
+              )}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cn("transition-transform", sequencerVisible && "rotate-90")}>
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+              {sequencerVisible ? "Hide Piano Roll" : "Show Piano Roll"}
+              {sequencer.notes.length > 0 && (
+                <span className="rounded-full bg-neutral-700 px-1.5 py-0.5 text-[10px] text-neutral-300">
+                  {sequencer.notes.length} notes
+                </span>
+              )}
+            </button>
+            {sequencerVisible && (
+              <SequencerPanel
+                tracks={tracks}
+                notes={sequencer.notes}
+                bpm={session.bpm}
+                playheadTick={currentTick}
+                isPlaying={isPlaying}
+                onAddNote={sequencer.addNote}
+                onSelectNote={sequencer.selectNote}
+                onClearSelection={sequencer.clearSelection}
+                onMoveNote={sequencer.moveNote}
+                onResizeNote={sequencer.resizeNote}
+                onRemoveNote={sequencer.removeNote}
+                selectedNotes={sequencer.selectedNotes}
+                onTrackInstrumentChange={handleTrackInstrumentChange}
+                onClearAll={sequencer.clearAll}
+                onPlay={handlePlay}
+                onStop={stop}
+                onSetPlayhead={setPosition}
+                onSetBpm={handleBpmChange}
+                className="flex-1 min-h-[300px]"
+              />
+            )}
           </div>
         )}
 
@@ -693,8 +695,6 @@ export default function SessionWorkspacePage() {
               context={chatContext}
               apiKey={apiKey}
               sendMessageRef={chatSendRef}
-              onGenerateArrangement={handleGenerateArrangement}
-              onAddChordsToSequencer={handleAddChordsToSequencer}
               onAction={handleChatAction}
               className="flex-1"
             />
@@ -722,8 +722,6 @@ export default function SessionWorkspacePage() {
             context={chatContext}
             apiKey={apiKey}
             sendMessageRef={chatSendRef}
-            onGenerateArrangement={handleGenerateArrangement}
-            onAddChordsToSequencer={handleAddChordsToSequencer}
             onAction={handleChatAction}
             className="min-h-0 flex-1"
           />
@@ -736,6 +734,22 @@ export default function SessionWorkspacePage() {
 
         {/* Center: Arrangement + collapsible Sequencer */}
         <div className="flex min-w-0 flex-1 flex-col overflow-y-auto p-3">
+          {/* Loading indicator during auto-kickoff */}
+          {isAutoKicking && sections.length === 0 && (
+            <div className="flex flex-col items-center justify-center gap-3 py-16">
+              <div className="flex items-center gap-1">
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <div
+                    key={i}
+                    className="h-8 w-1.5 rounded-full bg-amber-500/60 waveform-bar"
+                    style={{ animationDelay: `${i * 0.15}s` }}
+                  />
+                ))}
+              </div>
+              <p className="text-sm text-neutral-400">Building your arrangement...</p>
+            </div>
+          )}
+
           {/* Arrangement panel */}
           <ArrangementPanel
             sections={sections}
@@ -819,15 +833,21 @@ export default function SessionWorkspacePage() {
           </svg>
         </button>
 
-        {/* Capture panel popover */}
+        {/* Capture panel popover with backdrop */}
         {captureOpen && (
-          <div className="fixed bottom-24 right-6 z-40 w-80 rounded-2xl border border-neutral-700 bg-[#0a0a0a] shadow-2xl shadow-black/50">
-            <CapturePanel
-              collapsed={false}
-              onAddToSession={handleCaptureAddToSession}
-              className="border-l-0 rounded-2xl"
+          <>
+            <div
+              className="fixed inset-0 z-30"
+              onClick={() => setCaptureOpen(false)}
             />
-          </div>
+            <div className="fixed bottom-24 right-6 z-40 w-80 rounded-2xl border border-neutral-700 bg-[#0a0a0a] shadow-2xl shadow-black/50">
+              <CapturePanel
+                collapsed={false}
+                onAddToSession={handleCaptureAddToSession}
+                className="border-l-0 rounded-2xl"
+              />
+            </div>
+          </>
         )}
       </div>
 

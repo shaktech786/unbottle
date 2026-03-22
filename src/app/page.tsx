@@ -309,8 +309,8 @@ export default function Home() {
                   Export
                 </h3>
                 <p className="text-sm leading-relaxed text-muted max-w-[220px]">
-                  Download stems, MIDI, or a full mix.
-                  Take it into your DAW or share it directly.
+                  Export your arrangement as MIDI and
+                  bring it into any DAW to finish your track.
                 </p>
               </div>
             </ScrollReveal>
