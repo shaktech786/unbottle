@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils/cn";
 import { useSession } from "@/lib/hooks/use-session";
+import { usePreferences } from "@/lib/hooks/use-preferences";
 import type { NoteName } from "@/lib/music/types";
 
 const GENRE_PRESETS: { name: string; color: string }[] = [
@@ -56,12 +57,13 @@ const ALL_KEYS: NoteName[] = [
 
 export default function NewSessionPage() {
   const { createSession, isLoading } = useSession();
+  const { preferences } = usePreferences();
 
   const [title, setTitle] = useState("");
-  const [genre, setGenre] = useState<string | null>(null);
+  const [genre, setGenre] = useState<string | null>(() => preferences.defaultGenre || null);
   const [customGenre, setCustomGenre] = useState("");
-  const [mood, setMood] = useState<string | null>(null);
-  const [bpm, setBpm] = useState(120);
+  const [mood, setMood] = useState<string | null>(() => preferences.defaultMood || null);
+  const [bpm, setBpm] = useState(() => preferences.defaultBpm);
   const [keySignature, setKeySignature] = useState<string>("C");
 
   async function handleSubmit(e: React.FormEvent) {

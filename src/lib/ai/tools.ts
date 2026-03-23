@@ -115,6 +115,53 @@ export const PRODUCER_TOOLS: Anthropic.Messages.Tool[] = [
       },
     },
   },
+  {
+    name: "add_track",
+    description:
+      "Add a new instrument track to the session. Use this when the user wants to add an instrument, or when you're building out the arrangement and need more tracks.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        name: {
+          type: "string",
+          description: "Track name (e.g. 'Lead Synth', 'Bass', 'Rhythm Guitar')",
+        },
+        instrument: {
+          type: "string",
+          enum: [
+            "piano", "electric_piano", "bass_electric", "bass_synth",
+            "guitar_acoustic", "guitar_electric", "strings", "pad",
+            "organ", "brass", "flute", "saxophone", "drums", "synth",
+          ],
+          description: "Instrument type for the track",
+        },
+      },
+      required: ["name", "instrument"],
+    },
+  },
+  {
+    name: "suggest_lyrics",
+    description:
+      "Suggest lyrics or vocal melodies for a section. Use this when the user asks for lyrics, words, vocal ideas, or wants help writing a song's text.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        sectionName: {
+          type: "string",
+          description: "Which section these lyrics are for (e.g. 'Verse 1', 'Chorus')",
+        },
+        lyrics: {
+          type: "string",
+          description: "The suggested lyrics, with line breaks",
+        },
+        vocalMelodyHint: {
+          type: "string",
+          description: "Brief description of the vocal melody contour (e.g. 'rising in the verse, descending in the chorus')",
+        },
+      },
+      required: ["sectionName", "lyrics"],
+    },
+  },
 ];
 
 export interface ToolResult {

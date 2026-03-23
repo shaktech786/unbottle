@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useSessionContext } from "@/lib/session/context";
 import { TransportControls } from "@/components/sequencer/transport-controls";
 import { ArrangementPanel } from "@/components/arrangement/arrangement-panel";
@@ -14,7 +15,9 @@ import { BookmarkList } from "@/components/session/bookmark-list";
 import { useTonePlayer } from "@/lib/hooks/use-tone-player";
 import { useSequencer } from "@/lib/hooks/use-sequencer";
 import { useHyperfocusGuard } from "@/lib/hooks/use-hyperfocus-guard";
+import { useKeyboardShortcuts } from "@/lib/hooks/use-keyboard-shortcuts";
 import { useApiKey } from "@/lib/hooks/use-api-key";
+import { usePreferences } from "@/lib/hooks/use-preferences";
 import { useToast } from "@/components/ui/toast-provider";
 import { Tooltip } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
@@ -57,9 +60,12 @@ export default function SessionWorkspacePage() {
     updateSection,
     updateTrack,
     updateSession,
+    refreshSession,
   } = useSessionContext();
 
   const { addToast } = useToast();
+  const router = useRouter();
+  const { preferences } = usePreferences();
 
   // ------- Sequencer (note management with undo/redo) -------
   const sequencer = useSequencer(contextNotes);
@@ -232,7 +238,17 @@ export default function SessionWorkspacePage() {
 
   // ------- Hyperfocus guard -------
   const { shouldNudge, elapsedMinutes, dismiss: dismissNudge } =
-    useHyperfocusGuard({ thresholdMinutes: 45 });
+    useHyperfocusGuard({ thresholdMinutes: preferences.hyperfocusMinutes });
+
+  // ------- Keyboard shortcuts -------
+  useKeyboardShortcuts({
+    onPlayPause: () => { if (isPlaying) { stop(); } else { void play(); } },
+    onUndo: sequencer.undo,
+    onRedo: sequencer.redo,
+    onDelete: sequencer.deleteSelected,
+    onSelectAll: sequencer.selectAll,
+    onEscape: sequencer.clearSelection,
+  });
 
   // ------- Chat context -------
   const chatContext = useMemo<ChatContext>(
@@ -388,9 +404,59 @@ export default function SessionWorkspacePage() {
         if (Object.keys(updates).length > 0) {
           updateSession(updates);
         }
+      } else if (action.toolName === "add_track") {
+        const input = action.toolInput as {
+          name: string;
+          instrument: string;
+        };
+
+        if (session) {
+          fetch(`/api/session/${session.id}/tracks`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: input.name,
+              instrument: input.instrument,
+            }),
+          })
+            .then((res) => {
+              if (res.ok) {
+                addToast({
+                  message: `Track '${input.name}' added`,
+                  variant: "success",
+                  duration: 3000,
+                });
+                // Refresh session to pick up the new track in state
+                void refreshSession();
+              } else {
+                addToast({
+                  message: "Failed to add track",
+                  variant: "error",
+                });
+              }
+            })
+            .catch(() => {
+              addToast({
+                message: "Failed to add track",
+                variant: "error",
+              });
+            });
+        }
+      } else if (action.toolName === "suggest_lyrics") {
+        const input = action.toolInput as {
+          sectionName: string;
+          lyrics: string;
+          vocalMelodyHint?: string;
+        };
+
+        addToast({
+          message: `Lyrics suggested for ${input.sectionName}`,
+          variant: "success",
+          duration: 3000,
+        });
       }
     },
-    [addSections, addToast, updateSession, setBpm, tracks, session?.bpm, session?.timeSignature, sequencer, play],
+    [addSections, addToast, updateSession, setBpm, tracks, session, sequencer, play, refreshSession],
   );
 
   // ------- Chord-to-sequencer handler -------
@@ -510,6 +576,34 @@ export default function SessionWorkspacePage() {
     }
   }, []);
 
+  // ------- Fork/branch session -------
+  const [isForking, setIsForking] = useState(false);
+  const handleForkSession = useCallback(async () => {
+    if (!session?.id || isForking) return;
+    setIsForking(true);
+    try {
+      const res = await fetch(`/api/session/${session.id}/branch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label: `Fork of ${session.title}` }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Failed to fork session");
+      }
+      const data = await res.json();
+      addToast({ message: "Session forked!", variant: "success", duration: 3000 });
+      router.push(`/session/${data.session.id}`);
+    } catch (err) {
+      addToast({
+        message: err instanceof Error ? err.message : "Failed to fork session",
+        variant: "error",
+      });
+    } finally {
+      setIsForking(false);
+    }
+  }, [session?.id, session?.title, isForking, addToast, router]);
+
   const handleTrackInstrumentChange = useCallback(
     (trackId: string, instrument: InstrumentType) => {
       updateTrack(trackId, { instrument });
@@ -585,6 +679,33 @@ export default function SessionWorkspacePage() {
                     <circle cx="18" cy="16" r="3" />
                   </svg>
                   <span className="hidden sm:inline">AI Generate</span>
+                </Button>
+              </Tooltip>
+              <Tooltip content="Fork this session">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleForkSession}
+                  disabled={isForking}
+                  loading={isForking}
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="12" cy="18" r="3" />
+                    <circle cx="6" cy="6" r="3" />
+                    <circle cx="18" cy="6" r="3" />
+                    <path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9" />
+                    <path d="M12 12v3" />
+                  </svg>
+                  <span className="hidden sm:inline">Fork</span>
                 </Button>
               </Tooltip>
               <Button

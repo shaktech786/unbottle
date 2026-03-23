@@ -1,11 +1,54 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useApiKey } from "@/lib/hooks/use-api-key";
 import { useElevenLabsKey } from "@/lib/hooks/use-elevenlabs-key";
+import { usePreferences } from "@/lib/hooks/use-preferences";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+
+const GENRE_OPTIONS = [
+  "",
+  "Hip-Hop",
+  "Pop",
+  "R&B",
+  "Electronic",
+  "Rock",
+  "Jazz",
+  "Lo-fi",
+  "Ambient",
+  "Funk",
+  "Soul",
+  "Classical",
+  "Trap",
+];
+
+const MOOD_OPTIONS = [
+  "",
+  "Chill",
+  "Energetic",
+  "Melancholic",
+  "Uplifting",
+  "Dark",
+  "Dreamy",
+  "Aggressive",
+  "Playful",
+  "Nostalgic",
+  "Ethereal",
+];
+
+function SavedIndicator({ show }: { show: boolean }) {
+  return (
+    <span
+      className={`ml-2 text-xs font-medium text-emerald-400 transition-opacity duration-300 ${
+        show ? "opacity-100" : "opacity-0"
+      }`}
+    >
+      Saved!
+    </span>
+  );
+}
 
 export default function SettingsPage() {
   const { apiKey, setApiKey, hasUserKey, isLoaded } = useApiKey();
@@ -22,6 +65,24 @@ export default function SettingsPage() {
   const [elInputValue, setElInputValue] = useState("");
   const [showElKey, setShowElKey] = useState(false);
   const [elSaved, setElSaved] = useState(false);
+
+  // Preferences
+  const { preferences, updatePreference } = usePreferences();
+  const [prefSaved, setPrefSaved] = useState(false);
+  const prefSavedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function showPrefSaved() {
+    setPrefSaved(true);
+    if (prefSavedTimer.current) clearTimeout(prefSavedTimer.current);
+    prefSavedTimer.current = setTimeout(() => setPrefSaved(false), 2000);
+  }
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (prefSavedTimer.current) clearTimeout(prefSavedTimer.current);
+    };
+  }, []);
 
   function handleSave() {
     const trimmed = inputValue.trim();
@@ -217,6 +278,187 @@ export default function SettingsPage() {
             </p>
           </div>
         )}
+      </Card>
+
+      {/* Session Defaults */}
+      <Card className="mt-4 p-4 sm:mt-6 sm:p-6">
+        <div className="flex items-baseline gap-2">
+          <h2 className="mb-1 text-lg font-semibold text-neutral-100">
+            Session Defaults
+          </h2>
+          <SavedIndicator show={prefSaved} />
+        </div>
+        <p className="mb-4 text-sm text-neutral-400">
+          Default values when creating a new session. You can always override
+          these per-session.
+        </p>
+
+        <div className="space-y-5">
+          {/* Default BPM */}
+          <div className="flex flex-col gap-1.5">
+            <label
+              htmlFor="default-bpm"
+              className="text-sm font-medium text-neutral-300"
+            >
+              Default BPM
+            </label>
+            <div className="flex items-center gap-3">
+              <input
+                id="default-bpm"
+                type="range"
+                min={60}
+                max={200}
+                value={preferences.defaultBpm}
+                onChange={(e) => {
+                  updatePreference("defaultBpm", Number(e.target.value));
+                  showPrefSaved();
+                }}
+                className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-neutral-700 accent-amber-500 touch-pan-x"
+              />
+              <span className="w-12 text-right font-mono text-sm font-bold text-amber-400 tabular-nums">
+                {preferences.defaultBpm}
+              </span>
+            </div>
+          </div>
+
+          {/* Default Genre */}
+          <div className="flex flex-col gap-1.5">
+            <label
+              htmlFor="default-genre"
+              className="text-sm font-medium text-neutral-300"
+            >
+              Default Genre
+            </label>
+            <select
+              id="default-genre"
+              value={preferences.defaultGenre}
+              onChange={(e) => {
+                updatePreference("defaultGenre", e.target.value);
+                showPrefSaved();
+              }}
+              className="h-11 w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 text-sm text-neutral-100 transition-colors duration-300 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+            >
+              {GENRE_OPTIONS.map((g) => (
+                <option key={g} value={g}>
+                  {g || "None"}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Default Mood */}
+          <div className="flex flex-col gap-1.5">
+            <label
+              htmlFor="default-mood"
+              className="text-sm font-medium text-neutral-300"
+            >
+              Default Mood
+            </label>
+            <select
+              id="default-mood"
+              value={preferences.defaultMood}
+              onChange={(e) => {
+                updatePreference("defaultMood", e.target.value);
+                showPrefSaved();
+              }}
+              className="h-11 w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 text-sm text-neutral-100 transition-colors duration-300 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+            >
+              {MOOD_OPTIONS.map((m) => (
+                <option key={m} value={m}>
+                  {m || "None"}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </Card>
+
+      {/* Focus & Workflow */}
+      <Card className="mt-4 p-4 sm:mt-6 sm:p-6">
+        <div className="flex items-baseline gap-2">
+          <h2 className="mb-1 text-lg font-semibold text-neutral-100">
+            Focus & Workflow
+          </h2>
+          <SavedIndicator show={prefSaved} />
+        </div>
+        <p className="mb-4 text-sm text-neutral-400">
+          Tune how Unbottle supports your creative flow.
+        </p>
+
+        <div className="space-y-5">
+          {/* Hyperfocus Timer */}
+          <div className="flex flex-col gap-1.5">
+            <label
+              htmlFor="hyperfocus-minutes"
+              className="text-sm font-medium text-neutral-300"
+            >
+              Hyperfocus Timer
+            </label>
+            <p className="text-xs text-neutral-500">
+              Get a nudge after this many minutes of continuous work.
+            </p>
+            <div className="flex items-center gap-3">
+              <input
+                id="hyperfocus-minutes"
+                type="range"
+                min={15}
+                max={120}
+                step={5}
+                value={preferences.hyperfocusMinutes}
+                onChange={(e) => {
+                  updatePreference(
+                    "hyperfocusMinutes",
+                    Number(e.target.value),
+                  );
+                  showPrefSaved();
+                }}
+                className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-neutral-700 accent-amber-500 touch-pan-x"
+              />
+              <span className="w-16 text-right font-mono text-sm font-bold text-amber-400 tabular-nums">
+                {preferences.hyperfocusMinutes}m
+              </span>
+            </div>
+          </div>
+
+          {/* Auto-save */}
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <label
+                htmlFor="auto-save"
+                className="text-sm font-medium text-neutral-300"
+              >
+                Auto-save
+              </label>
+              <p className="text-xs text-neutral-500">
+                Automatically save changes as you work.
+              </p>
+            </div>
+            <button
+              id="auto-save"
+              role="switch"
+              type="button"
+              aria-checked={preferences.autoSaveEnabled}
+              onClick={() => {
+                updatePreference(
+                  "autoSaveEnabled",
+                  !preferences.autoSaveEnabled,
+                );
+                showPrefSaved();
+              }}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:ring-offset-2 focus:ring-offset-neutral-950 ${
+                preferences.autoSaveEnabled ? "bg-amber-500" : "bg-neutral-700"
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-lg transition-transform duration-300 ${
+                  preferences.autoSaveEnabled
+                    ? "translate-x-5"
+                    : "translate-x-0.5"
+                }`}
+              />
+            </button>
+          </div>
+        </div>
       </Card>
 
       <Card className="mt-4 p-4 sm:mt-6 sm:p-6">
