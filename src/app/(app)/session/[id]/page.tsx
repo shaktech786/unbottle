@@ -23,6 +23,10 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 import { chordProgressionToNotes } from "@/lib/music/chord-to-notes";
+import { reorderSections } from "@/lib/music/section-reorder";
+import { getSectionTickRange, copyNotesForSection } from "@/lib/audio/playback-utils";
+import { ActionHistory } from "@/lib/session/action-history";
+import type { SessionSnapshot } from "@/lib/session/action-history";
 import type { ChatAction, ChatContext } from "@/lib/hooks/use-chat";
 import type { Bookmark, InstrumentType, Note, Section, SectionType, ChordEvent } from "@/lib/music/types";
 
@@ -57,6 +61,7 @@ export default function SessionWorkspacePage() {
     setNotes: setContextNotes,
     addSections,
     deleteSection,
+    clearSections,
     updateSection,
     updateTrack,
     updateSession,
@@ -69,6 +74,24 @@ export default function SessionWorkspacePage() {
 
   // ------- Sequencer (note management with undo/redo) -------
   const sequencer = useSequencer(contextNotes);
+
+  // ------- AI Action undo history -------
+  const aiHistory = useRef(new ActionHistory());
+  const [canUndoAI, setCanUndoAI] = useState(false);
+
+  const snapshotSession = useCallback((): SessionSnapshot => ({
+    sections: [...sections],
+    notes: [...sequencer.notes],
+    bpm: session?.bpm ?? 120,
+    keySignature: session?.keySignature ?? "C",
+    genre: session?.genre,
+    mood: session?.mood,
+  }), [sections, sequencer.notes, session?.bpm, session?.keySignature, session?.genre, session?.mood]);
+
+  const pushAISnapshot = useCallback(() => {
+    aiHistory.current.push(snapshotSession());
+    setCanUndoAI(true);
+  }, [snapshotSession]);
 
   // Sync context notes into sequencer when they load from API
   // (only on initial load / refresh, not on every sequencer change)
@@ -157,6 +180,8 @@ export default function SessionWorkspacePage() {
   const [generateOpen, setGenerateOpen] = useState(false);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [mobileTab, setMobileTab] = useState<MobileTab>("chat");
+  const [copiedNotes, setCopiedNotes] = useState<Omit<Note, "id">[] | null>(null);
+  const [loopingSectionId, setLoopingSectionId] = useState<string | null>(null);
 
   // Load bookmarks from API
   useEffect(() => {
@@ -230,10 +255,12 @@ export default function SessionWorkspacePage() {
     setBpm,
     setPosition,
     currentTick,
+    loopSection,
+    clearLoop,
   } = useTonePlayer(
     sequencer.notes,
     session?.bpm ?? 120,
-    tracks[0]?.instrument ?? "piano",
+    tracks,
   );
 
   // ------- Hyperfocus guard -------
@@ -308,6 +335,9 @@ export default function SessionWorkspacePage() {
   // ------- AI tool action handler -------
   const handleChatAction = useCallback(
     (action: ChatAction) => {
+      // Snapshot current state before any AI modification
+      pushAISnapshot();
+
       if (action.toolName === "generate_arrangement") {
         const input = action.toolInput as {
           sections?: Array<{
@@ -359,7 +389,14 @@ export default function SessionWorkspacePage() {
             },
           );
 
-          void addSections(newSections).then(() => {
+          // When sections already exist, clear them first to avoid duplicates
+          const applyArrangement = async () => {
+            if (sections.length > 0) {
+              await clearSections();
+              sequencer.clearAll();
+            }
+
+            await addSections(newSections);
             addToast({
               message: `${newSections.length} section${newSections.length === 1 ? "" : "s"} added`,
               variant: "success",
@@ -384,7 +421,9 @@ export default function SessionWorkspacePage() {
                 }
               }
             }, 500);
-          });
+          };
+
+          void applyArrangement();
         }
       } else if (action.toolName === "update_session") {
         const input = action.toolInput as {
@@ -456,7 +495,7 @@ export default function SessionWorkspacePage() {
         });
       }
     },
-    [addSections, addToast, updateSession, setBpm, tracks, session, sequencer, play, refreshSession],
+    [addSections, addToast, updateSession, setBpm, tracks, session, sequencer, play, refreshSession, clearSections, sections, pushAISnapshot],
   );
 
   // ------- Chord-to-sequencer handler -------
@@ -538,6 +577,118 @@ export default function SessionWorkspacePage() {
       void updateSection(sectionId, updates);
     },
     [updateSection],
+  );
+
+  // ------- Reorder sections (drag-and-drop) -------
+  const handleReorderSections = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      const reordered = reorderSections(sections, fromIndex, toIndex);
+      // Persist each section's new startBar and sortOrder
+      for (const s of reordered) {
+        void updateSection(s.id, { startBar: s.startBar, sortOrder: s.sortOrder });
+      }
+    },
+    [sections, updateSection],
+  );
+
+  // ------- Undo AI action -------
+  const handleUndoAI = useCallback(() => {
+    const snapshot = aiHistory.current.undo();
+    if (!snapshot) return;
+
+    // Restore session-level properties
+    updateSession({
+      bpm: snapshot.bpm,
+      keySignature: snapshot.keySignature,
+      ...(snapshot.genre !== undefined ? { genre: snapshot.genre } : {}),
+      ...(snapshot.mood !== undefined ? { mood: snapshot.mood } : {}),
+    });
+    setBpm(snapshot.bpm);
+
+    // Restore notes
+    sequencer.setNotes(snapshot.notes);
+
+    // For sections, we do a full refresh to restore them cleanly
+    void refreshSession();
+
+    setCanUndoAI(aiHistory.current.canUndo());
+    addToast({ message: "AI action undone", variant: "default", duration: 2500 });
+  }, [updateSession, setBpm, sequencer, refreshSession, addToast]);
+
+  // ------- Section looping -------
+  const handleLoopSection = useCallback(
+    (sectionId: string) => {
+      const section = sections.find((s) => s.id === sectionId);
+      if (!section) return;
+      const timeSignature = session?.timeSignature ?? "4/4";
+      const { startTick, endTick } = getSectionTickRange(section, timeSignature);
+      loopSection(startTick, endTick);
+      setLoopingSectionId(sectionId);
+      addToast({
+        message: `Looping ${section.name}`,
+        variant: "default",
+        duration: 2000,
+      });
+    },
+    [sections, session?.timeSignature, loopSection, addToast],
+  );
+
+  const handleClearLoop = useCallback(() => {
+    clearLoop();
+    setLoopingSectionId(null);
+    addToast({
+      message: "Loop cleared",
+      variant: "default",
+      duration: 2000,
+    });
+  }, [clearLoop, addToast]);
+
+  // ------- Section copy/paste -------
+  const handleCopySection = useCallback(
+    (sectionId: string) => {
+      const section = sections.find((s) => s.id === sectionId);
+      if (!section) return;
+      const timeSignature = session?.timeSignature ?? "4/4";
+      const { startTick, endTick } = getSectionTickRange(section, timeSignature);
+      const copied = copyNotesForSection(
+        sequencer.notes,
+        startTick,
+        endTick,
+        0, // store with 0 offset; will be re-offset on paste
+      );
+      setCopiedNotes(copied);
+      addToast({
+        message: `Copied ${copied.length} note${copied.length !== 1 ? "s" : ""} from ${section.name}`,
+        variant: "success",
+        duration: 2000,
+      });
+    },
+    [sections, session?.timeSignature, sequencer.notes, addToast],
+  );
+
+  const handlePasteToSection = useCallback(
+    (targetSectionId: string) => {
+      if (!copiedNotes || copiedNotes.length === 0) return;
+      const targetSection = sections.find((s) => s.id === targetSectionId);
+      if (!targetSection) return;
+      const timeSignature = session?.timeSignature ?? "4/4";
+      const { startTick: targetStart } = getSectionTickRange(targetSection, timeSignature);
+
+      // Offset the copied notes (stored at offset 0) to the target section
+      const notesToAdd: Note[] = copiedNotes.map((n) => ({
+        ...n,
+        id: `note_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        startTick: n.startTick + targetStart,
+      }));
+
+      sequencer.addBulkNotes(notesToAdd);
+      addToast({
+        message: `Pasted ${notesToAdd.length} note${notesToAdd.length !== 1 ? "s" : ""} to ${targetSection.name}`,
+        variant: "success",
+        duration: 2000,
+      });
+    },
+    [copiedNotes, sections, session?.timeSignature, sequencer, addToast],
   );
 
   // ------- Bookmark creation -------
@@ -658,6 +809,30 @@ export default function SessionWorkspacePage() {
           onStop={stop}
           trailing={
             <div className="flex items-center gap-2">
+              {canUndoAI && (
+                <Tooltip content="Undo last AI action">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleUndoAI}
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="1 4 1 10 7 10" />
+                      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                    </svg>
+                    <span className="hidden sm:inline">Undo AI</span>
+                  </Button>
+                </Tooltip>
+              )}
               <Tooltip content="Generate audio with AI">
                 <Button
                   variant="ghost"
@@ -763,6 +938,13 @@ export default function SessionWorkspacePage() {
               onUpdateSection={handleUpdateSection}
               onRequestAIGenerate={handleRequestAIGenerate}
               onAddChordsToSequencer={handleAddChordsToSequencer}
+              onReorderSections={handleReorderSections}
+              onLoopSection={handleLoopSection}
+              onClearLoop={handleClearLoop}
+              loopingSectionId={loopingSectionId}
+              onCopySection={handleCopySection}
+              onPasteToSection={handlePasteToSection}
+              hasCopiedNotes={copiedNotes !== null && copiedNotes.length > 0}
             />
             <button
               onClick={() => setSequencerVisible((v) => !v)}
@@ -799,6 +981,7 @@ export default function SessionWorkspacePage() {
                 selectedNotes={sequencer.selectedNotes}
                 onTrackInstrumentChange={handleTrackInstrumentChange}
                 onClearAll={sequencer.clearAll}
+                onUpdateVelocity={sequencer.updateNoteVelocity}
                 onPlay={handlePlay}
                 onStop={stop}
                 onSetPlayhead={setPosition}
@@ -879,6 +1062,12 @@ export default function SessionWorkspacePage() {
             onUpdateSection={handleUpdateSection}
             onRequestAIGenerate={handleRequestAIGenerate}
             onAddChordsToSequencer={handleAddChordsToSequencer}
+            onLoopSection={handleLoopSection}
+            onClearLoop={handleClearLoop}
+            loopingSectionId={loopingSectionId}
+            onCopySection={handleCopySection}
+            onPasteToSection={handlePasteToSection}
+            hasCopiedNotes={copiedNotes !== null && copiedNotes.length > 0}
           />
 
           {/* Sequencer toggle */}
@@ -930,6 +1119,7 @@ export default function SessionWorkspacePage() {
                 selectedNotes={sequencer.selectedNotes}
                 onTrackInstrumentChange={handleTrackInstrumentChange}
                 onClearAll={sequencer.clearAll}
+                onUpdateVelocity={sequencer.updateNoteVelocity}
                 onPlay={handlePlay}
                 onStop={stop}
                 onSetPlayhead={setPosition}

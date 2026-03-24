@@ -208,6 +208,17 @@ export function deleteSection(sessionId: string, sectionId: string): boolean {
   return true;
 }
 
+/**
+ * Delete all sections for a session. Returns the number of deleted sections.
+ */
+export function clearAllSections(sessionId: string): number {
+  const sections = sectionsBySession.get(sessionId);
+  if (!sections) return 0;
+  const count = sections.length;
+  sectionsBySession.set(sessionId, []);
+  return count;
+}
+
 export function updateSection(
   sessionId: string,
   sectionId: string,

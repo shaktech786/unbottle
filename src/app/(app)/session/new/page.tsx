@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils/cn";
 import { useSession } from "@/lib/hooks/use-session";
 import { usePreferences } from "@/lib/hooks/use-preferences";
+import { SESSION_TEMPLATES } from "@/lib/music/templates";
+import type { SessionTemplate } from "@/lib/music/templates";
 import type { NoteName } from "@/lib/music/types";
 
 const GENRE_PRESETS: { name: string; color: string }[] = [
@@ -55,6 +57,14 @@ const ALL_KEYS: NoteName[] = [
   "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
 ];
 
+const TEMPLATE_ICONS: Record<string, string> = {
+  "lofi-chill": "M9 18V5l12-2v13",
+  "pop-anthem": "M12 2L2 7l10 5 10-5-10-5z",
+  "ambient-drift": "M12 3v18m-7-7h14",
+  "rock-drive": "M13 2L3 14h9l-1 8 10-12h-9l1-8z",
+  "electronic-pulse": "M22 12h-4l-3 9L9 3l-3 9H2",
+};
+
 export default function NewSessionPage() {
   const { createSession, isLoading } = useSession();
   const { preferences } = usePreferences();
@@ -65,6 +75,23 @@ export default function NewSessionPage() {
   const [mood, setMood] = useState<string | null>(() => preferences.defaultMood || null);
   const [bpm, setBpm] = useState(() => preferences.defaultBpm);
   const [keySignature, setKeySignature] = useState<string>("C");
+  const [selectedTemplate, setSelectedTemplate] = useState<SessionTemplate | null>(null);
+
+  function applyTemplate(template: SessionTemplate) {
+    if (selectedTemplate?.id === template.id) {
+      // Deselect
+      setSelectedTemplate(null);
+      return;
+    }
+    setSelectedTemplate(template);
+    setBpm(template.bpm);
+    setKeySignature(template.keySignature);
+    setGenre(template.genre);
+    setMood(template.mood);
+    if (!title.trim()) {
+      setTitle(template.name);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -74,6 +101,8 @@ export default function NewSessionPage() {
       mood: mood ?? undefined,
       bpm,
       keySignature,
+      templateSections: selectedTemplate?.sections,
+      templateTracks: selectedTemplate?.tracks,
     });
   }
 
@@ -114,6 +143,92 @@ export default function NewSessionPage() {
             </p>
           </div>
         </button>
+
+        <div className="my-8 flex items-center gap-4">
+          <div className="h-px flex-1 bg-neutral-800" />
+          <span className="text-xs text-neutral-500">or pick a template</span>
+          <div className="h-px flex-1 bg-neutral-800" />
+        </div>
+
+        {/* Template Grid */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {SESSION_TEMPLATES.map((template) => (
+            <button
+              key={template.id}
+              type="button"
+              onClick={() => applyTemplate(template)}
+              className={cn(
+                "group flex flex-col gap-2 rounded-xl border p-4 text-left transition-all duration-300",
+                selectedTemplate?.id === template.id
+                  ? "border-amber-500/50 bg-amber-500/10 shadow-lg shadow-amber-500/5"
+                  : "border-neutral-800 bg-neutral-900/30 hover:border-neutral-700 hover:bg-neutral-900/50",
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <div className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-lg transition-colors duration-300",
+                  selectedTemplate?.id === template.id
+                    ? "bg-amber-500/20"
+                    : "bg-neutral-800",
+                )}>
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={cn(
+                      "transition-colors",
+                      selectedTemplate?.id === template.id
+                        ? "text-amber-400"
+                        : "text-neutral-500",
+                    )}
+                  >
+                    <path d={TEMPLATE_ICONS[template.id] ?? "M9 18V5l12-2v13"} />
+                  </svg>
+                </div>
+                <div>
+                  <p className={cn(
+                    "text-sm font-semibold transition-colors",
+                    selectedTemplate?.id === template.id
+                      ? "text-amber-300"
+                      : "text-neutral-200",
+                  )}>
+                    {template.name}
+                  </p>
+                  <p className="text-[10px] text-neutral-500">
+                    {template.bpm} BPM | {template.keySignature} | {template.genre}
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-neutral-400 line-clamp-2">
+                {template.description}
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {template.sections.slice(0, 5).map((s, i) => (
+                  <span
+                    key={i}
+                    className="rounded-full px-1.5 py-0.5 text-[9px] font-medium"
+                    style={{
+                      backgroundColor: `${s.color}20`,
+                      color: s.color,
+                    }}
+                  >
+                    {s.name}
+                  </span>
+                ))}
+                {template.sections.length > 5 && (
+                  <span className="rounded-full bg-neutral-800 px-1.5 py-0.5 text-[9px] text-neutral-500">
+                    +{template.sections.length - 5}
+                  </span>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
 
         <div className="my-8 flex items-center gap-4">
           <div className="h-px flex-1 bg-neutral-800" />
@@ -245,7 +360,7 @@ export default function NewSessionPage() {
 
           {/* Submit */}
           <Button type="submit" size="lg" loading={isLoading} className="mt-2 w-full min-h-[44px]">
-            Create Session
+            {selectedTemplate ? `Create with ${selectedTemplate.name}` : "Create Session"}
           </Button>
         </form>
       </div>

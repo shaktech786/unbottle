@@ -14,6 +14,7 @@ import { PianoRoll } from "./piano-roll";
 import { PianoKeys } from "./piano-keys";
 import { Timeline } from "./timeline";
 import { TrackList } from "./track-list";
+import { VelocityLane } from "./velocity-lane";
 
 type SnapValue = "1/4" | "1/8" | "1/16" | "1/32";
 
@@ -65,6 +66,9 @@ export interface SequencerPanelProps {
   /** Clear all notes */
   onClearAll?: () => void;
 
+  /** Update velocity for a single note */
+  onUpdateVelocity?: (noteId: string, velocity: number) => void;
+
   className?: string;
 }
 
@@ -89,6 +93,7 @@ export function SequencerPanel({
   onTrackInstrumentChange,
   onSetPlayhead,
   onClearAll,
+  onUpdateVelocity,
   className,
 }: SequencerPanelProps) {
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(
@@ -262,6 +267,21 @@ export function SequencerPanel({
               onScrollX={setPianoScrollX}
             />
           </div>
+
+          {/* Velocity lane below the piano roll */}
+          {onUpdateVelocity && (
+            <div className="flex shrink-0">
+              <div style={{ width: PIANO_KEY_WIDTH }} className="shrink-0" />
+              <VelocityLane
+                notes={notes}
+                selectedNotes={selectedNotes}
+                totalBars={totalBars}
+                width={rollWidth}
+                scrollX={pianoScrollX}
+                onUpdateVelocity={onUpdateVelocity}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

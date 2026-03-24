@@ -11,6 +11,13 @@ interface ArrangementPanelProps {
   onUpdateSection?: (sectionId: string, updates: Partial<Section>) => void;
   onRequestAIGenerate?: () => void;
   onAddChordsToSequencer?: () => void;
+  onLoopSection?: (sectionId: string) => void;
+  onClearLoop?: () => void;
+  loopingSectionId?: string | null;
+  onCopySection?: (sectionId: string) => void;
+  onPasteToSection?: (sectionId: string) => void;
+  hasCopiedNotes?: boolean;
+  onReorderSections?: (fromIndex: number, toIndex: number) => void;
 }
 
 export function ArrangementPanel({
@@ -20,6 +27,13 @@ export function ArrangementPanel({
   onUpdateSection,
   onRequestAIGenerate,
   onAddChordsToSequencer,
+  onLoopSection,
+  onClearLoop,
+  loopingSectionId,
+  onCopySection,
+  onPasteToSection,
+  hasCopiedNotes,
+  onReorderSections,
 }: ArrangementPanelProps) {
   const hasChords = sections.some((s) => s.chordProgression?.length > 0);
   return (
@@ -117,6 +131,13 @@ export function ArrangementPanel({
           onAddSection={onAddSection}
           onDeleteSection={onDeleteSection}
           onUpdateSection={onUpdateSection}
+          onLoopSection={onLoopSection}
+          onClearLoop={onClearLoop}
+          loopingSectionId={loopingSectionId}
+          onCopySection={onCopySection}
+          onPasteToSection={onPasteToSection}
+          hasCopiedNotes={hasCopiedNotes}
+          onReorderSections={onReorderSections}
         />
       )}
     </div>

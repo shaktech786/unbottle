@@ -67,8 +67,8 @@ export async function POST(request: Request) {
     const readable = new ReadableStream({
       async start(controller) {
         try {
-          // First API call — may return text, tool_use, or both
-          const response = await claude.messages.create({
+          // Stream the first API call — tokens arrive in real time
+          const stream = claude.messages.stream({
             model: "claude-sonnet-4-20250514",
             max_tokens: 4096,
             system: systemPrompt,
@@ -76,26 +76,68 @@ export async function POST(request: Request) {
             tools: PRODUCER_TOOLS,
           });
 
-          // Process all content blocks from the response
-          for (const block of response.content) {
-            if (block.type === "text" && block.text) {
-              sendSSE(controller, { type: "token", content: block.text });
-            } else if (block.type === "tool_use") {
-              sendSSE(controller, {
-                type: "action",
-                toolName: block.name,
-                toolInput: block.input,
-              });
+          // Track tool use blocks as they arrive
+          const toolUseBlocks: Map<number, { id: string; name: string; jsonBuf: string }> = new Map();
+
+          for await (const event of stream) {
+            switch (event.type) {
+              case "content_block_start": {
+                if (event.content_block.type === "tool_use") {
+                  toolUseBlocks.set(event.index, {
+                    id: event.content_block.id,
+                    name: event.content_block.name,
+                    jsonBuf: "",
+                  });
+                }
+                break;
+              }
+
+              case "content_block_delta": {
+                if (event.delta.type === "text_delta") {
+                  // Stream text tokens immediately
+                  sendSSE(controller, { type: "token", content: event.delta.text });
+                } else if (event.delta.type === "input_json_delta") {
+                  // Buffer tool input JSON incrementally
+                  const block = toolUseBlocks.get(event.index);
+                  if (block) {
+                    block.jsonBuf += event.delta.partial_json;
+                  }
+                }
+                break;
+              }
+
+              case "content_block_stop": {
+                // When a tool_use block finishes, emit the action event
+                const block = toolUseBlocks.get(event.index);
+                if (block) {
+                  let toolInput: Record<string, unknown> = {};
+                  try {
+                    toolInput = JSON.parse(block.jsonBuf) as Record<string, unknown>;
+                  } catch {
+                    // Malformed tool JSON — send empty input
+                  }
+                  sendSSE(controller, {
+                    type: "action",
+                    toolName: block.name,
+                    toolInput,
+                  });
+                  toolUseBlocks.delete(event.index);
+                }
+                break;
+              }
             }
           }
 
+          // Get the final completed message to check stop_reason
+          const finalMessage = await stream.finalMessage();
+
           // If the model called tools, do a follow-up to get the summary text
-          if (response.stop_reason === "tool_use") {
-            const toolUseBlocks = response.content.filter(
+          if (finalMessage.stop_reason === "tool_use") {
+            const toolBlocks = finalMessage.content.filter(
               (block): block is Anthropic.Messages.ToolUseBlock => block.type === "tool_use",
             );
 
-            const toolResultContent: Anthropic.Messages.ToolResultBlockParam[] = toolUseBlocks.map((block) => ({
+            const toolResultContent: Anthropic.Messages.ToolResultBlockParam[] = toolBlocks.map((block) => ({
               type: "tool_result" as const,
               tool_use_id: block.id,
               content: "Done. The changes have been applied to the workspace.",
@@ -108,7 +150,7 @@ export async function POST(request: Request) {
                 system: systemPrompt,
                 messages: [
                   ...messages,
-                  { role: "assistant" as const, content: response.content },
+                  { role: "assistant" as const, content: finalMessage.content },
                   { role: "user" as const, content: toolResultContent },
                 ],
               });

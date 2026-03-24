@@ -13,26 +13,27 @@ function ticksToDuration(ticks: number): string {
 }
 
 /**
- * Convert a Pitch string (e.g. "C#4") to a MIDI note number (0-127).
+ * Convert a Pitch string (e.g. "C#4", "Eb3") to a MIDI note number (0-127).
+ * Supports both sharp and flat notation.
  */
-function pitchToMidiNumber(pitch: string): number {
+export function pitchToMidiNumber(pitch: string): number {
   const noteMap: Record<string, number> = {
     C: 0,
-    "C#": 1,
+    "C#": 1, Db: 1,
     D: 2,
-    "D#": 3,
-    E: 4,
+    "D#": 3, Eb: 3,
+    E: 4, Fb: 4,
     F: 5,
-    "F#": 6,
+    "F#": 6, Gb: 6,
     G: 7,
-    "G#": 8,
+    "G#": 8, Ab: 8,
     A: 9,
-    "A#": 10,
-    B: 11,
+    "A#": 10, Bb: 10,
+    B: 11, Cb: 11,
   };
 
-  // Parse note name and octave from pitch string
-  const match = pitch.match(/^([A-G]#?)(\d)$/);
+  // Parse note name and octave from pitch string (supports # and b)
+  const match = pitch.match(/^([A-G][#b]?)(\d)$/);
   if (!match) {
     throw new Error(`Invalid pitch: ${pitch}`);
   }

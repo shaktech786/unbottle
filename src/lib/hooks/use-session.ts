@@ -20,7 +20,7 @@ interface UseSessionReturn {
   listSessions: () => Promise<void>;
 }
 
-interface CreateSessionInput {
+export interface CreateSessionInput {
   title?: string;
   description?: string;
   bpm?: number;
@@ -28,6 +28,10 @@ interface CreateSessionInput {
   timeSignature?: string;
   genre?: string;
   mood?: string;
+  /** Template sections to auto-create after session creation */
+  templateSections?: Omit<Section, "id" | "sessionId">[];
+  /** Template tracks to auto-create (replaces default piano track) */
+  templateTracks?: Omit<Track, "id" | "sessionId">[];
 }
 
 export function useSession(): UseSessionReturn {
@@ -44,10 +48,13 @@ export function useSession(): UseSessionReturn {
       setIsLoading(true);
       setError(null);
       try {
+        // Strip template data from the API payload (handled client-side)
+        const { templateSections, templateTracks, ...sessionPayload } = data ?? {};
+
         const res = await fetch("/api/session", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data ?? {}),
+          body: JSON.stringify(sessionPayload),
         });
 
         if (!res.ok) {
@@ -57,6 +64,31 @@ export function useSession(): UseSessionReturn {
 
         const { session: newSession } = await res.json();
         setSession(newSession);
+
+        // If template includes sections, create them
+        if (templateSections && templateSections.length > 0) {
+          await fetch(`/api/session/${newSession.id}/sections`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sections: templateSections }),
+          }).catch(() => {
+            // Best effort -- sections can be added later
+          });
+        }
+
+        // If template includes tracks, create them
+        if (templateTracks && templateTracks.length > 0) {
+          for (const track of templateTracks) {
+            await fetch(`/api/session/${newSession.id}/tracks`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(track),
+            }).catch(() => {
+              // Best effort
+            });
+          }
+        }
+
         router.push(`/session/${newSession.id}`);
         return newSession as Session;
       } catch (e) {

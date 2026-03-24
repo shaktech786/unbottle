@@ -10,6 +10,12 @@ interface SectionCardProps {
   onClick?: () => void;
   onDelete?: (sectionId: string) => void;
   onRename?: (sectionId: string, name: string) => void;
+  onLoop?: (sectionId: string) => void;
+  onClearLoop?: () => void;
+  isLooping?: boolean;
+  onCopy?: (sectionId: string) => void;
+  onPaste?: (sectionId: string) => void;
+  hasCopiedNotes?: boolean;
 }
 
 const sectionTypeLabels: Record<SectionType, string> = {
@@ -29,6 +35,12 @@ export function SectionCard({
   onClick,
   onDelete,
   onRename,
+  onLoop,
+  onClearLoop,
+  isLooping,
+  onCopy,
+  onPaste,
+  hasCopiedNotes,
 }: SectionCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(section.name);
@@ -85,6 +97,34 @@ export function SectionCard({
     [onDelete, section.id],
   );
 
+  const handleLoopClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (isLooping) {
+        onClearLoop?.();
+      } else {
+        onLoop?.(section.id);
+      }
+    },
+    [isLooping, onClearLoop, onLoop, section.id],
+  );
+
+  const handleCopyClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onCopy?.(section.id);
+    },
+    [onCopy, section.id],
+  );
+
+  const handlePasteClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onPaste?.(section.id);
+    },
+    [onPaste, section.id],
+  );
+
   return (
     <button
       onClick={onClick}
@@ -94,6 +134,7 @@ export function SectionCard({
         isSelected
           ? "border-white/30 ring-1 ring-amber-500/60 shadow-[0_0_12px_rgba(245,158,11,0.15)]"
           : "border-white/10 hover:border-white/20",
+        isLooping && "ring-1 ring-cyan-500/60 shadow-[0_0_12px_rgba(6,182,212,0.15)]",
       )}
       style={{
         width: `${width}px`,
@@ -156,9 +197,99 @@ export function SectionCard({
         </p>
       </div>
 
-      <p className="mt-2 font-mono text-[11px] text-neutral-400">
-        {section.lengthBars} bars
-      </p>
+      <div className="mt-2 flex items-center justify-between">
+        <p className="font-mono text-[11px] text-neutral-400">
+          {section.lengthBars} bars
+        </p>
+
+        {/* Action buttons -- visible on hover */}
+        <div className="flex items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+          {/* Loop button */}
+          {onLoop && (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={handleLoopClick}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handleLoopClick(e as unknown as React.MouseEvent); }}
+              title={isLooping ? "Stop looping" : "Loop section"}
+              className={cn(
+                "flex h-5 w-5 items-center justify-center rounded-full transition-colors duration-150",
+                isLooping
+                  ? "bg-cyan-500/20 text-cyan-400"
+                  : "bg-neutral-800/80 text-neutral-500 hover:bg-cyan-900/40 hover:text-cyan-400",
+              )}
+            >
+              <svg
+                width="10"
+                height="10"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="17 1 21 5 17 9" />
+                <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                <polyline points="7 23 3 19 7 15" />
+                <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+              </svg>
+            </span>
+          )}
+
+          {/* Copy button */}
+          {onCopy && (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={handleCopyClick}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handleCopyClick(e as unknown as React.MouseEvent); }}
+              title="Copy notes from this section"
+              className="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-800/80 text-neutral-500 transition-colors duration-150 hover:bg-violet-900/40 hover:text-violet-400"
+            >
+              <svg
+                width="10"
+                height="10"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+              </svg>
+            </span>
+          )}
+
+          {/* Paste button -- only visible when notes are copied */}
+          {onPaste && hasCopiedNotes && (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={handlePasteClick}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handlePasteClick(e as unknown as React.MouseEvent); }}
+              title="Paste notes to this section"
+              className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-500/20 text-violet-400 transition-colors duration-150 hover:bg-violet-500/30"
+            >
+              <svg
+                width="10"
+                height="10"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+              </svg>
+            </span>
+          )}
+        </div>
+      </div>
     </button>
   );
 }

@@ -4,6 +4,7 @@ import {
   addSection as addSectionMemory,
   deleteSection as deleteSectionMemory,
   updateSection as updateSectionMemory,
+  clearAllSections as clearAllSectionsMemory,
 } from "@/lib/session/store";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/supabase/auth";
@@ -12,6 +13,7 @@ import {
   addSection as addSectionDB,
   deleteSection as deleteSectionDB,
   updateSection as updateSectionDB,
+  clearAllSections as clearAllSectionsDB,
 } from "@/lib/supabase/db";
 import type { Section } from "@/lib/music/types";
 
@@ -92,17 +94,43 @@ export async function POST(
   return Response.json({ sections: created }, { status: 201 });
 }
 
-// DELETE /api/session/[id]/sections -- delete a section by sectionId in body
+// DELETE /api/session/[id]/sections -- delete a section by sectionId in body,
+// or delete ALL sections when { clearAll: true }
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const body = (await request.json()) as { sectionId?: string };
+  const body = (await request.json()) as { sectionId?: string; clearAll?: boolean };
 
+  // --- Clear all sections ---
+  if (body.clearAll) {
+    if (supabaseConfigured) {
+      try {
+        const client = await createClient();
+        await requireAuth(client);
+        const count = await clearAllSectionsDB(client, id);
+        return Response.json({ success: true, deleted: count });
+      } catch (err) {
+        if (err instanceof Error && err.message.includes("Not authenticated")) {
+          return Response.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        return Response.json(
+          { error: "Failed to clear sections" },
+          { status: 500 },
+        );
+      }
+    }
+
+    // In-memory fallback
+    const count = clearAllSectionsMemory(id);
+    return Response.json({ success: true, deleted: count });
+  }
+
+  // --- Delete a single section ---
   if (!body.sectionId) {
     return Response.json(
-      { error: "sectionId is required" },
+      { error: "sectionId or clearAll is required" },
       { status: 400 },
     );
   }

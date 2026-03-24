@@ -344,6 +344,22 @@ export async function deleteSection(
 }
 
 /**
+ * Delete all sections for a session. Returns the number of deleted sections.
+ */
+export async function clearAllSections(
+  client: SupabaseClient,
+  sessionId: string,
+): Promise<number> {
+  const { error, count } = await client
+    .from("sections")
+    .delete({ count: "exact" })
+    .eq("session_id", sessionId);
+
+  if (error) throw error;
+  return count ?? 0;
+}
+
+/**
  * Update a section by id. Returns updated section or null if not found.
  */
 export async function updateSection(

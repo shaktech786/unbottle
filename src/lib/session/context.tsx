@@ -21,6 +21,7 @@ interface SessionContextValue {
   setNotes: (notes: Note[]) => void;
   addSections: (newSections: Omit<Section, "id" | "sessionId">[]) => Promise<void>;
   deleteSection: (sectionId: string) => Promise<void>;
+  clearSections: () => Promise<void>;
   updateSection: (sectionId: string, updates: Partial<Omit<Section, "id" | "sessionId">>) => Promise<void>;
   updateTrack: (trackId: string, updates: Partial<Track>) => void;
   isLoading: boolean;
@@ -187,6 +188,38 @@ export function SessionProvider({ sessionId, children }: SessionProviderProps) {
     [sessionId],
   );
 
+  const clearSections = useCallback(
+    async () => {
+      // Optimistic clear
+      setSections([]);
+      setNotes([]);
+      try {
+        const res = await fetch(`/api/session/${sessionId}/sections`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ clearAll: true }),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error ?? "Failed to clear sections");
+        }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to clear sections");
+        // Re-fetch to revert on failure
+        try {
+          const res = await fetch(`/api/session/${sessionId}/sections`);
+          if (res.ok) {
+            const data = (await res.json()) as { sections: Section[] };
+            setSections(data.sections);
+          }
+        } catch {
+          // Best effort revert
+        }
+      }
+    },
+    [sessionId],
+  );
+
   const updateSection = useCallback(
     async (sectionId: string, updates: Partial<Omit<Section, "id" | "sessionId">>) => {
       // Optimistic update
@@ -310,6 +343,7 @@ export function SessionProvider({ sessionId, children }: SessionProviderProps) {
         setNotes,
         addSections,
         deleteSection,
+        clearSections,
         updateSection,
         updateTrack,
         isLoading,

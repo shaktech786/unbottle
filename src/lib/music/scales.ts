@@ -30,12 +30,29 @@ export function isNoteInScale(note: NoteName, root: NoteName, scale: string = "m
   return scaleNotes.includes(note);
 }
 
-// Note to MIDI number conversion
+// Flat-to-sharp enharmonic mapping
+const FLAT_TO_SHARP: Record<string, string> = {
+  Db: "C#",
+  Eb: "D#",
+  Fb: "E",
+  Gb: "F#",
+  Ab: "G#",
+  Bb: "A#",
+  Cb: "B",
+};
+
+// Note to MIDI number conversion (handles both sharps and flats)
 export function noteToMidi(note: string): number {
-  const match = note.match(/^([A-G]#?)(\d)$/);
+  const match = note.match(/^([A-G][#b]?)(\d)$/);
   if (!match) return 60; // default to C4
-  const [, name, octave] = match;
+  let [, name] = match;
+  const [, , octave] = match;
+  // Convert flats to sharps for lookup
+  if (name.includes("b")) {
+    name = FLAT_TO_SHARP[name] ?? name;
+  }
   const noteIndex = ALL_NOTES.indexOf(name as NoteName);
+  if (noteIndex === -1) return 60;
   return (parseInt(octave) + 1) * 12 + noteIndex;
 }
 
