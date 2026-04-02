@@ -9,6 +9,7 @@ import { ChatPanel } from "@/components/chat/chat-panel";
 import { CapturePanel } from "@/components/capture/capture-panel";
 import { SequencerPanel } from "@/components/sequencer/sequencer-panel";
 import { ExportDialog } from "@/components/export/export-dialog";
+import { SheetMusicView } from "@/components/sheet-music/sheet-music-view";
 import { GeneratePanel } from "@/components/audio/generate-panel";
 import { HyperfocusNudge } from "@/components/session/hyperfocus-nudge";
 import { BookmarkList } from "@/components/session/bookmark-list";
@@ -28,6 +29,7 @@ import { getSectionTickRange, copyNotesForSection } from "@/lib/audio/playback-u
 import { ActionHistory } from "@/lib/session/action-history";
 import type { SessionSnapshot } from "@/lib/session/action-history";
 import type { ChatAction, ChatContext } from "@/lib/hooks/use-chat";
+import { PPQ } from "@/lib/music/types";
 import type { Bookmark, InstrumentType, Note, Section, SectionType, ChordEvent } from "@/lib/music/types";
 
 type MobileTab = "arrange" | "chat" | "capture";
@@ -176,6 +178,7 @@ export default function SessionWorkspacePage() {
   // ------- State -------
   const [captureOpen, setCaptureOpen] = useState(false);
   const [sequencerVisible, setSequencerVisible] = useState(false);
+  const [sheetMusicVisible, setSheetMusicVisible] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [generateOpen, setGenerateOpen] = useState(false);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
@@ -481,6 +484,43 @@ export default function SessionWorkspacePage() {
               });
             });
         }
+      } else if (action.toolName === "generate_notation") {
+        const input = action.toolInput as {
+          trackName: string;
+          notes: Array<{
+            pitch: string;
+            startBeat: number;
+            durationBeats: number;
+            velocity?: number;
+          }>;
+          description?: string;
+        };
+
+        // Find the target track by name
+        const targetTrack = tracks.find(
+          (t) => t.name.toLowerCase() === input.trackName.toLowerCase(),
+        ) ?? tracks[0];
+
+        if (targetTrack && input.notes?.length) {
+          const newNotes: Note[] = input.notes.map((n, idx) => ({
+            id: `ai_note_${Date.now()}_${idx}`,
+            trackId: targetTrack.id,
+            pitch: n.pitch as Note["pitch"],
+            startTick: Math.round((n.startBeat - 1) * PPQ),
+            durationTicks: Math.round(n.durationBeats * PPQ),
+            velocity: n.velocity ?? 80,
+          }));
+
+          sequencer.addBulkNotes(newNotes);
+          setSequencerVisible(true);
+          setSheetMusicVisible(true);
+
+          addToast({
+            message: `${newNotes.length} notes added${input.description ? `: ${input.description}` : ""}`,
+            variant: "success",
+            duration: 3000,
+          });
+        }
       } else if (action.toolName === "suggest_lyrics") {
         const input = action.toolInput as {
           sectionName: string;
@@ -727,6 +767,77 @@ export default function SessionWorkspacePage() {
     }
   }, []);
 
+  // ------- MusicXML import -------
+  const musicxmlInputRef = useRef<HTMLInputElement>(null);
+  const handleImportMusicXML = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/musicxml/import", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: "Import failed" }));
+        throw new Error(data.error ?? "Import failed");
+      }
+
+      const result = await res.json();
+
+      // Apply imported notes to sequencer
+      if (result.notes?.length > 0) {
+        // Map placeholder trackIds to real track IDs
+        const importedNotes: Note[] = result.notes.map((n: Omit<Note, "id">, idx: number) => {
+          // Match import_track_N to our actual tracks
+          const trackIndexMatch = n.trackId.match(/import_track_(\d+)/);
+          const trackIndex = trackIndexMatch ? parseInt(trackIndexMatch[1], 10) : 0;
+          const realTrack = tracks[trackIndex] ?? tracks[0];
+          return {
+            ...n,
+            id: `imported_${Date.now()}_${idx}`,
+            trackId: realTrack?.id ?? n.trackId,
+          };
+        });
+        sequencer.addBulkNotes(importedNotes);
+      }
+
+      // Apply session settings
+      if (result.bpm && result.bpm !== 120) {
+        updateSession({ bpm: result.bpm });
+        setBpm(result.bpm);
+      }
+      if (result.keySignature) {
+        updateSession({ keySignature: result.keySignature });
+      }
+      if (result.timeSignature) {
+        updateSession({ timeSignature: result.timeSignature });
+      }
+
+      setSequencerVisible(true);
+      setSheetMusicVisible(true);
+      addToast({
+        message: `Imported ${result.notes?.length ?? 0} notes from ${file.name}`,
+        variant: "success",
+        duration: 3000,
+      });
+    } catch (err) {
+      addToast({
+        message: err instanceof Error ? err.message : "Failed to import MusicXML",
+        variant: "error",
+      });
+    }
+
+    // Reset input so same file can be re-imported
+    if (musicxmlInputRef.current) {
+      musicxmlInputRef.current.value = "";
+    }
+  }, [tracks, sequencer, updateSession, setBpm, addToast]);
+
   // ------- Fork/branch session -------
   const [isForking, setIsForking] = useState(false);
   const handleForkSession = useCallback(async () => {
@@ -883,6 +994,36 @@ export default function SessionWorkspacePage() {
                   <span className="hidden sm:inline">Fork</span>
                 </Button>
               </Tooltip>
+              <Tooltip content="Import MusicXML">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => musicxmlInputRef.current?.click()}
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                  <span className="hidden sm:inline">Import</span>
+                </Button>
+              </Tooltip>
+              <input
+                ref={musicxmlInputRef}
+                type="file"
+                accept=".musicxml,.xml,.mxl"
+                onChange={handleImportMusicXML}
+                className="hidden"
+              />
               <Button
                 variant="ghost"
                 size="sm"
@@ -965,6 +1106,30 @@ export default function SessionWorkspacePage() {
                 </span>
               )}
             </button>
+            <button
+              onClick={() => setSheetMusicVisible((v) => !v)}
+              className={cn(
+                "flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition-colors",
+                sheetMusicVisible
+                  ? "border-violet-500/30 bg-violet-500/10 text-violet-400"
+                  : "border-neutral-700 text-neutral-400 hover:border-neutral-600 hover:text-neutral-300",
+              )}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cn("transition-transform", sheetMusicVisible && "rotate-90")}>
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+              {sheetMusicVisible ? "Hide Sheet Music" : "Show Sheet Music"}
+            </button>
+            {sheetMusicVisible && (
+              <SheetMusicView
+                tracks={tracks}
+                notes={sequencer.notes}
+                bpm={session.bpm}
+                keySignature={session.keySignature}
+                timeSignature={session.timeSignature}
+                className="min-h-[200px]"
+              />
+            )}
             {sequencerVisible && (
               <SequencerPanel
                 tracks={tracks}
@@ -1070,36 +1235,77 @@ export default function SessionWorkspacePage() {
             hasCopiedNotes={copiedNotes !== null && copiedNotes.length > 0}
           />
 
-          {/* Sequencer toggle */}
-          <button
-            onClick={() => setSequencerVisible((v) => !v)}
-            className={cn(
-              "mt-3 flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition-colors",
-              sequencerVisible
-                ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
-                : "border-neutral-700 text-neutral-400 hover:border-neutral-600 hover:text-neutral-300",
-            )}
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className={cn("transition-transform", sequencerVisible && "rotate-90")}
+          {/* Sequencer & Sheet Music toggles */}
+          <div className="mt-3 flex items-center gap-2">
+            <button
+              onClick={() => setSequencerVisible((v) => !v)}
+              className={cn(
+                "flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition-colors",
+                sequencerVisible
+                  ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
+                  : "border-neutral-700 text-neutral-400 hover:border-neutral-600 hover:text-neutral-300",
+              )}
             >
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
-            {sequencerVisible ? "Hide Piano Roll" : "Show Piano Roll"}
-            {sequencer.notes.length > 0 && (
-              <span className="rounded-full bg-neutral-700 px-1.5 py-0.5 text-[10px] text-neutral-300">
-                {sequencer.notes.length} notes
-              </span>
-            )}
-          </button>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={cn("transition-transform", sequencerVisible && "rotate-90")}
+              >
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+              {sequencerVisible ? "Hide Piano Roll" : "Show Piano Roll"}
+              {sequencer.notes.length > 0 && (
+                <span className="rounded-full bg-neutral-700 px-1.5 py-0.5 text-[10px] text-neutral-300">
+                  {sequencer.notes.length} notes
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setSheetMusicVisible((v) => !v)}
+              className={cn(
+                "flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition-colors",
+                sheetMusicVisible
+                  ? "border-violet-500/30 bg-violet-500/10 text-violet-400"
+                  : "border-neutral-700 text-neutral-400 hover:border-neutral-600 hover:text-neutral-300",
+              )}
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={cn("transition-transform", sheetMusicVisible && "rotate-90")}
+              >
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+              {sheetMusicVisible ? "Hide Sheet Music" : "Show Sheet Music"}
+            </button>
+          </div>
+
+          {/* Sheet Music View (above sequencer when both visible) */}
+          {sheetMusicVisible && (
+            <div className="mt-3 min-h-[250px]">
+              <SheetMusicView
+                tracks={tracks}
+                notes={sequencer.notes}
+                bpm={session.bpm}
+                keySignature={session.keySignature}
+                timeSignature={session.timeSignature}
+                className="h-full"
+              />
+            </div>
+          )}
 
           {/* Collapsible Sequencer */}
           {sequencerVisible && (

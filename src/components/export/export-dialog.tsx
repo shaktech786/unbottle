@@ -22,6 +22,7 @@ export interface ExportDialogProps {
 
 type ExportStatus = "idle" | "exporting" | "done" | "error";
 type WavExportStatus = "idle" | "rendering" | "done" | "error";
+type MusicXMLExportStatus = "idle" | "exporting" | "done" | "error";
 
 export function ExportDialog({
   open,
@@ -41,6 +42,11 @@ export function ExportDialog({
   const [wavProgress, setWavProgress] = useState(0);
   const [wavDownloadUrl, setWavDownloadUrl] = useState<string | null>(null);
   const [wavError, setWavError] = useState<string | null>(null);
+
+  // MusicXML export state
+  const [xmlStatus, setXmlStatus] = useState<MusicXMLExportStatus>("idle");
+  const [xmlDownloadUrl, setXmlDownloadUrl] = useState<string | null>(null);
+  const [xmlError, setXmlError] = useState<string | null>(null);
 
   // Audio generation
   const { apiKey: elevenLabsKey } = useElevenLabsKey();
@@ -146,6 +152,40 @@ export function ExportDialog({
     }
   }, [session, notes, tracks, trackIds, estimatedDuration, addToast]);
 
+  async function handleMusicXMLExport() {
+    setXmlStatus("exporting");
+    setXmlError(null);
+
+    try {
+      const response = await fetch("/api/musicxml/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          trackIds,
+          keySignature: session?.keySignature,
+          timeSignature: session?.timeSignature,
+          title: session?.title,
+        }),
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || `Export failed (${response.status})`);
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      setXmlDownloadUrl(url);
+      setXmlStatus("done");
+      addToast({ message: "MusicXML export complete", variant: "success", duration: 3000 });
+    } catch (err) {
+      setXmlError(err instanceof Error ? err.message : "Export failed");
+      setXmlStatus("error");
+      addToast({ message: "MusicXML export failed", variant: "error" });
+    }
+  }
+
   async function handleAudioGenerate() {
     await generateAudio({ sessionId, duration: 30, forceInstrumental: true });
   }
@@ -160,11 +200,17 @@ export function ExportDialog({
       URL.revokeObjectURL(wavDownloadUrl);
       setWavDownloadUrl(null);
     }
+    if (xmlDownloadUrl) {
+      URL.revokeObjectURL(xmlDownloadUrl);
+      setXmlDownloadUrl(null);
+    }
     setStatus("idle");
     setErrorMessage(null);
     setWavStatus("idle");
     setWavProgress(0);
     setWavError(null);
+    setXmlStatus("idle");
+    setXmlError(null);
     resetAudio();
     onClose();
   }
@@ -218,6 +264,59 @@ export function ExportDialog({
                 variant="secondary"
                 size="sm"
                 onClick={handleMidiExport}
+                className="w-full"
+              >
+                Retry
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* MusicXML export */}
+        <div className="rounded-lg border border-neutral-700 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h3 className="text-sm font-medium text-neutral-200">Sheet Music (MusicXML)</h3>
+              <p className="text-xs text-neutral-400 mt-0.5">
+                MusicXML file for MuseScore, Finale, Sibelius
+              </p>
+            </div>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-neutral-500">
+              <path d="M9 18V5l12-2v13" />
+              <circle cx="6" cy="18" r="3" />
+              <circle cx="18" cy="16" r="3" />
+            </svg>
+          </div>
+
+          {xmlStatus === "idle" && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleMusicXMLExport}
+              disabled={notes.length === 0}
+              className="w-full"
+            >
+              {notes.length === 0 ? "No notes to export" : "Export MusicXML"}
+            </Button>
+          )}
+
+          {xmlStatus === "exporting" && <ExportProgress />}
+
+          {xmlStatus === "done" && xmlDownloadUrl && (
+            <ExportProgress
+              complete
+              downloadUrl={xmlDownloadUrl}
+              filename={`unbottle-session-${sessionId}.musicxml`}
+            />
+          )}
+
+          {xmlStatus === "error" && (
+            <div className="flex flex-col gap-2">
+              <p className="text-xs text-red-400">{xmlError}</p>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleMusicXMLExport}
                 className="w-full"
               >
                 Retry

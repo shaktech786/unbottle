@@ -140,6 +140,51 @@ export const PRODUCER_TOOLS: Anthropic.Messages.Tool[] = [
     },
   },
   {
+    name: "generate_notation",
+    description:
+      "Generate musical notation as individual notes that appear in the piano roll and sheet music. Use this when the user asks for a melody, bass line, riff, motif, or any specific musical phrase. Notes will be rendered as both piano roll entries and sheet music notation. Always specify which track the notes should go on.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        trackName: {
+          type: "string",
+          description: "Name of the track these notes belong to (e.g. 'Lead Melody', 'Bass'). Must match an existing track name.",
+        },
+        notes: {
+          type: "array",
+          description: "Array of notes to add to the sequencer",
+          items: {
+            type: "object",
+            properties: {
+              pitch: {
+                type: "string",
+                description: "Note pitch in format NoteName+Octave (e.g. 'C4', 'F#5', 'Bb3'). Use sharps (#) not flats.",
+              },
+              startBeat: {
+                type: "number",
+                description: "Start position in beats from the beginning (beat 1 = start). E.g., 1.0 is the first beat, 1.5 is the 'and' of beat 1, 2.0 is beat 2.",
+              },
+              durationBeats: {
+                type: "number",
+                description: "Duration in beats. E.g., 1.0 = quarter note, 0.5 = eighth note, 2.0 = half note, 4.0 = whole note.",
+              },
+              velocity: {
+                type: "number",
+                description: "Velocity/dynamics 0-127. Default 80. Use lower for soft passages, higher for accents.",
+              },
+            },
+            required: ["pitch", "startBeat", "durationBeats"],
+          },
+        },
+        description: {
+          type: "string",
+          description: "Brief description of what this notation represents (e.g. 'ascending C major melody', '12-bar blues bass line')",
+        },
+      },
+      required: ["trackName", "notes"],
+    },
+  },
+  {
     name: "suggest_lyrics",
     description:
       "Suggest lyrics or vocal melodies for a section. Use this when the user asks for lyrics, words, vocal ideas, or wants help writing a song's text.",
