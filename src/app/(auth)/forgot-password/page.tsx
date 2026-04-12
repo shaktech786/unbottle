@@ -2,31 +2,32 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [submittedEmail, setSubmittedEmail] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError(null);
     setLoading(true);
 
-    const supabase = createClient();
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-      email,
-      { redirectTo: `${window.location.origin}/callback?type=recovery` }
-    );
-
-    if (resetError) {
-      setError(resetError.message);
-      setLoading(false);
-      return;
+    // The server route always responds 200 with the same body whether the
+    // email exists or not, so we can ignore the response shape and always
+    // show the success state. Network/server errors fall through to the
+    // same screen — better to look successful than to leak information.
+    try {
+      await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+    } catch {
+      // Intentional swallow — see comment above
     }
 
+    setSubmittedEmail(email);
     setSuccess(true);
     setLoading(false);
   }
@@ -38,9 +39,9 @@ export default function ForgotPasswordPage() {
           Check your email
         </h1>
         <p className="mb-4 text-sm text-neutral-400">
-          We sent a password reset link to{" "}
-          <span className="font-medium text-neutral-200">{email}</span>. Click
-          it to reset your password.
+          If an account exists for{" "}
+          <span className="font-medium text-neutral-200">{submittedEmail}</span>
+          , we sent a password reset link. Check your inbox and spam folder.
         </p>
         <Link
           href="/login"
@@ -60,12 +61,6 @@ export default function ForgotPasswordPage() {
       <p className="mb-6 text-sm text-neutral-400">
         Enter your email and we&apos;ll send you a reset link
       </p>
-
-      {error && (
-        <div className="mb-4 rounded-lg border border-red-800/40 bg-red-900/20 px-4 py-3 text-sm text-red-400">
-          {error}
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div>
