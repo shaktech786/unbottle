@@ -5,26 +5,36 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
-export default function LoginPage() {
+export default function ResetPasswordPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+
     setLoading(true);
 
     const supabase = createClient();
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
+    const { error: updateError } = await supabase.auth.updateUser({
       password,
     });
 
-    if (signInError) {
-      setError(signInError.message);
+    if (updateError) {
+      setError(updateError.message);
       setLoading(false);
       return;
     }
@@ -34,9 +44,11 @@ export default function LoginPage() {
 
   return (
     <>
-      <h1 className="mb-2 text-2xl font-bold text-stone-100">Welcome back</h1>
+      <h1 className="mb-2 text-2xl font-bold text-stone-100">
+        Set new password
+      </h1>
       <p className="mb-6 text-sm text-neutral-400">
-        Sign in to continue your sessions
+        Enter your new password below
       </p>
 
       {error && (
@@ -48,39 +60,39 @@ export default function LoginPage() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div>
           <label
-            htmlFor="email"
+            htmlFor="password"
             className="mb-1.5 block text-sm font-medium text-neutral-300"
           >
-            Email
+            New password
           </label>
           <input
-            id="email"
-            type="email"
-            autoComplete="email"
+            id="password"
+            type="password"
+            autoComplete="new-password"
             required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             className="w-full min-h-[44px] rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2.5 text-sm text-stone-100 placeholder:text-neutral-500 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
-            placeholder="you@example.com"
+            placeholder="At least 6 characters"
           />
         </div>
 
         <div>
           <label
-            htmlFor="password"
+            htmlFor="confirm-password"
             className="mb-1.5 block text-sm font-medium text-neutral-300"
           >
-            Password
+            Confirm new password
           </label>
           <input
-            id="password"
+            id="confirm-password"
             type="password"
-            autoComplete="current-password"
+            autoComplete="new-password"
             required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
             className="w-full min-h-[44px] rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2.5 text-sm text-stone-100 placeholder:text-neutral-500 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
-            placeholder="Your password"
+            placeholder="Repeat your password"
           />
         </div>
 
@@ -89,26 +101,16 @@ export default function LoginPage() {
           disabled={loading}
           className="mt-2 min-h-[44px] rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {loading ? "Signing in..." : "Sign in"}
+          {loading ? "Updating..." : "Update password"}
         </button>
       </form>
 
-      <p className="mt-4 text-center text-sm">
+      <p className="mt-6 text-center text-sm text-neutral-400">
         <Link
-          href="/forgot-password"
+          href="/login"
           className="font-medium text-amber-400 hover:text-amber-300"
         >
-          Forgot your password?
-        </Link>
-      </p>
-
-      <p className="mt-3 text-center text-sm text-neutral-400">
-        Don&apos;t have an account?{" "}
-        <Link
-          href="/signup"
-          className="font-medium text-amber-400 hover:text-amber-300"
-        >
-          Create one
+          Back to login
         </Link>
       </p>
     </>
