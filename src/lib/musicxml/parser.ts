@@ -255,9 +255,14 @@ export function parseMusicXML(xml: string): MusicXMLParseResult {
         const xmlDuration = durStr ? parseInt(durStr, 10) : divisions;
         const durationTicks = Math.round((xmlDuration / divisions) * PPQ);
 
-        // Parse velocity from dynamics
+        // Parse velocity from dynamics. Look in <notations> first
+        // (schema-correct location), then fall back to direct child of <note>
+        // for files written by older Unbottle builds.
         let velocity = 80;
-        const dynamicsTag = getTag(noteXml, "dynamics");
+        const notationsTag = getTag(noteXml, "notations");
+        const dynamicsTag =
+          (notationsTag ? getTag(notationsTag, "dynamics") : null) ??
+          getTag(noteXml, "dynamics");
         if (dynamicsTag) {
           const dynValue = getTag(dynamicsTag, "other-dynamics");
           if (dynValue) {

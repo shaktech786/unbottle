@@ -788,22 +788,59 @@ export default function SessionWorkspacePage() {
       }
 
       const result = await res.json();
+      const importedTracks: Array<{ name: string; instrument: InstrumentType }> =
+        result.tracks ?? [];
 
-      // Apply imported notes to sequencer
+      // Create any tracks the import needs that don't exist yet. Imported
+      // parts are 1:1 mapped onto session tracks by index, so if the file
+      // has more parts than the session has tracks (or the session has zero
+      // tracks), POST new ones using the parsed metadata.
+      const trackMap: string[] = tracks.map((t) => t.id); // index → real id
+      if (session?.id) {
+        for (let i = tracks.length; i < importedTracks.length; i++) {
+          const importedTrack = importedTracks[i];
+          try {
+            const r = await fetch(`/api/session/${session.id}/tracks`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name: importedTrack.name,
+                instrument: importedTrack.instrument,
+              }),
+            });
+            if (r.ok) {
+              const { track } = (await r.json()) as { track: { id: string } };
+              trackMap[i] = track.id;
+            }
+          } catch {
+            // If track creation fails, we'll fall back to track 0 below
+          }
+        }
+        // Pull the freshly created tracks into the session context
+        if (importedTracks.length > tracks.length) {
+          await refreshSession();
+        }
+      }
+
+      // Apply imported notes to sequencer with their real track IDs
       if (result.notes?.length > 0) {
-        // Map placeholder trackIds to real track IDs
-        const importedNotes: Note[] = result.notes.map((n: Omit<Note, "id">, idx: number) => {
-          // Match import_track_N to our actual tracks
-          const trackIndexMatch = n.trackId.match(/import_track_(\d+)/);
-          const trackIndex = trackIndexMatch ? parseInt(trackIndexMatch[1], 10) : 0;
-          const realTrack = tracks[trackIndex] ?? tracks[0];
-          return {
-            ...n,
-            id: `imported_${Date.now()}_${idx}`,
-            trackId: realTrack?.id ?? n.trackId,
-          };
-        });
-        sequencer.addBulkNotes(importedNotes);
+        const fallbackTrackId = trackMap[0];
+        const importedNotes: Note[] = result.notes
+          .map((n: Omit<Note, "id">, idx: number) => {
+            const trackIndexMatch = n.trackId.match(/import_track_(\d+)/);
+            const trackIndex = trackIndexMatch ? parseInt(trackIndexMatch[1], 10) : 0;
+            const realId = trackMap[trackIndex] ?? fallbackTrackId;
+            if (!realId) return null;
+            return {
+              ...n,
+              id: `imported_${Date.now()}_${idx}`,
+              trackId: realId,
+            };
+          })
+          .filter((n: Note | null): n is Note => n !== null);
+        if (importedNotes.length > 0) {
+          sequencer.addBulkNotes(importedNotes);
+        }
       }
 
       // Apply session settings
@@ -836,7 +873,7 @@ export default function SessionWorkspacePage() {
     if (musicxmlInputRef.current) {
       musicxmlInputRef.current.value = "";
     }
-  }, [tracks, sequencer, updateSession, setBpm, addToast]);
+  }, [tracks, session?.id, refreshSession, sequencer, updateSession, setBpm, addToast]);
 
   // ------- Fork/branch session -------
   const [isForking, setIsForking] = useState(false);

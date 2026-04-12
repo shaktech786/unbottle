@@ -415,17 +415,15 @@ export function exportToMusicXML(
             lines.push(`        <dot/>`);
           }
 
-          // Dynamics from velocity
-          const dynamics = Math.round((event.velocity / 127) * 100);
-          lines.push(`        <dynamics><other-dynamics>${dynamics}</other-dynamics></dynamics>`);
-
-          // Notations for ties
-          if (needTieStart || needTieStop) {
-            lines.push(`        <notations>`);
-            if (needTieStart) lines.push(`          <tied type="start"/>`);
-            if (needTieStop) lines.push(`          <tied type="stop"/>`);
-            lines.push(`        </notations>`);
-          }
+          // Notations: ties + dynamics. dynamics inside notations is the
+          // schema-valid location (vs. as a direct child of <note>, which
+          // OSMD and stricter parsers reject).
+          const dynamicsValue = Math.round((event.velocity / 127) * 100);
+          lines.push(`        <notations>`);
+          if (needTieStart) lines.push(`          <tied type="start"/>`);
+          if (needTieStop) lines.push(`          <tied type="stop"/>`);
+          lines.push(`          <dynamics><other-dynamics>${dynamicsValue}</other-dynamics></dynamics>`);
+          lines.push(`        </notations>`);
 
           lines.push(`      </note>`);
         }
