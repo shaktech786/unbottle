@@ -23,6 +23,13 @@ export interface CapturePanelProps {
   collapsed?: boolean;
   onToggleCollapse?: () => void;
   onAddToSession?: (entry: CaptureEntry) => void;
+  /**
+   * Called when the user clicks "Transcribe to MIDI" on a recorded blob.
+   * The host is responsible for running pitch detection, creating notes,
+   * and clearing the preview by returning. When provided, the preview
+   * shows a "Transcribe to MIDI" action alongside "Save Audio".
+   */
+  onTranscribeToMidi?: (blob: Blob) => Promise<void> | void;
   className?: string;
 }
 
@@ -30,6 +37,7 @@ export function CapturePanel({
   collapsed = false,
   onToggleCollapse,
   onAddToSession,
+  onTranscribeToMidi,
   className,
 }: CapturePanelProps) {
   const [activeTab, setActiveTab] = useState<CaptureTab>("record");
@@ -83,6 +91,16 @@ export function CapturePanel({
   }
 
   function handleDiscard() {
+    if (previewEntry?.audioUrl) {
+      URL.revokeObjectURL(previewEntry.audioUrl);
+    }
+    setPreviewEntry(null);
+  }
+
+  async function handleTranscribe(blob: Blob) {
+    if (!onTranscribeToMidi) return;
+    await onTranscribeToMidi(blob);
+    // Clear the preview once the host has processed the audio
     if (previewEntry?.audioUrl) {
       URL.revokeObjectURL(previewEntry.audioUrl);
     }
@@ -162,8 +180,14 @@ export function CapturePanel({
           <div className="mb-4">
             <CapturePreview
               audioUrl={previewEntry.audioUrl ?? null}
+              audioBlob={previewEntry.audioBlob ?? null}
               onAddToSession={handleAddToSession}
               onDiscard={handleDiscard}
+              onTranscribeToMidi={
+                onTranscribeToMidi && previewEntry.type === "record"
+                  ? handleTranscribe
+                  : undefined
+              }
             />
           </div>
         )}

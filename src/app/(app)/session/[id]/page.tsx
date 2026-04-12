@@ -335,6 +335,94 @@ export default function SessionWorkspacePage() {
     [session, updateSession, setBpm, addToast],
   );
 
+  // ------- Hum-to-MIDI: transcribe a recorded blob into notes -------
+  const handleTranscribeToMidi = useCallback(
+    async (blob: Blob) => {
+      if (!session) return;
+
+      try {
+        const { decodeBlobToMono, detectPitchSegments, segmentsToNotes } = await import(
+          "@/lib/audio/hum-to-midi"
+        );
+        const { samples, sampleRate } = await decodeBlobToMono(blob);
+        const segments = detectPitchSegments(samples, {
+          sampleRate,
+          keySignature: session.keySignature,
+        });
+
+        if (segments.length === 0) {
+          addToast({
+            message: "Couldn't detect a melody — try humming louder and clearer",
+            variant: "error",
+          });
+          return;
+        }
+
+        // Find an existing "Vocal" track or create one. We don't reuse the
+        // first track because that's usually a piano/bass and stomping notes
+        // onto it would surprise the user.
+        let vocalTrack = tracks.find((t) => t.name.toLowerCase().includes("vocal"));
+        if (!vocalTrack) {
+          const r = await fetch(`/api/session/${session.id}/tracks`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: "Vocal", instrument: "piano" }),
+          });
+          if (r.ok) {
+            const { track } = (await r.json()) as { track: typeof tracks[number] };
+            vocalTrack = track;
+            await refreshSession();
+          }
+        }
+
+        if (!vocalTrack) {
+          addToast({ message: "Failed to create vocal track", variant: "error" });
+          return;
+        }
+
+        const partialNotes = segmentsToNotes(segments, vocalTrack.id, session.bpm ?? 120);
+        const notes: Note[] = partialNotes.map((n, idx) => ({
+          ...n,
+          id: `hum_${Date.now()}_${idx}`,
+        }));
+        sequencer.addBulkNotes(notes);
+
+        // Persist the capture metadata so it shows up in the captures list
+        fetch(`/api/session/${session.id}/captures`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "audio",
+            detectedNotes: notes.map((n) => ({
+              pitch: n.pitch,
+              start: n.startTick,
+              duration: n.durationTicks,
+            })),
+            durationMs: Math.round((samples.length / sampleRate) * 1000),
+          }),
+        }).catch(() => {
+          // Best-effort persistence — note add still succeeded
+        });
+
+        setSequencerVisible(true);
+        setSheetMusicVisible(true);
+        addToast({
+          message: `Transcribed ${notes.length} notes${
+            session.keySignature ? ` (auto-tuned to ${session.keySignature})` : ""
+          }`,
+          variant: "success",
+          duration: 4000,
+        });
+      } catch (err) {
+        addToast({
+          message: err instanceof Error ? err.message : "Transcription failed",
+          variant: "error",
+        });
+      }
+    },
+    [session, tracks, refreshSession, sequencer, addToast],
+  );
+
   // ------- AI tool action handler -------
   const handleChatAction = useCallback(
     (action: ChatAction) => {
@@ -1214,6 +1302,7 @@ export default function SessionWorkspacePage() {
           <CapturePanel
             collapsed={false}
             onAddToSession={handleCaptureAddToSession}
+            onTranscribeToMidi={handleTranscribeToMidi}
             className="flex-1 w-full border-l-0"
           />
         )}
@@ -1398,6 +1487,7 @@ export default function SessionWorkspacePage() {
               <CapturePanel
                 collapsed={false}
                 onAddToSession={handleCaptureAddToSession}
+                onTranscribeToMidi={handleTranscribeToMidi}
                 className="border-l-0 rounded-2xl"
               />
             </div>

@@ -7,9 +7,15 @@ import { WaveformDisplay } from "./waveform-display";
 
 export interface CapturePreviewProps {
   audioUrl: string | null;
+  audioBlob?: Blob | null;
   transcription?: string | null;
   onAddToSession: () => void;
   onDiscard: () => void;
+  /**
+   * Called with the recorded blob when the user wants the audio
+   * transcribed to MIDI. Only shown when the prop is provided.
+   */
+  onTranscribeToMidi?: (blob: Blob) => Promise<void> | void;
   className?: string;
 }
 
@@ -18,13 +24,26 @@ export interface CapturePreviewProps {
  */
 export function CapturePreview({
   audioUrl,
+  audioBlob,
   transcription,
   onAddToSession,
   onDiscard,
+  onTranscribeToMidi,
   className,
 }: CapturePreviewProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+
+  async function handleTranscribe() {
+    if (!audioBlob || !onTranscribeToMidi || isTranscribing) return;
+    setIsTranscribing(true);
+    try {
+      await onTranscribeToMidi(audioBlob);
+    } finally {
+      setIsTranscribing(false);
+    }
+  }
 
   function togglePlayback() {
     if (!audioRef.current || !audioUrl) return;
@@ -109,18 +128,31 @@ export function CapturePreview({
       )}
 
       {/* Actions */}
-      <div className="flex gap-2">
-        <Button variant="ghost" size="sm" onClick={onDiscard} className="flex-1">
-          Discard
-        </Button>
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={onAddToSession}
-          className="flex-1"
-        >
-          Add to Session
-        </Button>
+      <div className="flex flex-col gap-2">
+        {onTranscribeToMidi && (
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleTranscribe}
+            disabled={!audioBlob || isTranscribing}
+            className="w-full"
+          >
+            {isTranscribing ? "Transcribing..." : "Transcribe to MIDI"}
+          </Button>
+        )}
+        <div className="flex gap-2">
+          <Button variant="ghost" size="sm" onClick={onDiscard} className="flex-1">
+            Discard
+          </Button>
+          <Button
+            variant={onTranscribeToMidi ? "ghost" : "primary"}
+            size="sm"
+            onClick={onAddToSession}
+            className="flex-1"
+          >
+            Save Audio
+          </Button>
+        </div>
       </div>
     </div>
   );
