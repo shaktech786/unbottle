@@ -1,8 +1,30 @@
 // Core music domain types used across the entire application
 
 export type NoteName = "C" | "C#" | "D" | "D#" | "E" | "F" | "F#" | "G" | "G#" | "A" | "A#" | "B";
+export type FlatNoteName = "Db" | "Eb" | "Gb" | "Ab" | "Bb";
+/**
+ * Roots a chord can be spelled with. Sharps are the canonical internal form
+ * (matches NoteName / Pitch), but flats are accepted because they're
+ * harmonically meaningful: e.g. in C minor the bVI is Ab, not G#. Use
+ * `normalizeChordRoot` to coerce a flat to its sharp enharmonic equivalent
+ * when you need a NoteName for MIDI / scale / pitch lookups.
+ */
+export type ChordRoot = NoteName | FlatNoteName;
 export type Octave = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 export type Pitch = `${NoteName}${Octave}`;
+
+const FLAT_TO_SHARP: Record<FlatNoteName, NoteName> = {
+  Db: "C#",
+  Eb: "D#",
+  Gb: "F#",
+  Ab: "G#",
+  Bb: "A#",
+};
+
+/** Convert a flat-spelled root to its sharp enharmonic equivalent. */
+export function normalizeChordRoot(root: ChordRoot): NoteName {
+  return (FLAT_TO_SHARP as Record<string, NoteName>)[root] ?? (root as NoteName);
+}
 
 export interface Note {
   id: string;
@@ -15,9 +37,9 @@ export interface Note {
 }
 
 export interface Chord {
-  root: NoteName;
+  root: ChordRoot;
   quality: "major" | "minor" | "diminished" | "augmented" | "dominant7" | "major7" | "minor7" | "sus2" | "sus4" | "add9" | "power";
-  bass?: NoteName; // slash chord
+  bass?: ChordRoot; // slash chord
 }
 
 export interface ChordEvent {

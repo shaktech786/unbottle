@@ -81,6 +81,54 @@ describe("chordProgressionToNotes", () => {
     const notes = chordProgressionToNotes(sections, "t1", 120);
     expect(notes[0].startTick).toBe(4 * 4 * PPQ);
   });
+
+  it("renders the canonical Cm-Ab-F-G lo-fi progression with correct pitches", () => {
+    // Regression: AI used to send "A" instead of "Ab" because the tool's
+    // root enum was sharps-only. Now flats are accepted end-to-end and
+    // produce the right pitches.
+    const sections = [
+      makeSection({
+        chordProgression: [
+          { chord: { root: "C", quality: "minor" }, durationBars: 1 },
+          { chord: { root: "Ab", quality: "major" }, durationBars: 1 },
+          { chord: { root: "F", quality: "major" }, durationBars: 1 },
+          { chord: { root: "G", quality: "major" }, durationBars: 1 },
+        ],
+      }),
+    ];
+    const notes = chordProgressionToNotes(sections, "t1", 120);
+    expect(notes).toHaveLength(12); // 4 chords × 3-note triads
+
+    const pitchesAtTick = (tick: number) =>
+      notes.filter((n) => n.startTick === tick).map((n) => n.pitch);
+
+    // Cm: C3 D#3 G3
+    expect(pitchesAtTick(0)).toEqual(["C3", "D#3", "G3"]);
+    // Ab major: G#3 C4 D#4 (flat normalized to sharp for MIDI lookup)
+    expect(pitchesAtTick(4 * PPQ)).toEqual(["G#3", "C4", "D#4"]);
+    // F major: F3 A3 C4
+    expect(pitchesAtTick(8 * PPQ)).toEqual(["F3", "A3", "C4"]);
+    // G major: G3 B3 D4
+    expect(pitchesAtTick(12 * PPQ)).toEqual(["G3", "B3", "D4"]);
+  });
+
+  it("treats Ab and A as different chords (no enharmonic collapse)", () => {
+    const ab = chordProgressionToNotes(
+      [makeSection({
+        chordProgression: [{ chord: { root: "Ab", quality: "major" }, durationBars: 1 }],
+      })],
+      "t1",
+      120,
+    );
+    const a = chordProgressionToNotes(
+      [makeSection({
+        chordProgression: [{ chord: { root: "A", quality: "major" }, durationBars: 1 }],
+      })],
+      "t1",
+      120,
+    );
+    expect(ab.map((n) => n.pitch)).not.toEqual(a.map((n) => n.pitch));
+  });
 });
 
 describe("totalSectionsTicks", () => {

@@ -1,4 +1,5 @@
-import type { NoteName } from "./types";
+import type { ChordRoot, NoteName } from "./types";
+import { normalizeChordRoot } from "./types";
 
 export const ALL_NOTES: NoteName[] = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
@@ -77,8 +78,12 @@ export const CHORD_INTERVALS: Record<string, number[]> = {
   power: [0, 7],
 };
 
-export function getChordNotes(root: NoteName, quality: string, octave: number = 4): string[] {
-  const rootMidi = noteToMidi(`${root}${octave}`);
+export function getChordNotes(root: ChordRoot, quality: string, octave: number = 4): string[] {
+  // Normalize flats (Ab → G#) so the MIDI lookup uses the canonical
+  // sharp form. This means the stored chord can preserve "Ab" for display
+  // while still producing correct notes downstream.
+  const sharpRoot: NoteName = normalizeChordRoot(root);
+  const rootMidi = noteToMidi(`${sharpRoot}${octave}`);
   const intervals = CHORD_INTERVALS[quality] ?? CHORD_INTERVALS.major;
   return intervals.map((interval) => midiToNote(rootMidi + interval));
 }

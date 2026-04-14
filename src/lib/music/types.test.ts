@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { barsToTicks, ticksToSeconds, chordToString, PPQ } from "./types";
+import {
+  barsToTicks,
+  ticksToSeconds,
+  chordToString,
+  normalizeChordRoot,
+  PPQ,
+} from "./types";
 
 describe("barsToTicks", () => {
   it("converts 1 bar in 4/4 to 1920 ticks", () => {
@@ -52,5 +58,48 @@ describe("chordToString", () => {
 
   it("formats power chord", () => {
     expect(chordToString({ root: "E", quality: "power" })).toBe("E5");
+  });
+
+  it("formats a flat-rooted chord using the canonical flat spelling", () => {
+    // Lo-fi context: bVI in C minor is Ab major, NOT G# major.
+    expect(chordToString({ root: "Ab", quality: "major" })).toBe("Ab");
+  });
+
+  it("formats a flat-rooted minor chord", () => {
+    expect(chordToString({ root: "Bb", quality: "minor" })).toBe("Bbm");
+  });
+
+  it("formats a flat slash chord", () => {
+    expect(chordToString({ root: "Eb", quality: "major", bass: "Bb" })).toBe(
+      "Eb/Bb",
+    );
+  });
+});
+
+describe("normalizeChordRoot", () => {
+  it("passes sharps through unchanged", () => {
+    expect(normalizeChordRoot("C")).toBe("C");
+    expect(normalizeChordRoot("F#")).toBe("F#");
+    expect(normalizeChordRoot("A#")).toBe("A#");
+  });
+
+  it("maps Db → C#", () => {
+    expect(normalizeChordRoot("Db")).toBe("C#");
+  });
+
+  it("maps Eb → D#", () => {
+    expect(normalizeChordRoot("Eb")).toBe("D#");
+  });
+
+  it("maps Gb → F#", () => {
+    expect(normalizeChordRoot("Gb")).toBe("F#");
+  });
+
+  it("maps Ab → G# (the bug that made Ab major become A major)", () => {
+    expect(normalizeChordRoot("Ab")).toBe("G#");
+  });
+
+  it("maps Bb → A#", () => {
+    expect(normalizeChordRoot("Bb")).toBe("A#");
   });
 });

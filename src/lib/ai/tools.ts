@@ -54,9 +54,11 @@ export const PRODUCER_TOOLS: Anthropic.Messages.Tool[] = [
                         root: {
                           type: "string",
                           enum: [
-                            "C", "C#", "D", "D#", "E", "F",
-                            "F#", "G", "G#", "A", "A#", "B",
+                            "C", "C#", "Db", "D", "D#", "Eb", "E", "F",
+                            "F#", "Gb", "G", "G#", "Ab", "A", "A#", "Bb", "B",
                           ],
+                          description:
+                            "Chord root. Use the spelling that fits the key — e.g. 'Ab' (not 'G#') for the bVI in C minor, 'Bb' for the bVII in C minor, etc. Sharps and flats are both accepted; pick whichever is musically idiomatic.",
                         },
                         quality: {
                           type: "string",
@@ -69,10 +71,10 @@ export const PRODUCER_TOOLS: Anthropic.Messages.Tool[] = [
                         bass: {
                           type: "string",
                           enum: [
-                            "C", "C#", "D", "D#", "E", "F",
-                            "F#", "G", "G#", "A", "A#", "B",
+                            "C", "C#", "Db", "D", "D#", "Eb", "E", "F",
+                            "F#", "Gb", "G", "G#", "Ab", "A", "A#", "Bb", "B",
                           ],
-                          description: "Optional bass note for slash chords",
+                          description: "Optional bass note for slash chords. Sharps and flats both accepted.",
                         },
                       },
                       required: ["root", "quality"],
