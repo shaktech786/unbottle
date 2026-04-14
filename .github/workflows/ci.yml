@@ -9,12 +9,17 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # Opt JS actions (checkout, setup-node, etc.) into their Node 24 runtime.
+      # Becomes the default on 2026-06-02; enabling it now clears the
+      # deprecation warning from the Node 20 runner.
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - run: npm ci
