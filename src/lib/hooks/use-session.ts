@@ -17,6 +17,7 @@ interface UseSessionReturn {
     id: string,
     updates: Partial<Session>,
   ) => Promise<Session | null>;
+  deleteSession: (id: string) => Promise<boolean>;
   listSessions: () => Promise<void>;
 }
 
@@ -155,6 +156,31 @@ export function useSession(): UseSessionReturn {
     [],
   );
 
+  const deleteSessionFn = useCallback(
+    async (id: string): Promise<boolean> => {
+      setError(null);
+      try {
+        const res = await fetch(`/api/session/${id}`, {
+          method: "DELETE",
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error ?? "Failed to delete session");
+        }
+
+        // Remove from local sessions list
+        setSessions((prev) => prev.filter((s) => s.id !== id));
+        return true;
+      } catch (e) {
+        const message = e instanceof Error ? e.message : "Unknown error";
+        setError(message);
+        return false;
+      }
+    },
+    [],
+  );
+
   const listSessionsFn = useCallback(async (): Promise<void> => {
     setIsLoading(true);
     setError(null);
@@ -186,6 +212,7 @@ export function useSession(): UseSessionReturn {
     createSession: createSessionFn,
     loadSession,
     updateSession: updateSessionFn,
+    deleteSession: deleteSessionFn,
     listSessions: listSessionsFn,
   };
 }

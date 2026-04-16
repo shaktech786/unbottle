@@ -100,6 +100,10 @@ export function SequencerPanel({
     tracks[0]?.id ?? null,
   );
   const [snap, setSnap] = useState<SnapValue>("1/16");
+  const [zoom, setZoom] = useState(1);
+  const ZOOM_MIN = 0.5;
+  const ZOOM_MAX = 3;
+  const ZOOM_STEP = 0.25;
   // Auto-expand bars to fit notes (4 beats per bar, PPQ ticks per beat)
   const maxNoteTick = notes.length > 0
     ? Math.max(...notes.map((n) => n.startTick + n.durationTicks))
@@ -172,6 +176,30 @@ export function SequencerPanel({
           </select>
         </div>
 
+        {/* Zoom */}
+        <div className="flex items-center gap-1">
+          <span className="hidden sm:inline text-xs text-neutral-500">Zoom</span>
+          <button
+            onClick={() => setZoom((z) => Math.max(ZOOM_MIN, +(z - ZOOM_STEP).toFixed(2)))}
+            disabled={zoom <= ZOOM_MIN}
+            className="h-7 w-7 rounded bg-neutral-800 text-xs font-bold text-neutral-300 border border-neutral-700 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Zoom out"
+          >
+            -
+          </button>
+          <span className="w-10 text-center text-xs font-mono text-neutral-400">
+            {Math.round(zoom * 100)}%
+          </span>
+          <button
+            onClick={() => setZoom((z) => Math.min(ZOOM_MAX, +(z + ZOOM_STEP).toFixed(2)))}
+            disabled={zoom >= ZOOM_MAX}
+            className="h-7 w-7 rounded bg-neutral-800 text-xs font-bold text-neutral-300 border border-neutral-700 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Zoom in"
+          >
+            +
+          </button>
+        </div>
+
         {/* Bars */}
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-neutral-500">Bars</span>
@@ -234,6 +262,7 @@ export function SequencerPanel({
               onSetPlayhead={onSetPlayhead}
               scrollX={pianoScrollX}
               width={rollWidth}
+              zoom={zoom}
             />
           </div>
 
@@ -257,6 +286,8 @@ export function SequencerPanel({
               scaleNotes={scaleNotes}
               width={rollWidth}
               height={rollHeight}
+              zoom={zoom}
+              onZoomChange={setZoom}
               onAddNote={onAddNote}
               onSelectNote={onSelectNote}
               onClearSelection={onClearSelection}
@@ -278,6 +309,7 @@ export function SequencerPanel({
                 totalBars={totalBars}
                 width={rollWidth}
                 scrollX={pianoScrollX}
+                zoom={zoom}
                 onUpdateVelocity={onUpdateVelocity}
               />
             </div>

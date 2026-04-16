@@ -12,11 +12,13 @@ interface VelocityLaneProps {
   totalBars: number;
   width: number;
   scrollX: number;
+  /** Horizontal zoom multiplier (default 1). */
+  zoom?: number;
   onUpdateVelocity: (noteId: string, velocity: number) => void;
   className?: string;
 }
 
-const LANE_HEIGHT = 60;
+const LANE_HEIGHT = 80;
 
 export function VelocityLane({
   notes,
@@ -24,6 +26,7 @@ export function VelocityLane({
   totalBars,
   width,
   scrollX,
+  zoom = 1,
   onUpdateVelocity,
   className,
 }: VelocityLaneProps) {
@@ -32,7 +35,7 @@ export function VelocityLane({
   const activeNoteId = useRef<string | null>(null);
 
   const totalTicks = totalBars * 4 * PPQ;
-  const pxPerTick = width / totalTicks;
+  const pxPerTick = (width / totalTicks) * zoom;
 
   const getNoteAtX = useCallback(
     (clientX: number): Note | null => {

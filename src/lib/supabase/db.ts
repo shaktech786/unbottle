@@ -512,6 +512,44 @@ export async function addBookmark(
   return mapBookmarkRow(inserted as BookmarkRow);
 }
 
+/**
+ * Update a bookmark (e.g. rename).
+ */
+export async function updateBookmark(
+  client: SupabaseClient,
+  bookmarkId: string,
+  updates: Partial<Pick<Bookmark, "label" | "description">>,
+): Promise<Bookmark> {
+  const row: Record<string, unknown> = {};
+  if (updates.label !== undefined) row.label = updates.label;
+  if (updates.description !== undefined) row.description = updates.description;
+
+  const { data, error } = await client
+    .from("bookmarks")
+    .update(row)
+    .eq("id", bookmarkId)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return mapBookmarkRow(data as BookmarkRow);
+}
+
+/**
+ * Delete a bookmark by ID.
+ */
+export async function deleteBookmark(
+  client: SupabaseClient,
+  bookmarkId: string,
+): Promise<void> {
+  const { error } = await client
+    .from("bookmarks")
+    .delete()
+    .eq("id", bookmarkId);
+
+  if (error) throw error;
+}
+
 // ---------------------------------------------------------------------------
 // Branch Session
 // ---------------------------------------------------------------------------

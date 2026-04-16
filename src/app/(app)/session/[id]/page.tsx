@@ -209,7 +209,6 @@ export default function SessionWorkspacePage() {
   // When a user lands on a brand-new session (no sections, no notes),
   // auto-send a kickoff message to the AI so they get immediate guidance.
   const hasAutoKicked = useRef(false);
-  const [isAutoKicking, setIsAutoKicking] = useState(false);
   useEffect(() => {
     if (
       session &&
@@ -218,7 +217,6 @@ export default function SessionWorkspacePage() {
       contextNotes.length === 0
     ) {
       hasAutoKicked.current = true;
-      setIsAutoKicking(true);
 
       const parts: string[] = [];
       if (session.genre) parts.push(`genre is ${session.genre}`);
@@ -237,12 +235,8 @@ export default function SessionWorkspacePage() {
         attempts++;
         if (chatSendRef.current) {
           chatSendRef.current(msg);
-          // Clear auto-kick indicator after a delay (AI will respond)
-          setTimeout(() => setIsAutoKicking(false), 2000);
         } else if (attempts < 10) {
           setTimeout(tryKick, 500);
-        } else {
-          setIsAutoKicking(false);
         }
       };
       const timer = setTimeout(tryKick, 1000);
@@ -848,6 +842,72 @@ export default function SessionWorkspacePage() {
       });
   }, [session, bookmarks.length, sections.length, sequencer.notes.length, addToast]);
 
+  // ------- Bookmark rename -------
+  const handleRenameBookmark = useCallback(
+    (bookmarkId: string, newLabel: string) => {
+      if (!session?.id) return;
+      // Optimistic update
+      setBookmarks((prev) =>
+        prev.map((b) => (b.id === bookmarkId ? { ...b, label: newLabel } : b)),
+      );
+      fetch(`/api/session/${session.id}/bookmark`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookmarkId, label: newLabel }),
+      }).catch(() => {
+        addToast({ message: "Failed to rename bookmark", variant: "error" });
+      });
+    },
+    [session?.id, addToast],
+  );
+
+  // ------- Bookmark delete -------
+  const handleDeleteBookmark = useCallback(
+    (bookmarkId: string) => {
+      if (!session?.id) return;
+      // Optimistic update
+      setBookmarks((prev) => prev.filter((b) => b.id !== bookmarkId));
+      fetch(`/api/session/${session.id}/bookmark`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookmarkId }),
+      })
+        .then((res) => {
+          if (res.ok) {
+            addToast({ message: "Bookmark deleted", variant: "default", duration: 2000 });
+          }
+        })
+        .catch(() => {
+          addToast({ message: "Failed to delete bookmark", variant: "error" });
+        });
+    },
+    [session?.id, addToast],
+  );
+
+  // ------- Bookmark restore -------
+  const handleRestoreBookmark = useCallback(
+    (bookmark: Bookmark) => {
+      const snap = bookmark.contextSnapshot;
+      const updates: Record<string, unknown> = {};
+      if (snap.bpm != null) {
+        updates.bpm = snap.bpm;
+        setBpm(snap.bpm);
+      }
+      if (snap.keySignature != null) {
+        updates.keySignature = snap.keySignature;
+      }
+      if (Object.keys(updates).length > 0) {
+        updateSession(updates);
+        addToast({
+          message: `Restored ${[snap.bpm != null ? `BPM ${snap.bpm}` : "", snap.keySignature != null ? `Key ${snap.keySignature}` : ""].filter(Boolean).join(", ")}`,
+          variant: "success",
+          duration: 2500,
+        });
+      }
+    },
+    [updateSession, setBpm, addToast],
+  );
+
   // Trigger "Ask AI to Generate" by sending a prompt to chat
   const handleRequestAIGenerate = useCallback(() => {
     if (chatSendRef.current) {
@@ -1031,6 +1091,11 @@ export default function SessionWorkspacePage() {
         />
       )}
 
+      {/* Session title */}
+      <div className="flex items-center gap-2 px-4 py-1.5 border-b border-neutral-800/30">
+        <span className="text-xs text-neutral-500 truncate">{session.title}</span>
+      </div>
+
       {/* Transport Controls */}
       <div className="shrink-0 overflow-x-auto">
         <TransportControls
@@ -1044,7 +1109,7 @@ export default function SessionWorkspacePage() {
           onPlay={handlePlay}
           onStop={stop}
           trailing={
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               {canUndoAI && (
                 <Tooltip content="Undo last AI action">
                   <Button
@@ -1065,7 +1130,7 @@ export default function SessionWorkspacePage() {
                       <polyline points="1 4 1 10 7 10" />
                       <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
                     </svg>
-                    <span className="hidden sm:inline">Undo AI</span>
+                    <span className="hidden md:inline">Undo AI</span>
                   </Button>
                 </Tooltip>
               )}
@@ -1089,7 +1154,7 @@ export default function SessionWorkspacePage() {
                     <circle cx="6" cy="18" r="3" />
                     <circle cx="18" cy="16" r="3" />
                   </svg>
-                  <span className="hidden sm:inline">AI Generate</span>
+                  <span className="hidden md:inline">AI Generate</span>
                 </Button>
               </Tooltip>
               <Tooltip content="Fork this session">
@@ -1116,7 +1181,7 @@ export default function SessionWorkspacePage() {
                     <path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9" />
                     <path d="M12 12v3" />
                   </svg>
-                  <span className="hidden sm:inline">Fork</span>
+                  <span className="hidden md:inline">Fork</span>
                 </Button>
               </Tooltip>
               <Tooltip content="Import MusicXML">
@@ -1139,7 +1204,7 @@ export default function SessionWorkspacePage() {
                     <polyline points="17 8 12 3 7 8" />
                     <line x1="12" y1="3" x2="12" y2="15" />
                   </svg>
-                  <span className="hidden sm:inline">Import</span>
+                  <span className="hidden md:inline">Import</span>
                 </Button>
               </Tooltip>
               <input
@@ -1168,7 +1233,7 @@ export default function SessionWorkspacePage() {
                   <polyline points="7 10 12 15 17 10" />
                   <line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
-                <span className="hidden sm:inline">Export</span>
+                <span className="hidden md:inline">Export</span>
               </Button>
             </div>
           }
@@ -1293,7 +1358,13 @@ export default function SessionWorkspacePage() {
               className="flex-1"
             />
             <div className="border-t border-neutral-800 p-3">
-              <BookmarkList bookmarks={bookmarks} onAdd={handleAddBookmark} />
+              <BookmarkList
+                bookmarks={bookmarks}
+                onAdd={handleAddBookmark}
+                onDelete={handleDeleteBookmark}
+                onRename={handleRenameBookmark}
+                onRestore={handleRestoreBookmark}
+              />
             </div>
           </div>
         )}
@@ -1323,28 +1394,18 @@ export default function SessionWorkspacePage() {
 
           {/* Bookmarks section below chat */}
           <div className="shrink-0 border-t border-neutral-800 p-3">
-            <BookmarkList bookmarks={bookmarks} onAdd={handleAddBookmark} />
+            <BookmarkList
+                bookmarks={bookmarks}
+                onAdd={handleAddBookmark}
+                onDelete={handleDeleteBookmark}
+                onRename={handleRenameBookmark}
+                onRestore={handleRestoreBookmark}
+              />
           </div>
         </div>
 
         {/* Center: Arrangement + collapsible Sequencer */}
         <div className="flex min-w-0 flex-1 flex-col overflow-y-auto p-3">
-          {/* Loading indicator during auto-kickoff */}
-          {isAutoKicking && sections.length === 0 && (
-            <div className="flex flex-col items-center justify-center gap-3 py-16">
-              <div className="flex items-center gap-1">
-                {[0, 1, 2, 3, 4].map((i) => (
-                  <div
-                    key={i}
-                    className="h-8 w-1.5 rounded-full bg-amber-500/60 waveform-bar"
-                    style={{ animationDelay: `${i * 0.15}s` }}
-                  />
-                ))}
-              </div>
-              <p className="text-sm text-neutral-400">Building your arrangement...</p>
-            </div>
-          )}
-
           {/* Arrangement panel */}
           <ArrangementPanel
             sections={sections}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LandingNav } from "@/components/landing/landing-nav";
 import { Waveform } from "@/components/landing/waveform";
 import { ScrollReveal } from "@/components/landing/scroll-reveal";
 import { WorkspacePreview } from "@/components/landing/workspace-preview";
@@ -6,6 +7,8 @@ import { WorkspacePreview } from "@/components/landing/workspace-preview";
 export default function Home() {
   return (
     <div className="flex flex-col flex-1">
+      {/* Navigation header */}
+      <LandingNav />
       {/* ================================================================ */}
       {/* HERO                                                             */}
       {/* ================================================================ */}
@@ -32,7 +35,7 @@ export default function Home() {
         </div>
 
         <div className="mt-10 sm:mt-12">
-          <Link href="/dashboard">
+          <Link href="/signup">
             <button className="group relative inline-flex items-center justify-center rounded-xl bg-amber-glow px-8 py-4 text-base font-semibold text-[#0a0a0a] transition-all hover:bg-amber-deep hover:shadow-[0_0_40px_rgba(245,158,11,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-glow focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a] min-h-[48px]">
               Start a Session
             </button>
@@ -343,7 +346,7 @@ export default function Home() {
 
         <ScrollReveal delay={150}>
           <div className="mt-10 sm:mt-12">
-            <Link href="/dashboard">
+            <Link href="/signup">
               <button className="group relative inline-flex items-center justify-center rounded-xl bg-amber-glow px-10 py-4 text-lg font-semibold text-[#0a0a0a] transition-all hover:bg-amber-deep hover:shadow-[0_0_50px_rgba(245,158,11,0.3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-glow focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a] min-h-[52px]">
                 Start a Session
               </button>

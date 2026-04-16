@@ -7,9 +7,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface SessionListProps {
   sessions: Session[];
   isLoading: boolean;
+  onRename?: (id: string, newTitle: string) => Promise<void>;
+  onDelete?: (id: string) => Promise<void>;
 }
 
-export function SessionList({ sessions, isLoading }: SessionListProps) {
+export function SessionList({ sessions, isLoading, onRename, onDelete }: SessionListProps) {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -61,7 +63,12 @@ export function SessionList({ sessions, isLoading }: SessionListProps) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {sessions.map((session) => (
-        <SessionCard key={session.id} session={session} />
+        <SessionCard
+          key={session.id}
+          session={session}
+          onRename={onRename}
+          onDelete={onDelete}
+        />
       ))}
     </div>
   );

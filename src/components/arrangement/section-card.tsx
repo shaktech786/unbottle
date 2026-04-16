@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils/cn";
 import type { Section, SectionType } from "@/lib/music/types";
+import { chordToString } from "@/lib/music/types";
 
 interface SectionCardProps {
   section: Section;
@@ -192,10 +193,21 @@ export function SectionCard({
             {section.name}
           </p>
         )}
-        <p className="mt-0.5 text-[10px] text-neutral-500">
-          {sectionTypeLabels[section.type]}
-        </p>
+        {section.name !== sectionTypeLabels[section.type] && (
+          <p className="mt-0.5 text-[10px] text-neutral-500">
+            {sectionTypeLabels[section.type]}
+          </p>
+        )}
       </div>
+
+      {/* Chord progression pills */}
+      {section.chordProgression.length > 0 && (
+        <p className="mt-1 truncate text-[9px] leading-tight text-amber-400/60">
+          {section.chordProgression
+            .map((ce) => chordToString(ce.chord))
+            .join(" | ")}
+        </p>
+      )}
 
       <div className="mt-2 flex items-center justify-between">
         <p className="font-mono text-[11px] text-neutral-400">

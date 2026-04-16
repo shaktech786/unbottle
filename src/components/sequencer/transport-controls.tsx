@@ -77,7 +77,7 @@ export function TransportControls({
   );
 
   return (
-    <div className="relative z-10 flex h-14 shrink-0 items-center gap-2 border-b border-neutral-800/50 bg-[#0a0a0a] px-3 overflow-x-auto sm:gap-4 sm:px-4">
+    <div className="relative z-10 flex h-14 shrink-0 items-center gap-1 border-b border-neutral-800/50 bg-[#0a0a0a] px-2 overflow-x-auto sm:gap-2 sm:px-3 md:gap-4 md:px-4">
       {/* Play/Stop group */}
       <div className="flex items-center gap-1.5">
         <button
@@ -261,7 +261,7 @@ export function TransportControls({
           <polyline points="7 23 3 19 7 15" />
           <path d="M21 13v2a4 4 0 0 1-4 4H3" />
         </svg>
-        <span className="text-xs font-medium">Loop</span>
+        <span className="hidden text-xs font-medium sm:inline">Loop</span>
       </button>
 
       {/* Trailing slot (export button, etc.) */}

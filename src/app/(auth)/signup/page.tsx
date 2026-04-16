@@ -115,6 +115,38 @@ export default function SignupPage() {
             className="w-full min-h-[44px] rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2.5 text-sm text-stone-100 placeholder:text-neutral-500 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
             placeholder="At least 6 characters"
           />
+          {password.length > 0 && (
+            <div className="mt-2 flex items-center gap-2">
+              <div className="flex flex-1 gap-1">
+                {[1, 2, 3, 4].map((i) => {
+                  const strength =
+                    (password.length >= 6 ? 1 : 0) +
+                    (password.length >= 8 ? 1 : 0) +
+                    (/[A-Z]/.test(password) && /[a-z]/.test(password) ? 1 : 0) +
+                    (/[0-9!@#$%^&*]/.test(password) ? 1 : 0);
+                  const colors = ["bg-red-500", "bg-orange-500", "bg-amber-500", "bg-emerald-500"];
+                  return (
+                    <div
+                      key={i}
+                      className={`h-1 flex-1 rounded-full transition-colors ${
+                        i <= strength ? colors[strength - 1] : "bg-neutral-700"
+                      }`}
+                    />
+                  );
+                })}
+              </div>
+              <span className="text-[10px] text-neutral-500">
+                {(() => {
+                  const s =
+                    (password.length >= 6 ? 1 : 0) +
+                    (password.length >= 8 ? 1 : 0) +
+                    (/[A-Z]/.test(password) && /[a-z]/.test(password) ? 1 : 0) +
+                    (/[0-9!@#$%^&*]/.test(password) ? 1 : 0);
+                  return ["Weak", "Fair", "Good", "Strong"][s - 1] ?? "Too short";
+                })()}
+              </span>
+            </div>
+          )}
         </div>
 
         <div>

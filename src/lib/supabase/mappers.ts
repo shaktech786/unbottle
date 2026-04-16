@@ -223,6 +223,10 @@ export function mapBookmarkRow(row: BookmarkRow): Bookmark {
       lastAction: snapshot.lastAction,
       activeTrackId: snapshot.activeTrackId,
       playheadPosition: snapshot.playheadPosition,
+      bpm: snapshot.bpm,
+      keySignature: snapshot.keySignature,
+      sectionCount: snapshot.sectionCount,
+      noteCount: snapshot.noteCount,
     },
     createdAt: row.created_at,
   };

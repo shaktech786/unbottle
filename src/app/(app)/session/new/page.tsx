@@ -65,6 +65,26 @@ const TEMPLATE_ICONS: Record<string, string> = {
   "electronic-pulse": "M22 12h-4l-3 9L9 3l-3 9H2",
 };
 
+type ScaleMode = "major" | "minor";
+
+/** Parse a keySignature string like "D minor" into note + mode */
+function parseKeySignature(ks: string): { note: string; mode: ScaleMode } {
+  const parts = ks.trim().split(/\s+/);
+  if (parts.length >= 2 && parts[parts.length - 1].toLowerCase() === "minor") {
+    return { note: parts.slice(0, -1).join(""), mode: "minor" };
+  }
+  // Strip trailing "major" if present
+  if (parts.length >= 2 && parts[parts.length - 1].toLowerCase() === "major") {
+    return { note: parts.slice(0, -1).join(""), mode: "major" };
+  }
+  return { note: parts[0], mode: "major" };
+}
+
+/** Compose note + mode into a keySignature string */
+function composeKeySignature(note: string, mode: ScaleMode): string {
+  return mode === "minor" ? `${note} minor` : note;
+}
+
 export default function NewSessionPage() {
   const { createSession, isLoading } = useSession();
   const { preferences } = usePreferences();
@@ -74,7 +94,8 @@ export default function NewSessionPage() {
   const [customGenre, setCustomGenre] = useState("");
   const [mood, setMood] = useState<string | null>(() => preferences.defaultMood || null);
   const [bpm, setBpm] = useState(() => preferences.defaultBpm);
-  const [keySignature, setKeySignature] = useState<string>("C");
+  const [selectedNote, setSelectedNote] = useState<string>("C");
+  const [scaleMode, setScaleMode] = useState<ScaleMode>("major");
   const [selectedTemplate, setSelectedTemplate] = useState<SessionTemplate | null>(null);
 
   function applyTemplate(template: SessionTemplate) {
@@ -85,7 +106,10 @@ export default function NewSessionPage() {
     }
     setSelectedTemplate(template);
     setBpm(template.bpm);
-    setKeySignature(template.keySignature);
+    // Parse template keySignature to set note and mode separately
+    const parsed = parseKeySignature(template.keySignature);
+    setSelectedNote(parsed.note);
+    setScaleMode(parsed.mode);
     setGenre(template.genre);
     setMood(template.mood);
     if (!title.trim()) {
@@ -100,7 +124,7 @@ export default function NewSessionPage() {
       genre: genre === "__custom__" ? customGenre.trim() : (genre ?? undefined),
       mood: mood ?? undefined,
       bpm,
-      keySignature,
+      keySignature: composeKeySignature(selectedNote, scaleMode),
       templateSections: selectedTemplate?.sections,
       templateTracks: selectedTemplate?.tracks,
     });
@@ -339,15 +363,42 @@ export default function NewSessionPage() {
             <label className="text-sm font-medium text-neutral-300">
               Starting Key
             </label>
+            {/* Major / Minor toggle */}
+            <div className="mb-1 flex items-center gap-1 rounded-lg bg-neutral-800/50 p-0.5 self-start">
+              <button
+                type="button"
+                onClick={() => setScaleMode("major")}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-200",
+                  scaleMode === "major"
+                    ? "bg-amber-500 text-white shadow-sm"
+                    : "text-neutral-400 hover:text-neutral-200",
+                )}
+              >
+                Major
+              </button>
+              <button
+                type="button"
+                onClick={() => setScaleMode("minor")}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-200",
+                  scaleMode === "minor"
+                    ? "bg-amber-500 text-white shadow-sm"
+                    : "text-neutral-400 hover:text-neutral-200",
+                )}
+              >
+                Minor
+              </button>
+            </div>
             <div className="flex flex-wrap gap-1.5">
               {ALL_KEYS.map((key) => (
                 <button
                   key={key}
                   type="button"
-                  onClick={() => setKeySignature(key)}
+                  onClick={() => setSelectedNote(key)}
                   className={cn(
                     "flex h-10 w-10 items-center justify-center rounded-lg font-mono text-xs font-medium transition-colors duration-300 sm:h-9 sm:w-9",
-                    keySignature === key
+                    selectedNote === key
                       ? "bg-amber-500 text-white"
                       : "bg-neutral-800 text-neutral-300 hover:bg-neutral-700",
                   )}
@@ -356,6 +407,9 @@ export default function NewSessionPage() {
                 </button>
               ))}
             </div>
+            <p className="text-xs text-neutral-500">
+              {composeKeySignature(selectedNote, scaleMode)}
+            </p>
           </div>
 
           {/* Submit */}

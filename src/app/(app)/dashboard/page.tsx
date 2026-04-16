@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,8 @@ import { useSession } from "@/lib/hooks/use-session";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { sessions, isLoading, error, listSessions, createSession } = useSession();
+  const { sessions, isLoading, error, listSessions, createSession, updateSession, deleteSession } = useSession();
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     listSessions();
@@ -18,6 +19,34 @@ export default function DashboardPage() {
   async function handleNewSession() {
     await createSession();
   }
+
+  const handleRename = useCallback(
+    async (id: string, newTitle: string) => {
+      await updateSession(id, { title: newTitle } as Partial<import("@/lib/music/types").Session>);
+      // Refresh list to reflect the change
+      await listSessions();
+    },
+    [updateSession, listSessions],
+  );
+
+  const handleDelete = useCallback(
+    async (id: string) => {
+      await deleteSession(id);
+    },
+    [deleteSession],
+  );
+
+  const filteredSessions = useMemo(() => {
+    if (!searchQuery.trim()) return sessions;
+    const q = searchQuery.toLowerCase();
+    return sessions.filter(
+      (s) =>
+        s.title?.toLowerCase().includes(q) ||
+        s.genre?.toLowerCase().includes(q) ||
+        s.mood?.toLowerCase().includes(q) ||
+        s.keySignature?.toLowerCase().includes(q),
+    );
+  }, [sessions, searchQuery]);
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
@@ -51,8 +80,8 @@ export default function DashboardPage() {
           </Button>
         </div>
 
-        {/* Quick start card for empty state */}
-        {!isLoading && sessions.length === 0 && (
+        {/* Quick start card — always visible as the primary low-friction entry point */}
+        {!isLoading && (
           <button
             onClick={handleNewSession}
             className="group mb-8 flex w-full items-center gap-6 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-8 text-left transition-all duration-300 hover:border-amber-500/40 hover:bg-amber-500/10 hover:shadow-lg hover:shadow-amber-500/5"
@@ -87,7 +116,7 @@ export default function DashboardPage() {
         )}
 
         {/* Or go to the session creation page */}
-        {!isLoading && sessions.length === 0 && (
+        {!isLoading && (
           <div className="mb-8 text-center">
             <button
               onClick={() => router.push("/session/new")}
@@ -116,10 +145,42 @@ export default function DashboardPage() {
         {/* Recent sessions */}
         {!error && (
           <div>
-            <h3 className="mb-4 text-sm font-medium uppercase tracking-wider text-neutral-500">
-              Recent Sessions
-            </h3>
-            <SessionList sessions={sessions} isLoading={isLoading} />
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="text-sm font-medium uppercase tracking-wider text-neutral-500">
+                Recent Sessions
+              </h3>
+              {sessions.length > 2 && (
+                <div className="relative">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-500"
+                  >
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Search sessions..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="h-8 w-48 rounded-lg border border-neutral-700 bg-neutral-800/50 pl-8 pr-3 text-xs text-neutral-200 placeholder:text-neutral-500 focus:border-amber-500/50 focus:outline-none"
+                  />
+                </div>
+              )}
+            </div>
+            <SessionList
+              sessions={filteredSessions}
+              isLoading={isLoading}
+              onRename={handleRename}
+              onDelete={handleDelete}
+            />
           </div>
         )}
       </div>

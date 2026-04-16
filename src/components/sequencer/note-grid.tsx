@@ -21,7 +21,7 @@ export interface NoteGridProps {
   noteNames: NoteName[];
   /** Ticks per cell (grid snap). Defaults to PPQ / 4 (sixteenth notes). */
   ticksPerCell?: number;
-  /** Horizontal pixels per tick. */
+  /** Horizontal pixels per tick (base, before zoom). */
   pxPerTick: number;
   /** Total ticks visible. */
   totalTicks: number;
@@ -29,6 +29,8 @@ export interface NoteGridProps {
   scaleNotes?: Set<NoteName>;
   /** Vertical scroll offset. */
   scrollY?: number;
+  /** Horizontal zoom multiplier (default 1). */
+  zoom?: number;
   className?: string;
 }
 
@@ -50,6 +52,7 @@ export function NoteGrid({
   totalTicks,
   scaleNotes,
   scrollY = 0,
+  zoom = 1,
   className,
 }: NoteGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -103,11 +106,12 @@ export function NoteGrid({
     }
 
     // Draw vertical grid lines
+    const zoomedPxPerTick = pxPerTick * zoom;
     const ticksPerBeat = PPQ;
     const ticksPerBar = ticksPerBeat * 4; // assumes 4/4
 
     for (let tick = 0; tick <= totalTicks; tick += ticksPerCell) {
-      const x = tick * pxPerTick;
+      const x = tick * zoomedPxPerTick;
       if (x > width) break;
 
       const isBar = tick % ticksPerBar === 0;
@@ -140,6 +144,7 @@ export function NoteGrid({
     totalTicks,
     scaleNotes,
     scrollY,
+    zoom,
   ]);
 
   return (

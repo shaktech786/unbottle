@@ -14,7 +14,7 @@ function formatTimestamp(iso: string): string {
 
 /**
  * Minimal markdown-ish formatting: bold (**text**), inline code (`code`),
- * and fenced code blocks (```...```).
+ * fenced code blocks (```...```), and paragraph / line breaks.
  */
 function formatContent(text: string): React.ReactNode[] {
   const nodes: React.ReactNode[] = [];
@@ -26,7 +26,7 @@ function formatContent(text: string): React.ReactNode[] {
   while ((match = codeBlockRegex.exec(text)) !== null) {
     if (match.index > lastIndex) {
       nodes.push(
-        ...formatInline(text.slice(lastIndex, match.index), nodes.length),
+        ...formatParagraphs(text.slice(lastIndex, match.index), nodes.length),
       );
     }
     nodes.push(
@@ -41,7 +41,40 @@ function formatContent(text: string): React.ReactNode[] {
   }
 
   if (lastIndex < text.length) {
-    nodes.push(...formatInline(text.slice(lastIndex), nodes.length));
+    nodes.push(...formatParagraphs(text.slice(lastIndex), nodes.length));
+  }
+
+  return nodes;
+}
+
+/**
+ * Split text on double-newlines into paragraphs, and render single
+ * newlines as <br /> within each paragraph. This ensures AI responses
+ * display with proper spacing even if whitespace-pre-wrap is not enough.
+ */
+function formatParagraphs(text: string, keyOffset: number): React.ReactNode[] {
+  const paragraphs = text.split(/\n{2,}/);
+  const nodes: React.ReactNode[] = [];
+
+  for (let i = 0; i < paragraphs.length; i++) {
+    const para = paragraphs[i];
+    if (!para) continue;
+
+    // Within a paragraph, split on single newlines and insert <br />
+    const lines = para.split("\n");
+    const paraChildren: React.ReactNode[] = [];
+    for (let j = 0; j < lines.length; j++) {
+      if (j > 0) {
+        paraChildren.push(<br key={`br-${keyOffset}-${i}-${j}`} />);
+      }
+      paraChildren.push(...formatInline(lines[j], keyOffset + i * 100 + j));
+    }
+
+    nodes.push(
+      <p key={`p-${keyOffset}-${i}`} className="mb-2 last:mb-0">
+        {paraChildren}
+      </p>,
+    );
   }
 
   return nodes;
@@ -108,7 +141,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         {isEmpty ? (
           <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-orange-500" />
         ) : (
-          <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+          <div className="break-words text-sm leading-relaxed">
             {formatContent(message.content)}
           </div>
         )}

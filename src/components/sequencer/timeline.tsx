@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils/cn";
 import { PPQ } from "@/lib/music/types";
 
 export interface TimelineProps {
-  /** Pixels per tick. */
+  /** Pixels per tick (base, before zoom). */
   pxPerTick: number;
   /** Total ticks to display. */
   totalTicks: number;
@@ -23,6 +23,8 @@ export interface TimelineProps {
   scrollX?: number;
   /** Width of the visible area. */
   width: number;
+  /** Horizontal zoom multiplier (default 1). */
+  zoom?: number;
   className?: string;
 }
 
@@ -40,11 +42,13 @@ export function Timeline({
   onSetPlayhead,
   scrollX = 0,
   width,
+  zoom = 1,
   className,
 }: TimelineProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const HEIGHT = 28;
 
+  const zoomedPxPerTick = pxPerTick * zoom;
   const ticksPerBar = beatsPerBar * PPQ;
   const ticksPerBeat = PPQ;
 
@@ -75,8 +79,8 @@ export function Timeline({
 
     // Loop region
     if (loopStart !== undefined && loopEnd !== undefined) {
-      const x1 = loopStart * pxPerTick - scrollX;
-      const x2 = loopEnd * pxPerTick - scrollX;
+      const x1 = loopStart * zoomedPxPerTick - scrollX;
+      const x2 = loopEnd * zoomedPxPerTick - scrollX;
       ctx.fillStyle = "#f59e0b20"; // amber very transparent
       ctx.fillRect(x1, 0, x2 - x1, HEIGHT);
 
@@ -90,12 +94,24 @@ export function Timeline({
       ctx.stroke();
     }
 
+    // Determine bar label skip interval based on how wide each bar is in pixels
+    const barWidthPx = ticksPerBar * zoomedPxPerTick;
+    let labelEvery: number;
+    if (barWidthPx >= 40) {
+      labelEvery = 1;       // enough room for every bar number
+    } else if (barWidthPx >= 20) {
+      labelEvery = 2;       // show every 2nd
+    } else if (barWidthPx >= 10) {
+      labelEvery = 4;       // show every 4th
+    } else {
+      labelEvery = 8;       // very zoomed out
+    }
+
     // Bar and beat markers
-    ctx.font = "10px ui-monospace, monospace";
     ctx.textBaseline = "middle";
 
     for (let tick = 0; tick <= totalTicks; tick += ticksPerBeat) {
-      const x = tick * pxPerTick - scrollX;
+      const x = tick * zoomedPxPerTick - scrollX;
       if (x < -50 || x > width + 50) continue;
 
       const isBar = tick % ticksPerBar === 0;
@@ -110,22 +126,27 @@ export function Timeline({
         ctx.lineTo(x, HEIGHT);
         ctx.stroke();
 
-        // Bar number
-        ctx.fillStyle = "#999999";
-        ctx.fillText(`${barNumber}`, x + 4, HEIGHT / 2);
+        // Bar number — only show at the label interval
+        if ((barNumber - 1) % labelEvery === 0) {
+          ctx.fillStyle = "#bbbbbb";
+          ctx.font = "bold 11px ui-monospace, monospace";
+          ctx.fillText(`${barNumber}`, x + 5, HEIGHT / 2);
+        }
       } else {
-        // Beat tick
-        ctx.strokeStyle = "#2a2a2a";
-        ctx.lineWidth = 0.5;
-        ctx.beginPath();
-        ctx.moveTo(x, HEIGHT * 0.6);
-        ctx.lineTo(x, HEIGHT);
-        ctx.stroke();
+        // Beat tick — only draw if bars are wide enough to see them
+        if (barWidthPx >= 20) {
+          ctx.strokeStyle = "#2a2a2a";
+          ctx.lineWidth = 0.5;
+          ctx.beginPath();
+          ctx.moveTo(x, HEIGHT * 0.6);
+          ctx.lineTo(x, HEIGHT);
+          ctx.stroke();
+        }
       }
     }
 
     // Playhead marker
-    const playX = playheadTick * pxPerTick - scrollX;
+    const playX = playheadTick * zoomedPxPerTick - scrollX;
     if (playX >= 0 && playX <= width) {
       ctx.fillStyle = "#f97316"; // orange-500
       // Draw small triangle
@@ -137,7 +158,7 @@ export function Timeline({
       ctx.fill();
     }
   }, [
-    pxPerTick,
+    zoomedPxPerTick,
     totalTicks,
     ticksPerBar,
     ticksPerBeat,
@@ -154,10 +175,10 @@ export function Timeline({
       if (!onSetPlayhead) return;
       const rect = e.currentTarget.getBoundingClientRect();
       const x = e.clientX - rect.left + scrollX;
-      const tick = Math.max(0, Math.round(x / pxPerTick));
+      const tick = Math.max(0, Math.round(x / zoomedPxPerTick));
       onSetPlayhead(tick);
     },
-    [onSetPlayhead, scrollX, pxPerTick],
+    [onSetPlayhead, scrollX, zoomedPxPerTick],
   );
 
   return (

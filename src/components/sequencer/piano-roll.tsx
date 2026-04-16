@@ -99,6 +99,10 @@ export interface PianoRollProps {
   scaleNotes?: Set<NoteName>;
   width?: number;
   height?: number;
+  /** Horizontal zoom multiplier from parent (default 1). */
+  zoom?: number;
+  /** Callback when zoom changes (e.g. via Ctrl+wheel). */
+  onZoomChange?: (zoom: number) => void;
 
   onAddNote?: (note: Omit<Note, "id">) => void;
   onSelectNote?: (noteId: string, additive: boolean) => void;
@@ -177,6 +181,8 @@ export function PianoRoll({
   scaleNotes,
   width = 800,
   height = 500,
+  zoom = 1,
+  onZoomChange,
   onAddNote,
   onSelectNote,
   onClearSelection,
@@ -202,8 +208,6 @@ export function PianoRoll({
     const maxScroll = pitchesForInit.length * ROW_HEIGHT - height;
     return Math.max(0, Math.min(maxScroll, targetY));
   });
-  const [pxPerTick, setPxPerTick] = useState<number | null>(null);
-
   // Hover state for ghost preview
   const [hoverCell, setHoverCell] = useState<{ tick: number; pitchIdx: number } | null>(null);
   // Current drag cursor pos (canvas-relative) for live drawing feedback
@@ -213,8 +217,8 @@ export function PianoRoll({
   const totalRows = pitches.length;
   const snapTicks = SNAP_TICKS[snap];
   const totalTicks = totalBars * beatsPerBar * PPQ;
-  const defaultPxPerTick = width / totalTicks;
-  const activePxPerTick = pxPerTick ?? defaultPxPerTick;
+  const basePxPerTick = width / totalTicks;
+  const activePxPerTick = basePxPerTick * zoom;
   const contentHeight = totalRows * ROW_HEIGHT;
   const contentWidth = totalTicks * activePxPerTick;
 
@@ -757,14 +761,10 @@ export function PianoRoll({
     const isCtrlOrMeta = e.ctrlKey || e.metaKey;
 
     if (isCtrlOrMeta) {
-      // Zoom horizontally
+      // Zoom horizontally via parent zoom state
       const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-      setPxPerTick((prev) => {
-        const current = prev ?? defaultPxPerTick;
-        const minPx = width / (totalBars * beatsPerBar * PPQ * 2); // allow 2x zoom out
-        const maxPx = 2; // max zoom in
-        return Math.max(minPx, Math.min(maxPx, current * zoomFactor));
-      });
+      const newZoom = Math.max(0.5, Math.min(3, zoom * zoomFactor));
+      onZoomChange?.(+newZoom.toFixed(2));
     } else if (e.shiftKey) {
       // Scroll horizontally
       setScrollX((prev) =>

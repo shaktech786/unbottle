@@ -147,6 +147,10 @@ export interface Bookmark {
     lastAction?: string;
     activeTrackId?: string;
     playheadPosition?: number;
+    bpm?: number;
+    keySignature?: string;
+    sectionCount?: number;
+    noteCount?: number;
   };
   createdAt: string;
 }

@@ -42,6 +42,33 @@ const DEFAULT_SUGGESTIONS: Suggestion[] = [
   },
 ];
 
+const FOLLOWUP_SUGGESTIONS: Suggestion[] = [
+  {
+    id: "followup-1",
+    label: "Add more instruments",
+    action: "Add more instruments to the current arrangement. Layer in something that complements what we already have.",
+    category: "instrument",
+  },
+  {
+    id: "followup-2",
+    label: "Change the key",
+    action: "Change the key of the current arrangement. Pick something that shifts the mood while keeping the same structure.",
+    category: "arrangement",
+  },
+  {
+    id: "followup-3",
+    label: "Try a different arrangement",
+    action: "Give me a completely different arrangement. Keep the same general vibe but rethink the structure and chord choices.",
+    category: "structure",
+  },
+  {
+    id: "followup-4",
+    label: "Make it more energetic",
+    action: "Make the current arrangement more energetic. Increase the tempo feel, add rhythmic drive, and make it hit harder.",
+    category: "general",
+  },
+];
+
 export function ChatPanel({
   sessionId,
   context,
@@ -74,7 +101,7 @@ export function ChatPanel({
     () =>
       messages.length === 0
         ? suggestions ?? DEFAULT_SUGGESTIONS
-        : suggestions ?? [],
+        : suggestions ?? FOLLOWUP_SUGGESTIONS,
     [messages.length, suggestions],
   );
 
@@ -114,7 +141,7 @@ export function ChatPanel({
       <ChatErrorBanner errorType={chatError} />
 
       {/* Messages */}
-      <MessageList messages={messages} className="flex-1" />
+      <MessageList messages={messages} isStreaming={isStreaming} className="flex-1" />
 
       {/* Suggestions */}
       {activeSuggestions.length > 0 && !isStreaming && (

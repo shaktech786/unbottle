@@ -304,5 +304,27 @@ export function getBookmarks(sessionId: string): Bookmark[] {
   return bookmarksBySession.get(sessionId) ?? [];
 }
 
+export function updateBookmark(
+  sessionId: string,
+  bookmarkId: string,
+  updates: Partial<Pick<Bookmark, "label" | "description">>,
+): Bookmark | undefined {
+  const bookmarks = bookmarksBySession.get(sessionId);
+  if (!bookmarks) return undefined;
+  const idx = bookmarks.findIndex((b) => b.id === bookmarkId);
+  if (idx === -1) return undefined;
+  bookmarks[idx] = { ...bookmarks[idx], ...updates };
+  return bookmarks[idx];
+}
+
+export function deleteBookmark(sessionId: string, bookmarkId: string): boolean {
+  const bookmarks = bookmarksBySession.get(sessionId);
+  if (!bookmarks) return false;
+  const idx = bookmarks.findIndex((b) => b.id === bookmarkId);
+  if (idx === -1) return false;
+  bookmarks.splice(idx, 1);
+  return true;
+}
+
 // Export maps for direct access from API routes if needed
 export { sessions, tracksBySession, sectionsBySession };
