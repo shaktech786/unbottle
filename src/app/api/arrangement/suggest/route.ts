@@ -4,8 +4,12 @@ import {
   type MomentumSessionState,
 } from "@/lib/ai/prompts/momentum";
 import type { Suggestion } from "@/lib/music/types";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
+
+const supabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL);
 
 interface SuggestRequestBody {
   sessionState: MomentumSessionState;
@@ -29,6 +33,11 @@ const VALID_CATEGORIES: Suggestion["category"][] = [
 
 export async function POST(request: Request) {
   try {
+    if (supabaseConfigured) {
+      const client = await createClient();
+      await requireAuth(client);
+    }
+
     const body = (await request.json()) as SuggestRequestBody;
     const { sessionState } = body;
 

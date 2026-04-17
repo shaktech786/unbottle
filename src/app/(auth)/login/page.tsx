@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { OAuthButtons } from "@/components/auth/oauth-buttons";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -38,6 +39,8 @@ export default function LoginPage() {
       <p className="mb-6 text-sm text-neutral-400">
         Sign in to continue your sessions
       </p>
+
+      <OAuthButtons />
 
       {error && (
         <div className="mb-4 rounded-lg border border-red-800/40 bg-red-900/20 px-4 py-3 text-sm text-red-400">

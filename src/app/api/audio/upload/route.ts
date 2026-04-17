@@ -2,7 +2,7 @@ import { type NextRequest } from "next/server";
 import { generateId } from "@/lib/session/store";
 import { audioBuffer } from "@/lib/audio/buffer";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser } from "@/lib/supabase/auth";
+import { requireAuth } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -42,12 +42,8 @@ export async function POST(request: NextRequest) {
   if (supabaseConfigured) {
     try {
       const client = await createClient();
-
-      // Use authenticated userId when available, fall back to "anonymous"
-      const user = await getCurrentUser(client);
-      const userId = user?.id ?? "anonymous";
-
-      const storagePath = `${userId}/${captureId}.webm`;
+      const user = await requireAuth(client);
+      const storagePath = `${user.id}/${captureId}.webm`;
       const arrayBuffer = await audio.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
 

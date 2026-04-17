@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { OAuthButtons } from "@/components/auth/oauth-buttons";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
@@ -73,6 +74,8 @@ export default function SignupPage() {
       <p className="mb-6 text-sm text-neutral-400">
         Start producing with an AI co-pilot
       </p>
+
+      <OAuthButtons />
 
       {error && (
         <div className="mb-4 rounded-lg border border-red-800/50 bg-red-900/20 px-4 py-3 text-sm text-red-400">

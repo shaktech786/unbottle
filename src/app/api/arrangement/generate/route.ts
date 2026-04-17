@@ -1,8 +1,12 @@
 import { generateCompletion, getUserApiKey } from "@/lib/ai/claude";
 import { buildArrangementPrompt } from "@/lib/ai/prompts/arrangement";
 import type { Section, ChordEvent, SectionType } from "@/lib/music/types";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
+
+const supabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL);
 
 interface GenerateRequestBody {
   prompt: string;
@@ -66,6 +70,11 @@ const SECTION_COLORS: Record<SectionType, string> = {
 
 export async function POST(request: Request) {
   try {
+    if (supabaseConfigured) {
+      const client = await createClient();
+      await requireAuth(client);
+    }
+
     const body = (await request.json()) as GenerateRequestBody;
     const { prompt } = body;
 

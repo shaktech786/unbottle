@@ -148,6 +148,17 @@ export function SessionCard({ session, onRename, onDelete }: SessionCardProps) {
 
         {/* Badges */}
         <div className="mt-3 flex flex-wrap gap-1.5 pl-2">
+          {session.parentBranchId && (
+            <span className="flex items-center gap-1 rounded-full border border-violet-500/30 bg-violet-500/10 px-2 py-0.5 text-xs text-violet-400">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="6" y1="3" x2="6" y2="15" />
+                <circle cx="18" cy="6" r="3" />
+                <circle cx="6" cy="18" r="3" />
+                <path d="M18 9a9 9 0 0 1-9 9" />
+              </svg>
+              Fork
+            </span>
+          )}
           {session.genre && (
             <span className="rounded-full bg-neutral-800 px-2 py-0.5 text-xs text-neutral-300">
               {session.genre}
@@ -249,6 +260,17 @@ export function SessionCard({ session, onRename, onDelete }: SessionCardProps) {
 
       {/* Badges */}
       <div className="mt-3 flex flex-wrap gap-1.5 pl-2">
+        {session.parentBranchId && (
+          <span className="flex items-center gap-1 rounded-full border border-violet-500/30 bg-violet-500/10 px-2 py-0.5 text-xs text-violet-400">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="6" y1="3" x2="6" y2="15" />
+              <circle cx="18" cy="6" r="3" />
+              <circle cx="6" cy="18" r="3" />
+              <path d="M18 9a9 9 0 0 1-9 9" />
+            </svg>
+            Fork
+          </span>
+        )}
         {session.genre && (
           <span className="rounded-full bg-neutral-800 px-2 py-0.5 text-xs text-neutral-300">
             {session.genre}

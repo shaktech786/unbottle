@@ -1,64 +1,24 @@
 /**
  * Offline audio renderer.
  *
- * Uses OfflineAudioContext + basic oscillator-based synthesis to render
- * a session's notes into a WAV Blob. This runs entirely in the browser
- * without needing Tone.js or network-loaded samples.
+ * Uses Tone.Offline() with the same Sampler instruments as live playback
+ * to render a session's notes into a WAV Blob. Produces audio that matches
+ * what the user hears during live playback.
  */
 
-import type { Note, Track, InstrumentType } from "@/lib/music/types";
-import { PPQ } from "@/lib/music/types";
+import type { Note, Track } from "@/lib/music/types";
+import { ticksToSeconds } from "@/lib/music/types";
 import { float32ToWav } from "./wav-encoder";
+import { INSTRUMENT_CONFIGS, buildSampleUrls } from "./instruments";
+import { routeNotesToTracks } from "./note-router";
 
 /**
- * Map instrument types to basic Web Audio oscillator waveforms.
- * These are rough approximations — the goal is a quick offline bounce,
- * not a studio-quality render.
- */
-const INSTRUMENT_WAVEFORM: Record<InstrumentType, OscillatorType> = {
-  piano: "triangle",
-  electric_piano: "triangle",
-  bass_electric: "sawtooth",
-  bass_synth: "sawtooth",
-  guitar_acoustic: "triangle",
-  guitar_electric: "square",
-  strings: "sine",
-  pad: "sine",
-  organ: "square",
-  brass: "sawtooth",
-  flute: "sine",
-  saxophone: "sawtooth",
-  drums: "square",
-  synth: "square",
-};
-
-/**
- * Convert a pitch string like "C4" or "D#5" to frequency in Hz.
- * Uses equal temperament with A4 = 440 Hz.
- */
-function pitchToFrequency(pitch: string): number {
-  const match = pitch.match(/^([A-G]#?)(\d)$/);
-  if (!match) return 440;
-
-  const noteMap: Record<string, number> = {
-    C: 0, "C#": 1, D: 2, "D#": 3, E: 4, F: 5,
-    "F#": 6, G: 7, "G#": 8, A: 9, "A#": 10, B: 11,
-  };
-
-  const noteName = match[1];
-  const octave = parseInt(match[2], 10);
-  const semitone = noteMap[noteName] ?? 9;
-
-  // MIDI note number: C4 = 60, A4 = 69
-  const midi = (octave + 1) * 12 + semitone;
-  return 440 * Math.pow(2, (midi - 69) / 12);
-}
-
-/**
- * Render all session notes to a WAV audio Blob using OfflineAudioContext.
+ * Render all session notes to a WAV audio Blob using Tone.Offline().
+ * Loads the same CDN samples used during live playback so the exported
+ * audio matches what the user hears.
  *
  * @param notes           - All notes in the session
- * @param tracks          - All tracks (for instrument type, volume, mute state)
+ * @param tracks          - All tracks (for instrument type, volume, pan, mute/solo)
  * @param bpm             - Tempo in beats per minute
  * @param durationSeconds - Total render duration in seconds
  * @param onProgress      - Optional callback reporting progress 0-100
@@ -71,109 +31,124 @@ export async function renderSessionToAudio(
   durationSeconds: number,
   onProgress?: (percent: number) => void,
 ): Promise<Blob> {
-  const sampleRate = 44100;
-  const numChannels = 2; // stereo
-
-  // Ensure at least 0.1s to avoid 0-length context
   const safeDuration = Math.max(0.1, durationSeconds);
-  const totalSamples = Math.ceil(safeDuration * sampleRate);
 
   onProgress?.(0);
 
-  const offlineCtx = new OfflineAudioContext(numChannels, totalSamples, sampleRate);
+  // Tone.js is a client-only ESM module
+  const Tone = await import("tone");
 
-  // Build track lookup
-  const trackMap = new Map<string, Track>();
-  for (const track of tracks) {
-    trackMap.set(track.id, track);
-  }
+  onProgress?.(5);
 
-  // Determine which tracks are active (respect mute/solo)
-  const hasSolo = tracks.some((t) => t.solo);
-  const activeTracks = new Set<string>();
-  for (const track of tracks) {
-    if (hasSolo) {
-      if (track.solo) activeTracks.add(track.id);
-    } else {
-      if (!track.muted) activeTracks.add(track.id);
-    }
-  }
+  // Route notes (respects mute/solo semantics)
+  const routed = routeNotesToTracks(notes, tracks);
 
-  // Seconds per tick
-  const secondsPerTick = (60 / bpm) / PPQ;
+  const trackById = new Map<string, Track>();
+  for (const track of tracks) trackById.set(track.id, track);
 
   onProgress?.(10);
 
-  // Schedule each note as an oscillator
-  let scheduled = 0;
-  const totalNotes = notes.length;
+  // Tone.Offline temporarily replaces the global audio context with an
+  // OfflineContext, so all new Tone nodes are created there automatically.
+  const toneBuffer = await Tone.Offline(async ({ transport }) => {
+    transport.bpm.value = bpm;
 
-  for (const note of notes) {
-    const track = trackMap.get(note.trackId);
-    if (!track || !activeTracks.has(note.trackId)) continue;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const instrumentMap = new Map<string, any>();
+    const loadPromises: Promise<void>[] = [];
 
-    const startTime = note.startTick * secondsPerTick;
-    const duration = note.durationTicks * secondsPerTick;
+    for (const [trackId, routedTrack] of routed) {
+      const track = trackById.get(trackId);
+      if (!track) continue;
 
-    // Skip notes that fall outside the render window
-    if (startTime >= safeDuration) continue;
-    const clampedDuration = Math.min(duration, safeDuration - startTime);
+      const config = INSTRUMENT_CONFIGS[routedTrack.instrument];
+      const volumeDb =
+        track.volume > 0 ? 20 * Math.log10(track.volume) : -Infinity;
+      const channel = new Tone.Channel({
+        volume: volumeDb,
+        pan: track.pan,
+      }).toDestination();
 
-    const frequency = pitchToFrequency(note.pitch);
-    const waveform = INSTRUMENT_WAVEFORM[track.instrument] ?? "sine";
+      if (config.isSynth) {
+        const instrument =
+          routedTrack.instrument === "drums"
+            ? new Tone.MembraneSynth()
+            : new Tone.PolySynth(Tone.Synth);
+        instrument.connect(channel);
+        instrumentMap.set(trackId, instrument);
+      } else {
+        const urls = buildSampleUrls(config);
 
-    // Create oscillator for this note
-    const oscillator = offlineCtx.createOscillator();
-    oscillator.type = waveform;
-    oscillator.frequency.value = frequency;
+        const prom = new Promise<void>((resolve) => {
+          const sampler = new Tone.Sampler({
+            urls,
+            onload: () => {
+              instrumentMap.set(trackId, sampler);
+              resolve();
+            },
+            onerror: () => {
+              // Disconnect the failed sampler before creating the fallback
+              try { sampler.disconnect(); } catch { /* ignore */ }
+              const fallback = new Tone.PolySynth(Tone.Synth);
+              fallback.connect(channel);
+              instrumentMap.set(trackId, fallback);
+              resolve();
+            },
+          }).connect(channel);
+        });
 
-    // Gain node for volume envelope
-    const gainNode = offlineCtx.createGain();
-
-    // Base volume from velocity (0-127) and track volume (0-1)
-    const velocityGain = (note.velocity / 127) * track.volume;
-    // Scale down to avoid clipping with many simultaneous notes
-    const masterGain = velocityGain * 0.15;
-
-    // Simple ADSR-ish envelope: quick attack, sustain, short release
-    const attackTime = 0.005;
-    const releaseTime = Math.min(0.05, clampedDuration * 0.1);
-
-    gainNode.gain.setValueAtTime(0, startTime);
-    gainNode.gain.linearRampToValueAtTime(masterGain, startTime + attackTime);
-    gainNode.gain.setValueAtTime(masterGain, startTime + clampedDuration - releaseTime);
-    gainNode.gain.linearRampToValueAtTime(0, startTime + clampedDuration);
-
-    // Stereo panning
-    const panner = offlineCtx.createStereoPanner();
-    panner.pan.value = track.pan;
-
-    oscillator.connect(gainNode);
-    gainNode.connect(panner);
-    panner.connect(offlineCtx.destination);
-
-    oscillator.start(startTime);
-    oscillator.stop(startTime + clampedDuration);
-
-    scheduled++;
-    if (totalNotes > 0 && scheduled % 50 === 0) {
-      onProgress?.(10 + Math.round((scheduled / totalNotes) * 40));
+        loadPromises.push(prom);
+      }
     }
-  }
 
-  onProgress?.(50);
+    // Wait for all samplers to finish loading from CDN
+    await Promise.all(loadPromises);
 
-  // Render
-  const audioBuffer = await offlineCtx.startRendering();
+    onProgress?.(60);
+
+    // Schedule notes onto the offline transport
+    for (const [trackId, { notes: trackNotes }] of routed) {
+      const instrument = instrumentMap.get(trackId);
+      if (!instrument) continue;
+
+      for (const note of trackNotes) {
+        const startSec = ticksToSeconds(note.startTick, bpm);
+        if (startSec >= safeDuration) continue;
+
+        const durationSec = Math.min(
+          ticksToSeconds(note.durationTicks, bpm),
+          safeDuration - startSec,
+        );
+
+        transport.schedule((time: number) => {
+          try {
+            instrument.triggerAttackRelease(
+              note.pitch,
+              durationSec,
+              time,
+              note.velocity / 127,
+            );
+          } catch {
+            // Ignore individual note errors (e.g. unsupported pitch for drums)
+          }
+        }, startSec);
+      }
+    }
+
+    transport.start(0);
+  }, safeDuration, 2, 44100);
 
   onProgress?.(80);
 
-  // Interleave stereo channels into a single Float32Array
-  const left = audioBuffer.getChannelData(0);
-  const right = audioBuffer.numberOfChannels > 1
-    ? audioBuffer.getChannelData(1)
-    : left;
+  // ToneAudioBuffer wraps a standard AudioBuffer — extract channel data
+  const rawBuffer = toneBuffer.get();
+  if (!rawBuffer) throw new Error("Offline render produced no audio");
 
+  const left = rawBuffer.getChannelData(0);
+  const right =
+    rawBuffer.numberOfChannels > 1 ? rawBuffer.getChannelData(1) : left;
+
+  // Interleave L/R into a single Float32Array for the WAV encoder
   const interleaved = new Float32Array(left.length * 2);
   for (let i = 0; i < left.length; i++) {
     interleaved[i * 2] = left[i];
@@ -182,8 +157,7 @@ export async function renderSessionToAudio(
 
   onProgress?.(90);
 
-  // Encode to WAV
-  const wavBlob = float32ToWav(interleaved, sampleRate, numChannels);
+  const wavBlob = float32ToWav(interleaved, 44100, 2);
 
   onProgress?.(100);
 

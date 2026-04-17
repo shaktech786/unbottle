@@ -95,7 +95,7 @@ export function SectionTimeline({
           <div
             key={section.id}
             className={cn(
-              "relative shrink-0 transition-opacity duration-150",
+              "group relative shrink-0 transition-opacity duration-150",
               dragIndex !== null && dragIndex === index && "opacity-40",
               dropTarget !== null && dropTarget === index && dragIndex !== index && "ring-2 ring-amber-500/50 rounded-lg",
             )}

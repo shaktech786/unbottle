@@ -3,8 +3,12 @@ import { buildProducerSystemPrompt } from "@/lib/ai/prompts/producer";
 import { PRODUCER_TOOLS } from "@/lib/ai/tools";
 import type { Section, Track } from "@/lib/music/types";
 import type Anthropic from "@anthropic-ai/sdk";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
+
+const supabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL);
 
 interface HistoryMessage {
   role: "user" | "assistant";
@@ -28,6 +32,11 @@ interface ChatRequestBody {
 
 export async function POST(request: Request) {
   try {
+    if (supabaseConfigured) {
+      const client = await createClient();
+      await requireAuth(client);
+    }
+
     const body = (await request.json()) as ChatRequestBody;
     const { message, history, context } = body;
 

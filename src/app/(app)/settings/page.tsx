@@ -8,6 +8,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 
+type Theme = "dark" | "light";
+
+function useTheme() {
+  const [theme, setThemeState] = useState<Theme>(() => {
+    if (typeof window === "undefined") return "dark";
+    const stored = localStorage.getItem("unbottle-theme") as Theme | null;
+    return stored === "light" ? "light" : "dark";
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
+
+  function setTheme(next: Theme) {
+    setThemeState(next);
+    localStorage.setItem("unbottle-theme", next);
+    document.documentElement.setAttribute("data-theme", next);
+  }
+
+  return { theme, setTheme };
+}
+
 const GENRE_OPTIONS = [
   "",
   "Hip-Hop",
@@ -51,6 +73,7 @@ function SavedIndicator({ show }: { show: boolean }) {
 }
 
 export default function SettingsPage() {
+  const { theme, setTheme } = useTheme();
   const { apiKey, setApiKey, hasUserKey, isLoaded } = useApiKey();
   const [inputValue, setInputValue] = useState("");
   const [showKey, setShowKey] = useState(false);
@@ -458,6 +481,36 @@ export default function SettingsPage() {
               />
             </button>
           </div>
+        </div>
+      </Card>
+
+      {/* Appearance */}
+      <Card className="mt-4 p-4 sm:mt-6 sm:p-6">
+        <h2 className="mb-4 text-lg font-semibold text-neutral-100">
+          Appearance
+        </h2>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-neutral-300">Theme</p>
+            <p className="text-xs text-neutral-500">
+              {theme === "dark" ? "Dark mode" : "Light mode"}
+            </p>
+          </div>
+          <button
+            role="switch"
+            type="button"
+            aria-checked={theme === "light"}
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:ring-offset-2 focus:ring-offset-neutral-950 ${
+              theme === "light" ? "bg-amber-500" : "bg-neutral-700"
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-lg transition-transform duration-300 ${
+                theme === "light" ? "translate-x-5" : "translate-x-0.5"
+              }`}
+            />
+          </button>
         </div>
       </Card>
 

@@ -89,6 +89,7 @@ export function TransportControls({
               : "bg-emerald-600 text-white hover:bg-emerald-500",
           )}
           aria-label={isPlaying ? "Pause" : "Play"}
+          title={isPlaying ? "Pause (Space)" : "Play (Space)"}
         >
           {isPlaying ? (
             <svg
@@ -116,6 +117,7 @@ export function TransportControls({
           onClick={handleStop}
           className="flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 transition-colors duration-300 hover:bg-neutral-800/70 hover:text-neutral-200"
           aria-label="Stop"
+          title="Stop"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
             <rect x="4" y="4" width="16" height="16" rx="2" />
@@ -245,6 +247,7 @@ export function TransportControls({
             : "text-neutral-400 hover:bg-neutral-800/70 hover:text-neutral-200",
         )}
         aria-label={isLooping ? "Disable loop" : "Enable loop"}
+        title={isLooping ? "Loop on" : "Loop off"}
       >
         <svg
           width="14"

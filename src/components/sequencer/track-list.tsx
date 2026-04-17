@@ -60,7 +60,7 @@ export function TrackList({
               onChange={(e) =>
                 onInstrumentChange?.(track.id, e.target.value as InstrumentType)
               }
-              className="w-full h-7 rounded bg-neutral-800 text-xs text-neutral-300 border border-neutral-700 outline-none cursor-pointer px-1"
+              className="w-full h-8 rounded bg-neutral-800 text-xs text-neutral-300 border border-neutral-700 outline-none cursor-pointer px-1"
             >
               <option value="piano">Piano</option>
               <option value="electric_piano">Electric Piano</option>

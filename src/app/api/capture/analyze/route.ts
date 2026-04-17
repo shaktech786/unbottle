@@ -1,8 +1,12 @@
 import { type NextRequest } from "next/server";
 import { generateCompletion, getUserApiKey } from "@/lib/ai/claude";
 import { buildCaptureAnalysisPrompt } from "@/lib/ai/prompts/capture-analysis";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
+
+const supabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL);
 
 interface CaptureAnalyzeBody {
   type: "audio" | "tap" | "text";
@@ -17,6 +21,15 @@ const VALID_CAPTURE_TYPES = new Set(["audio", "tap", "text"]);
 
 // POST /api/capture/analyze - analyze a musical capture via AI
 export async function POST(request: NextRequest) {
+  if (supabaseConfigured) {
+    try {
+      const client = await createClient();
+      await requireAuth(client);
+    } catch {
+      return Response.json({ error: "Authentication required" }, { status: 401 });
+    }
+  }
+
   let body: CaptureAnalyzeBody;
   try {
     body = await request.json();

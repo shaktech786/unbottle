@@ -155,7 +155,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
               label=""
             />
             <NavLink
-              href="/session/new"
+              href="/sessions"
               icon={<SessionsIcon />}
               label=""
             />
@@ -168,9 +168,9 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
               label="Dashboard"
             />
             <NavLink
-              href="/session/new"
+              href="/sessions"
               icon={<SessionsIcon />}
-              label="New Session"
+              label="My Sessions"
             />
           </>
         )}

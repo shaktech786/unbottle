@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils/cn";
 import { RecordButton } from "./record-button";
 import { TapPad } from "./tap-pad";
 import { CapturePreview } from "./capture-preview";
 import { DescribeInput } from "./describe-input";
+import type { CaptureData } from "@/lib/music/types";
 
 type CaptureTab = "record" | "tap" | "describe";
 
@@ -30,6 +31,7 @@ export interface CapturePanelProps {
    * shows a "Transcribe to MIDI" action alongside "Save Audio".
    */
   onTranscribeToMidi?: (blob: Blob) => Promise<void> | void;
+  sessionId?: string;
   className?: string;
 }
 
@@ -38,11 +40,25 @@ export function CapturePanel({
   onToggleCollapse,
   onAddToSession,
   onTranscribeToMidi,
+  sessionId,
   className,
 }: CapturePanelProps) {
   const [activeTab, setActiveTab] = useState<CaptureTab>("record");
   const [captures, setCaptures] = useState<CaptureEntry[]>([]);
   const [previewEntry, setPreviewEntry] = useState<CaptureEntry | null>(null);
+  const [persistedCaptures, setPersistedCaptures] = useState<CaptureData[]>([]);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    fetch(`/api/session/${sessionId}/captures`)
+      .then((res) => (res.ok ? res.json() : { captures: [] }))
+      .then((data: { captures?: CaptureData[] }) => {
+        if (data.captures?.length) {
+          setPersistedCaptures(data.captures);
+        }
+      })
+      .catch(() => {});
+  }, [sessionId]);
 
   const tabs: { key: CaptureTab; label: string }[] = [
     { key: "record", label: "Record" },
@@ -88,6 +104,10 @@ export function CapturePanel({
     setCaptures((prev) => [previewEntry, ...prev]);
     onAddToSession?.(previewEntry);
     setPreviewEntry(null);
+  }
+
+  function handleDeletePersistedCapture(captureId: string) {
+    setPersistedCaptures((prev) => prev.filter((c) => c.id !== captureId));
   }
 
   function handleDiscard() {
@@ -207,14 +227,14 @@ export function CapturePanel({
           <DescribeInput onSubmit={handleDescribeSubmit} />
         )}
 
-        {/* Recent captures */}
-        {captures.length > 0 && (
+        {/* Capture history: in-session + persisted from API */}
+        {(captures.length > 0 || persistedCaptures.length > 0) && (
           <div className="mt-6">
             <h3 className="mb-2 text-xs font-medium text-neutral-500 uppercase tracking-wider">
-              Recent Captures
+              Capture History
             </h3>
             <div className="space-y-2">
-              {captures.slice(0, 10).map((cap) => (
+              {captures.slice(0, 5).map((cap) => (
                 <div
                   key={cap.id}
                   className="rounded-lg border border-neutral-800 bg-neutral-900/50 px-3 py-2"
@@ -235,6 +255,72 @@ export function CapturePanel({
                   {cap.textDescription && (
                     <p className="mt-1 text-xs text-neutral-400 line-clamp-2">
                       {cap.textDescription}
+                    </p>
+                  )}
+                  {cap.audioUrl && (
+                    <audio
+                      src={cap.audioUrl}
+                      controls
+                      className="mt-1.5 h-7 w-full"
+                    />
+                  )}
+                </div>
+              ))}
+              {persistedCaptures.slice(0, 10).map((cap) => (
+                <div
+                  key={cap.id}
+                  className="group rounded-lg border border-neutral-800 bg-neutral-900/50 px-3 py-2"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-neutral-300">
+                      {cap.type === "audio" && "Audio Recording"}
+                      {cap.type === "tap" && "Tap Tempo"}
+                      {cap.type === "text" && "Text Description"}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-neutral-500">
+                        {new Date(cap.createdAt).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                      <button
+                        onClick={() => handleDeletePersistedCapture(cap.id)}
+                        className="opacity-0 group-hover:opacity-100 rounded p-0.5 text-neutral-600 hover:text-red-400 transition-all"
+                        title="Remove from history"
+                      >
+                        <svg
+                          width="10"
+                          height="10"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  {cap.textDescription && (
+                    <p className="mt-1 text-xs text-neutral-400 line-clamp-2">
+                      {cap.textDescription}
+                    </p>
+                  )}
+                  {cap.durationMs != null && cap.type === "audio" && (
+                    <p className="mt-0.5 text-[10px] text-neutral-600">
+                      {(cap.durationMs / 1000).toFixed(1)}s
+                      {cap.detectedNotes?.length
+                        ? ` · ${cap.detectedNotes.length} notes detected`
+                        : ""}
+                    </p>
+                  )}
+                  {cap.detectedRhythm?.length != null && cap.type === "tap" && (
+                    <p className="mt-0.5 text-[10px] text-neutral-600">
+                      {cap.detectedRhythm.length} taps
                     </p>
                   )}
                 </div>

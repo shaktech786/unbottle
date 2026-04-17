@@ -391,6 +391,8 @@ export function useTonePlayer(
         transport.stop();
         transport.cancel();
       }
+      scheduledIdsRef.current = [];
+      autoStopIdRef.current = null;
       const currentMap = mapRef.current;
       for (const [, entry] of currentMap) {
         try {

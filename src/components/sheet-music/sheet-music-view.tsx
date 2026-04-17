@@ -12,6 +12,8 @@ export interface SheetMusicViewProps {
   keySignature?: string;
   timeSignature?: string;
   className?: string;
+  onNoteSelect?: (noteId: string) => void;
+  selectedNoteId?: string | null;
 }
 
 type OSMDInstance = {
@@ -29,6 +31,8 @@ export function SheetMusicView({
   keySignature = "C major",
   timeSignature = "4/4",
   className,
+  onNoteSelect,
+  selectedNoteId,
 }: SheetMusicViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const osmdRef = useRef<OSMDInstance | null>(null);
@@ -36,6 +40,10 @@ export function SheetMusicView({
   const [error, setError] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1.0);
   const renderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Maps SVG stavenote element → matched Note, and noteId → SVG element
+  const elemToNoteRef = useRef<Map<Element, Note>>(new Map());
+  const noteIdToElemRef = useRef<Map<string, Element>>(new Map());
+  const selectedNoteIdRef = useRef<string | null | undefined>(selectedNoteId);
 
   // Lazily import OSMD (it's a large library, only load when needed)
   useEffect(() => {
@@ -80,6 +88,70 @@ export function SheetMusicView({
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const applyHighlight = useCallback((highlightedId: string | null | undefined) => {
+    // Reset all highlights
+    for (const elem of elemToNoteRef.current.keys()) {
+      const paths = elem.querySelectorAll("path, ellipse, rect");
+      for (const p of paths) {
+        (p as SVGElement).style.fill = "";
+        (p as SVGElement).style.stroke = "";
+      }
+    }
+    if (!highlightedId) return;
+    const elem = noteIdToElemRef.current.get(highlightedId);
+    if (!elem) return;
+    const paths = elem.querySelectorAll("path, ellipse, rect");
+    for (const p of paths) {
+      (p as SVGElement).style.fill = "#f59e0b";
+      (p as SVGElement).style.stroke = "#f59e0b";
+    }
+  }, []);
+
+  const buildNoteMap = useCallback(() => {
+    const container = containerRef.current;
+    if (!container || notes.length === 0) return;
+
+    elemToNoteRef.current = new Map();
+    noteIdToElemRef.current = new Map();
+
+    const svg = container.querySelector("svg");
+    if (!svg) return;
+
+    const svgWidth = svg.getBoundingClientRect().width || 1;
+    const maxTick = Math.max(...notes.map((n) => n.startTick + n.durationTicks), 1);
+
+    // Collect all stavenote elements and their center X positions
+    const stavenotes = Array.from(container.querySelectorAll("[class*='vf-stavenote']"));
+    if (stavenotes.length === 0) return;
+
+    const notesSorted = [...notes].sort((a, b) => a.startTick - b.startTick);
+    const assigned = new Set<string>();
+
+    for (const elem of stavenotes) {
+      const rect = elem.getBoundingClientRect();
+      const svgRect = svg.getBoundingClientRect();
+      const relX = rect.left + rect.width / 2 - svgRect.left;
+      const estimatedTick = (relX / svgWidth) * maxTick;
+
+      // Find closest unassigned note by tick
+      let best: Note | null = null;
+      let bestDist = Infinity;
+      for (const note of notesSorted) {
+        if (assigned.has(note.id)) continue;
+        const dist = Math.abs(note.startTick - estimatedTick);
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = note;
+        }
+      }
+      if (best) {
+        assigned.add(best.id);
+        elemToNoteRef.current.set(elem, best);
+        noteIdToElemRef.current.set(best.id, elem);
+      }
+    }
+  }, [notes]);
+
   // Render MusicXML whenever notes/tracks change
   const renderScore = useCallback(async () => {
     const osmd = osmdRef.current;
@@ -95,10 +167,12 @@ export function SheetMusicView({
       osmd.zoom = zoom;
       osmd.render();
       setError(null);
+      buildNoteMap();
+      applyHighlight(selectedNoteIdRef.current);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to render score");
     }
-  }, [tracks, notes, bpm, keySignature, timeSignature, zoom]);
+  }, [tracks, notes, bpm, keySignature, timeSignature, zoom, buildNoteMap, applyHighlight]);
 
   // Debounce renders to avoid thrashing during rapid note edits
   useEffect(() => {
@@ -118,6 +192,26 @@ export function SheetMusicView({
       }
     };
   }, [loading, renderScore]);
+
+  // Keep ref in sync so renderScore can read it without being in its dep array
+  useEffect(() => {
+    selectedNoteIdRef.current = selectedNoteId;
+    applyHighlight(selectedNoteId);
+  }, [selectedNoteId, applyHighlight]);
+
+  const handleScoreClick = useCallback((e: React.MouseEvent) => {
+    if (!onNoteSelect) return;
+    let target: Element | null = e.target as Element;
+    while (target && target !== containerRef.current) {
+      for (const [elem, note] of elemToNoteRef.current) {
+        if (elem === target || elem.contains(target)) {
+          onNoteSelect(note.id);
+          return;
+        }
+      }
+      target = target.parentElement;
+    }
+  }, [onNoteSelect]);
 
   const handleZoomIn = useCallback(() => {
     setZoom((z) => Math.min(2.0, z + 0.1));
@@ -200,7 +294,12 @@ export function SheetMusicView({
             <p className="text-xs text-neutral-400">Add notes to see sheet music</p>
           </div>
         )}
-        <div ref={containerRef} className="p-2" />
+        <div
+          ref={containerRef}
+          className="p-2"
+          onClick={onNoteSelect ? handleScoreClick : undefined}
+          style={onNoteSelect ? { cursor: "pointer" } : undefined}
+        />
       </div>
     </div>
   );

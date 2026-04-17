@@ -3,8 +3,12 @@ import {
   getUserElevenLabsKey,
 } from "@/lib/audio/elevenlabs";
 import { buildMusicPrompt } from "@/lib/audio/music-prompt";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
+
+const supabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL);
 
 interface AudioGenerateRequestBody {
   prompt?: string;
@@ -22,6 +26,11 @@ interface AudioGenerateRequestBody {
 
 export async function POST(request: Request) {
   try {
+    if (supabaseConfigured) {
+      const client = await createClient();
+      await requireAuth(client);
+    }
+
     const body = (await request.json()) as AudioGenerateRequestBody;
 
     // Build the prompt: use explicit prompt if provided, otherwise compose from params

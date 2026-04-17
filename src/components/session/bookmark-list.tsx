@@ -98,11 +98,20 @@ export function BookmarkList({
         )}
       </div>
       <div className="flex flex-col gap-1.5">
-        {bookmarks.map((bookmark) => {
+        {bookmarks.map((bookmark, index) => {
           const isEditing = editingId === bookmark.id;
           const isExpanded = expandedId === bookmark.id;
           const isActive = bookmark.id === activeId;
           const snap = bookmark.contextSnapshot;
+          const prev = index > 0 ? bookmarks[index - 1].contextSnapshot : null;
+          const sectionDelta =
+            prev != null && snap.sectionCount != null && prev.sectionCount != null
+              ? snap.sectionCount - prev.sectionCount
+              : null;
+          const noteDelta =
+            prev != null && snap.noteCount != null && prev.noteCount != null
+              ? snap.noteCount - prev.noteCount
+              : null;
 
           return (
             <div key={bookmark.id} className="flex flex-col">
@@ -148,6 +157,38 @@ export function BookmarkList({
                     <span className="max-w-[120px] truncate">{bookmark.label}</span>
                   )}
 
+                  {/* Delta badges (inline, only when not editing) */}
+                  {!isEditing && (sectionDelta !== null || noteDelta !== null) && (
+                    <span className="ml-auto flex items-center gap-1 shrink-0">
+                      {sectionDelta !== null && sectionDelta !== 0 && (
+                        <span
+                          className={cn(
+                            "rounded px-1 text-[9px] font-medium leading-4",
+                            sectionDelta > 0
+                              ? "bg-emerald-500/15 text-emerald-400"
+                              : "bg-red-500/15 text-red-400",
+                          )}
+                        >
+                          {sectionDelta > 0 ? "+" : ""}
+                          {sectionDelta}s
+                        </span>
+                      )}
+                      {noteDelta !== null && noteDelta !== 0 && (
+                        <span
+                          className={cn(
+                            "rounded px-1 text-[9px] font-medium leading-4",
+                            noteDelta > 0
+                              ? "bg-emerald-500/15 text-emerald-400"
+                              : "bg-red-500/15 text-red-400",
+                          )}
+                        >
+                          {noteDelta > 0 ? "+" : ""}
+                          {noteDelta}n
+                        </span>
+                      )}
+                    </span>
+                  )}
+
                   {/* Expand chevron */}
                   {!isEditing && (
                     <svg
@@ -160,7 +201,8 @@ export function BookmarkList({
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       className={cn(
-                        "shrink-0 transition-transform ml-auto",
+                        "shrink-0 transition-transform",
+                        sectionDelta === null && noteDelta === null && "ml-auto",
                         isExpanded && "rotate-180",
                       )}
                     >
@@ -256,6 +298,40 @@ export function BookmarkList({
                       </div>
                     )}
                   </div>
+                  {(sectionDelta !== null || noteDelta !== null) && (
+                    <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                      {sectionDelta !== null && (
+                        <span
+                          className={cn(
+                            "rounded px-1 py-0.5 text-[10px] font-medium",
+                            sectionDelta > 0
+                              ? "bg-emerald-500/10 text-emerald-400"
+                              : sectionDelta < 0
+                                ? "bg-red-500/10 text-red-400"
+                                : "bg-neutral-800 text-neutral-500",
+                          )}
+                        >
+                          {sectionDelta > 0 ? "+" : ""}
+                          {sectionDelta} sections
+                        </span>
+                      )}
+                      {noteDelta !== null && (
+                        <span
+                          className={cn(
+                            "rounded px-1 py-0.5 text-[10px] font-medium",
+                            noteDelta > 0
+                              ? "bg-emerald-500/10 text-emerald-400"
+                              : noteDelta < 0
+                                ? "bg-red-500/10 text-red-400"
+                                : "bg-neutral-800 text-neutral-500",
+                          )}
+                        >
+                          {noteDelta > 0 ? "+" : ""}
+                          {noteDelta} notes
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <div className="mt-1.5 text-[10px] text-neutral-600">
                     {new Date(bookmark.createdAt).toLocaleString()}
                   </div>

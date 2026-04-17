@@ -167,7 +167,7 @@ export function SequencerPanel({
           <select
             value={snap}
             onChange={(e) => setSnap(e.target.value as SnapValue)}
-            className="h-7 rounded bg-neutral-800 text-xs text-neutral-300 border border-neutral-700 outline-none cursor-pointer"
+            className="h-8 rounded bg-neutral-800 text-xs text-neutral-300 border border-neutral-700 outline-none cursor-pointer"
           >
             <option value="1/4">1/4</option>
             <option value="1/8">1/8</option>
@@ -182,7 +182,7 @@ export function SequencerPanel({
           <button
             onClick={() => setZoom((z) => Math.max(ZOOM_MIN, +(z - ZOOM_STEP).toFixed(2)))}
             disabled={zoom <= ZOOM_MIN}
-            className="h-7 w-7 rounded bg-neutral-800 text-xs font-bold text-neutral-300 border border-neutral-700 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed"
+            className="h-8 w-8 rounded bg-neutral-800 text-xs font-bold text-neutral-300 border border-neutral-700 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed"
             title="Zoom out"
           >
             -
@@ -193,7 +193,7 @@ export function SequencerPanel({
           <button
             onClick={() => setZoom((z) => Math.min(ZOOM_MAX, +(z + ZOOM_STEP).toFixed(2)))}
             disabled={zoom >= ZOOM_MAX}
-            className="h-7 w-7 rounded bg-neutral-800 text-xs font-bold text-neutral-300 border border-neutral-700 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed"
+            className="h-8 w-8 rounded bg-neutral-800 text-xs font-bold text-neutral-300 border border-neutral-700 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed"
             title="Zoom in"
           >
             +
@@ -211,7 +211,7 @@ export function SequencerPanel({
             }
             min={1}
             max={256}
-            className="w-12 h-7 rounded bg-neutral-800 text-center text-xs text-neutral-200 border border-neutral-700 focus:border-amber-500 outline-none"
+            className="w-12 h-8 rounded bg-neutral-800 text-center text-xs text-neutral-200 border border-neutral-700 focus:border-amber-500 outline-none"
           />
         </div>
 
@@ -220,7 +220,7 @@ export function SequencerPanel({
           {onClearAll && (
             <button
               onClick={onClearAll}
-              className="h-7 rounded bg-neutral-800 px-2 text-[10px] font-medium text-neutral-400 transition-colors hover:bg-red-900/40 hover:text-red-400"
+              className="h-8 rounded bg-neutral-800 px-2 text-[10px] font-medium text-neutral-400 transition-colors hover:bg-red-900/40 hover:text-red-400"
               title="Clear all notes"
             >
               Clear

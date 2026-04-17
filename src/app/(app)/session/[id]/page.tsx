@@ -179,6 +179,7 @@ export default function SessionWorkspacePage() {
   const [captureOpen, setCaptureOpen] = useState(false);
   const [sequencerVisible, setSequencerVisible] = useState(false);
   const [sheetMusicVisible, setSheetMusicVisible] = useState(false);
+  const [selectedSheetNoteId, setSelectedSheetNoteId] = useState<string | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
   const [generateOpen, setGenerateOpen] = useState(false);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
@@ -657,6 +658,15 @@ export default function SessionWorkspacePage() {
     [updateSession, setBpm],
   );
 
+  const handleSheetNoteSelect = useCallback(
+    (noteId: string) => {
+      setSelectedSheetNoteId(noteId);
+      sequencer.selectNote(noteId, false);
+      setSequencerVisible(true);
+    },
+    [sequencer],
+  );
+
   const handleKeyChange = useCallback(
     (keySignature: string) => updateSession({ keySignature }),
     [updateSession],
@@ -1091,9 +1101,30 @@ export default function SessionWorkspacePage() {
         />
       )}
 
-      {/* Session title */}
-      <div className="flex items-center gap-2 px-4 py-1.5 border-b border-neutral-800/30">
-        <span className="text-xs text-neutral-500 truncate">{session.title}</span>
+      {/* Breadcrumb / session title */}
+      <div className="flex items-center gap-1.5 px-4 py-1.5 border-b border-neutral-800/30">
+        <a
+          href="/dashboard"
+          className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors shrink-0"
+        >
+          Dashboard
+        </a>
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="text-neutral-700 shrink-0"
+        >
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+        <span className="text-xs text-neutral-400 truncate">
+          Session: {session.title}
+        </span>
       </div>
 
       {/* Transport Controls */}
@@ -1247,7 +1278,7 @@ export default function SessionWorkspacePage() {
             key={tab.key}
             onClick={() => setMobileTab(tab.key)}
             className={cn(
-              "flex-1 py-2.5 text-xs font-medium transition-colors",
+              "flex-1 min-h-[44px] py-2 text-xs font-medium transition-colors",
               mobileTab === tab.key
                 ? "border-b-2 border-amber-500 text-amber-400"
                 : "text-neutral-400 hover:text-neutral-200",
@@ -1318,6 +1349,8 @@ export default function SessionWorkspacePage() {
                 keySignature={session.keySignature}
                 timeSignature={session.timeSignature}
                 className="min-h-[200px]"
+                onNoteSelect={handleSheetNoteSelect}
+                selectedNoteId={selectedSheetNoteId}
               />
             )}
             {sequencerVisible && (
@@ -1374,6 +1407,7 @@ export default function SessionWorkspacePage() {
             collapsed={false}
             onAddToSession={handleCaptureAddToSession}
             onTranscribeToMidi={handleTranscribeToMidi}
+            sessionId={session.id}
             className="flex-1 w-full border-l-0"
           />
         )}
@@ -1490,6 +1524,8 @@ export default function SessionWorkspacePage() {
                 keySignature={session.keySignature}
                 timeSignature={session.timeSignature}
                 className="h-full"
+                onNoteSelect={handleSheetNoteSelect}
+                selectedNoteId={selectedSheetNoteId}
               />
             </div>
           )}
@@ -1549,6 +1585,7 @@ export default function SessionWorkspacePage() {
                 collapsed={false}
                 onAddToSession={handleCaptureAddToSession}
                 onTranscribeToMidi={handleTranscribeToMidi}
+                sessionId={session.id}
                 className="border-l-0 rounded-2xl"
               />
             </div>

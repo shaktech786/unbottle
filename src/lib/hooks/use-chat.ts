@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import type { ChatMessage, Section, Track } from "@/lib/music/types";
 import { getAuthHeaders } from "@/lib/hooks/use-api-key";
+import { removeLastAssistantMessage } from "@/lib/ai/chat-utils";
 
 export interface ChatContext {
   bpm?: number;
@@ -32,6 +33,7 @@ export interface ChatAction {
 export interface UseChatReturn {
   messages: ChatMessage[];
   sendMessage: (content: string) => Promise<void>;
+  regenerate: () => Promise<void>;
   isStreaming: boolean;
   clearMessages: () => void;
   isLoadingHistory: boolean;
@@ -255,5 +257,21 @@ export function useChat({ sessionId, context, apiKey, onAction }: UseChatOptions
     setIsStreaming(false);
   }, []);
 
-  return { messages, sendMessage, isStreaming, clearMessages, isLoadingHistory, chatError };
+  /**
+   * Remove the last assistant message and resend the last user message.
+   * No-op if there is no user message to resend.
+   */
+  const regenerate = useCallback(async () => {
+    if (isStreaming) return;
+    // Strip the last assistant message to find the last user content
+    const withoutLastAssistant = removeLastAssistantMessage(messages);
+    // Find the last user message
+    const lastUserMsg = [...withoutLastAssistant].reverse().find((m) => m.role === "user");
+    if (!lastUserMsg) return;
+    // Remove the last assistant message from state before resending
+    setMessages(withoutLastAssistant);
+    await sendMessage(lastUserMsg.content);
+  }, [isStreaming, messages, sendMessage]);
+
+  return { messages, sendMessage, regenerate, isStreaming, clearMessages, isLoadingHistory, chatError };
 }

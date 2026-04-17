@@ -96,6 +96,7 @@ export default function NewSessionPage() {
   const [bpm, setBpm] = useState(() => preferences.defaultBpm);
   const [selectedNote, setSelectedNote] = useState<string>("C");
   const [scaleMode, setScaleMode] = useState<ScaleMode>("major");
+  const [timeSignature, setTimeSignature] = useState("4/4");
   const [selectedTemplate, setSelectedTemplate] = useState<SessionTemplate | null>(null);
 
   function applyTemplate(template: SessionTemplate) {
@@ -125,6 +126,7 @@ export default function NewSessionPage() {
       mood: mood ?? undefined,
       bpm,
       keySignature: composeKeySignature(selectedNote, scaleMode),
+      timeSignature,
       templateSections: selectedTemplate?.sections,
       templateTracks: selectedTemplate?.tracks,
     });
@@ -410,6 +412,30 @@ export default function NewSessionPage() {
             <p className="text-xs text-neutral-500">
               {composeKeySignature(selectedNote, scaleMode)}
             </p>
+          </div>
+
+          {/* Time Signature */}
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-neutral-300">
+              Time Signature
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {["3/4", "4/4", "5/4", "6/8", "7/8"].map((ts) => (
+                <button
+                  key={ts}
+                  type="button"
+                  onClick={() => setTimeSignature(ts)}
+                  className={cn(
+                    "flex h-10 w-14 items-center justify-center rounded-lg font-mono text-xs font-medium transition-colors duration-300",
+                    timeSignature === ts
+                      ? "bg-amber-500 text-white"
+                      : "bg-neutral-800 text-neutral-300 hover:bg-neutral-700",
+                  )}
+                >
+                  {ts}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Submit */}

@@ -2,6 +2,20 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 
+// ─── Pure time-logic helpers (exported for testing) ───────────────────────────
+
+/** Returns the number of fully elapsed minutes between startMs and nowMs. */
+export function calcElapsedMinutes(startMs: number, nowMs: number): number {
+  return Math.floor((nowMs - startMs) / 60000);
+}
+
+/** Returns true when elapsedMinutes has reached or exceeded the threshold. */
+export function hasReachedThreshold(elapsedMinutes: number, thresholdMinutes = 45): boolean {
+  return elapsedMinutes >= thresholdMinutes;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 interface UseHyperfocusGuardOptions {
   /** Minutes before the first nudge (default: 45) */
   thresholdMinutes?: number;
