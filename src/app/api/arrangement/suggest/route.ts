@@ -97,6 +97,9 @@ export async function POST(request: Request) {
 
     return Response.json({ suggestions, nextStep });
   } catch (err) {
+    if (err instanceof Error && err.message === "Authentication required") {
+      return Response.json({ error: "Authentication required" }, { status: 401 });
+    }
     const errorMessage =
       err instanceof Error ? err.message : "Internal server error";
     return Response.json({ error: errorMessage }, { status: 500 });

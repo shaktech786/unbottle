@@ -81,6 +81,10 @@ export async function POST(request: Request) {
     const message =
       err instanceof Error ? err.message : "Internal server error";
 
+    if (message === "Authentication required") {
+      return Response.json({ error: "Authentication required" }, { status: 401 });
+    }
+
     // Surface missing-key errors as 401
     if (message.includes("No ElevenLabs API key")) {
       return Response.json({ error: message }, { status: 401 });

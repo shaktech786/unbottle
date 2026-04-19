@@ -68,6 +68,9 @@ export async function POST(request: NextRequest) {
 
       return Response.json({ url, captureId }, { status: 201 });
     } catch (err) {
+      if (err instanceof Error && err.message === "Authentication required") {
+        return Response.json({ error: "Authentication required" }, { status: 401 });
+      }
       const message = err instanceof Error ? err.message : "Internal server error";
       console.error("Audio upload error:", message);
       return Response.json({ error: message }, { status: 500 });

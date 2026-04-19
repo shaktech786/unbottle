@@ -9,11 +9,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
  *   1. When `requireAuth()` throws, the downstream work is NOT invoked.
  *   2. With valid auth, the route proceeds (non-401, downstream invoked).
  *
- * Note on status codes: most routes wrap the auth error in a generic 500
- * catch block with the message "Authentication required" (see route
- * implementations). `capture/analyze` is the exception — it returns 401.
- * We assert on the behavioural contract (downstream never runs) plus
- * whichever status the specific route actually returns.
+ * Status code contract: all gated routes return 401 with
+ * `{ error: "Authentication required" }` when `requireAuth()` fails.
+ * Other errors continue to return 500.
  */
 
 const {
@@ -86,6 +84,7 @@ describe("POST /api/arrangement/generate — auth gate", () => {
     requireAuthMock.mockRejectedValueOnce(new Error("Authentication required"));
     const { POST } = await import("./arrangement/generate/route");
     const res = await POST(jsonReq({ prompt: "hello" }));
+    expect(res.status).toBe(401);
     const json = await res.json();
     expect(json.error).toBe("Authentication required");
     expect(generateCompletionMock).not.toHaveBeenCalled();
@@ -108,6 +107,7 @@ describe("POST /api/arrangement/suggest — auth gate", () => {
     requireAuthMock.mockRejectedValueOnce(new Error("Authentication required"));
     const { POST } = await import("./arrangement/suggest/route");
     const res = await POST(jsonReq({ sessionState: { bpm: 120 } }));
+    expect(res.status).toBe(401);
     const json = await res.json();
     expect(json.error).toBe("Authentication required");
     expect(generateCompletionMock).not.toHaveBeenCalled();
@@ -130,6 +130,7 @@ describe("POST /api/audio/generate — auth gate", () => {
     requireAuthMock.mockRejectedValueOnce(new Error("Authentication required"));
     const { POST } = await import("./audio/generate/route");
     const res = await POST(jsonReq({ prompt: "lofi" }));
+    expect(res.status).toBe(401);
     const json = await res.json();
     expect(json.error).toBe("Authentication required");
     expect(generateMusicMock).not.toHaveBeenCalled();
@@ -168,6 +169,7 @@ describe("POST /api/audio/upload — auth gate", () => {
 
     const { POST } = await import("./audio/upload/route");
     const res = await POST(formReq() as never);
+    expect(res.status).toBe(401);
     const json = await res.json();
     expect(json.error).toBe("Authentication required");
     expect(uploadSpy).not.toHaveBeenCalled();
@@ -213,6 +215,7 @@ describe("POST /api/chat — auth gate", () => {
     const res = await POST(
       jsonReq({ sessionId: "s1", message: "hi", history: [], context: {} }),
     );
+    expect(res.status).toBe(401);
     const json = await res.json();
     expect(json.error).toBe("Authentication required");
     expect(getClaudeClientMock).not.toHaveBeenCalled();
