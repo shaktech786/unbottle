@@ -33,6 +33,8 @@ export interface CreateSessionInput {
   templateSections?: Omit<Section, "id" | "sessionId">[];
   /** Template tracks to auto-create (replaces default piano track) */
   templateTracks?: Omit<Track, "id" | "sessionId">[];
+  /** When true, navigates to the session with ?autoStart=true so the AI greets the user immediately */
+  autoStart?: boolean;
 }
 
 export function useSession(): UseSessionReturn {
@@ -49,8 +51,8 @@ export function useSession(): UseSessionReturn {
       setIsLoading(true);
       setError(null);
       try {
-        // Strip template data from the API payload (handled client-side)
-        const { templateSections, templateTracks, ...sessionPayload } = data ?? {};
+        // Strip client-only fields from the API payload
+        const { templateSections, templateTracks, autoStart, ...sessionPayload } = data ?? {};
 
         const res = await fetch("/api/session", {
           method: "POST",
@@ -90,7 +92,10 @@ export function useSession(): UseSessionReturn {
           }
         }
 
-        router.push(`/session/${newSession.id}`);
+        const dest = autoStart
+          ? `/session/${newSession.id}?autoStart=true`
+          : `/session/${newSession.id}`;
+        router.push(dest);
         return newSession as Session;
       } catch (e) {
         const message = e instanceof Error ? e.message : "Unknown error";

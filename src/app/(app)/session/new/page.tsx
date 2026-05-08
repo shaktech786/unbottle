@@ -133,7 +133,7 @@ export default function NewSessionPage() {
   }
 
   async function handleJustStart() {
-    await createSession();
+    await createSession({ autoStart: true });
   }
 
   return (

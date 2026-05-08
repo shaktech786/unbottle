@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSessionContext } from "@/lib/session/context";
 import { TransportControls } from "@/components/sequencer/transport-controls";
 import { ArrangementPanel } from "@/components/arrangement/arrangement-panel";
@@ -73,6 +73,7 @@ export default function SessionWorkspacePage() {
 
   const { addToast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { preferences } = usePreferences();
 
   // ------- Sequencer (note management with undo/redo) -------
@@ -210,6 +211,8 @@ export default function SessionWorkspacePage() {
   // ------- Auto-kickoff for fresh sessions -------
   // When a user lands on a brand-new session (no sections, no notes),
   // auto-send a kickoff message to the AI so they get immediate guidance.
+  // When autoStart=true (from "Just Start"), send a welcoming opener instead
+  // of the arrangement request so the AI greets the user immediately.
   const hasAutoKicked = useRef(false);
   useEffect(() => {
     if (
@@ -220,17 +223,24 @@ export default function SessionWorkspacePage() {
     ) {
       hasAutoKicked.current = true;
 
-      const parts: string[] = [];
-      if (session.genre) parts.push(`genre is ${session.genre}`);
-      if (session.mood) parts.push(`mood is ${session.mood}`);
-      if (session.bpm !== 120) parts.push(`BPM is ${session.bpm}`);
-      if (session.keySignature && session.keySignature !== "C") parts.push(`key is ${session.keySignature}`);
+      const isAutoStart = searchParams.get("autoStart") === "true";
 
-      const ctx = parts.length > 0
-        ? `I've set up: ${parts.join(", ")}.`
-        : "I just started a fresh session.";
+      let msg: string;
+      if (isAutoStart) {
+        msg = "Hey! I just jumped into a fresh session. What should we make?";
+      } else {
+        const parts: string[] = [];
+        if (session.genre) parts.push(`genre is ${session.genre}`);
+        if (session.mood) parts.push(`mood is ${session.mood}`);
+        if (session.bpm !== 120) parts.push(`BPM is ${session.bpm}`);
+        if (session.keySignature && session.keySignature !== "C") parts.push(`key is ${session.keySignature}`);
 
-      const msg = `${ctx} Build me a full arrangement with chord progressions I can hear right away. Pick anything I haven't chosen yet.`;
+        const ctx = parts.length > 0
+          ? `I've set up: ${parts.join(", ")}.`
+          : "I just started a fresh session.";
+
+        msg = `${ctx} Build me a full arrangement with chord progressions I can hear right away. Pick anything I haven't chosen yet.`;
+      }
 
       let attempts = 0;
       const tryKick = () => {
@@ -241,10 +251,10 @@ export default function SessionWorkspacePage() {
           setTimeout(tryKick, 500);
         }
       };
-      const timer = setTimeout(tryKick, 1000);
+      const timer = setTimeout(tryKick, 300);
       return () => clearTimeout(timer);
     }
-  }, [session, sections.length, contextNotes.length]);
+  }, [session, sections.length, contextNotes.length, searchParams]);
 
   // ------- Tone.js player (uses sequencer notes, not empty context) -------
   const {

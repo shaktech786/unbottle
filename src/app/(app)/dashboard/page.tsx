@@ -20,7 +20,7 @@ export default function DashboardPage() {
   }, [listSessions]);
 
   async function handleNewSession() {
-    await createSession();
+    await createSession({ autoStart: true });
   }
 
   const handleRename = useCallback(
