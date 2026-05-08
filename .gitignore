@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+e2e/.e2e-auth.json
 
 # next.js
 /.next/

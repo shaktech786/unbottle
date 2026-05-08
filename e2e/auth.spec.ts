@@ -31,6 +31,10 @@ function adminClient() {
 // Signup
 // ---------------------------------------------------------------------------
 
+// Auth specs intentionally start unauthenticated — clear the global storageState
+// set by global-setup so these tests aren't pre-logged-in.
+test.use({ storageState: { cookies: [], origins: [] } });
+
 test.describe("signup", () => {
   let createdUserId: string | undefined;
   const email = testEmail("signup");
