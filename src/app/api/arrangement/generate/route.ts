@@ -3,6 +3,7 @@ import { buildArrangementPrompt } from "@/lib/ai/prompts/arrangement";
 import type { Section, ChordEvent, SectionType } from "@/lib/music/types";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/supabase/auth";
+import { checkRateLimit } from "@/lib/ratelimit";
 
 export const dynamic = "force-dynamic";
 
@@ -70,9 +71,30 @@ const SECTION_COLORS: Record<SectionType, string> = {
 
 export async function POST(request: Request) {
   try {
+    let authedUserId: string | null = null;
+
     if (supabaseConfigured) {
       const client = await createClient();
-      await requireAuth(client);
+      const user = await requireAuth(client);
+      authedUserId = user.id;
+    }
+
+    const userApiKey = getUserApiKey(request);
+    const hasByoKey = Boolean(userApiKey);
+
+    if (authedUserId && !hasByoKey) {
+      const rateLimit = await checkRateLimit(authedUserId, "arrangement");
+      if (!rateLimit.allowed) {
+        return Response.json(
+          { error: "Rate limit exceeded" },
+          {
+            status: 429,
+            headers: {
+              "Retry-After": String(rateLimit.retryAfter ?? 3600),
+            },
+          },
+        );
+      }
     }
 
     const body = (await request.json()) as GenerateRequestBody;
@@ -89,8 +111,6 @@ export async function POST(request: Request) {
       mood: body.mood,
       existingSections: body.existingSections,
     });
-
-    const userApiKey = getUserApiKey(request);
 
     const rawResponse = await generateCompletion(
       systemPrompt,
