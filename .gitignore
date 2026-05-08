@@ -45,3 +45,10 @@ supabase/.temp/
 
 # APM dependencies
 apm_modules/
+
+# APM (Agent Package Manager) artifacts
+apm.yml
+apm.lock.yaml
+apm_modules/
+AGENTS.md
+PLAN.md
