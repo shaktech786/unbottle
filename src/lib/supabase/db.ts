@@ -80,6 +80,24 @@ export async function getSession(
 }
 
 /**
+ * Get a session by its share slug. Returns null if not found.
+ */
+export async function getSessionBySlug(
+  client: SupabaseClient,
+  slug: string,
+): Promise<Session | null> {
+  const { data, error } = await client
+    .from("sessions")
+    .select("*")
+    .eq("share_slug", slug)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+  return mapSessionRow(data as SessionRow);
+}
+
+/**
  * Create a new session. Returns the created session.
  */
 export async function createSession(

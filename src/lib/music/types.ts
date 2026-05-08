@@ -133,6 +133,8 @@ export interface Session {
   parentBranchId?: string;
   isShared?: boolean;
   sharedAt?: string;
+  shareSlug?: string;
+  isPublic?: boolean;
   createdAt: string;
   updatedAt: string;
   lastActiveAt: string;

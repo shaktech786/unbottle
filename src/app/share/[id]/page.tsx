@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { getSession as getSessionDB, getLatestAudioCapture } from "@/lib/supabase/db";
+import { getSessionBySlug, getLatestAudioCapture } from "@/lib/supabase/db";
 import { getSession as getSessionMemory } from "@/lib/session/store";
 import type { Session } from "@/lib/music/types";
 
@@ -20,8 +20,8 @@ async function fetchShareData(id: string): Promise<ShareData | null> {
   if (supabaseConfigured) {
     try {
       const client = await createClient();
-      const session = await getSessionDB(client, id);
-      if (!session || !session.isShared) return null;
+      const session = await getSessionBySlug(client, id);
+      if (!session || !session.isPublic) return null;
 
       let audioUrl: string | null = null;
       const capture = await getLatestAudioCapture(client, session.id);
