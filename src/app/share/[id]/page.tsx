@@ -21,7 +21,7 @@ async function fetchShareData(id: string): Promise<ShareData | null> {
     try {
       const client = await createClient();
       const session = await getSessionDB(client, id);
-      if (!session) return null;
+      if (!session || !session.isShared) return null;
 
       let audioUrl: string | null = null;
       const capture = await getLatestAudioCapture(client, session.id);
