@@ -1,5 +1,6 @@
 import { type NextRequest } from "next/server";
-import { generateCompletion, getUserApiKey } from "@/lib/ai/claude";
+import { generateCompletionFull, getUserApiKey } from "@/lib/ai/claude";
+import { logUsage } from "@/lib/log-usage";
 import { buildCaptureAnalysisPrompt } from "@/lib/ai/prompts/capture-analysis";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/supabase/auth";
@@ -21,10 +22,13 @@ const VALID_CAPTURE_TYPES = new Set(["audio", "tap", "text"]);
 
 // POST /api/capture/analyze - analyze a musical capture via AI
 export async function POST(request: NextRequest) {
+  let authedUserId: string | null = null;
+
   if (supabaseConfigured) {
     try {
       const client = await createClient();
-      await requireAuth(client);
+      const user = await requireAuth(client);
+      authedUserId = user.id;
     } catch {
       return Response.json({ error: "Authentication required" }, { status: 401 });
     }
@@ -59,12 +63,22 @@ export async function POST(request: NextRequest) {
   });
 
   try {
-    const rawResponse = await generateCompletion(
+    const { text: rawResponse, model, usage } = await generateCompletionFull(
       systemPrompt,
       userMessage,
       2048,
       apiKey,
     );
+
+    if (authedUserId) {
+      void logUsage({
+        userId: authedUserId,
+        tokensInput: usage.input_tokens,
+        tokensOutput: usage.output_tokens,
+        model,
+        endpoint: "/api/capture/analyze",
+      });
+    }
 
     // Parse the AI response as JSON
     let analysis: unknown;

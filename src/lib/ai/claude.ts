@@ -53,6 +53,16 @@ export async function generateCompletion(
   maxTokens = 4096,
   apiKey?: string,
 ): Promise<string> {
+  const { text } = await generateCompletionFull(systemPrompt, userMessage, maxTokens, apiKey);
+  return text;
+}
+
+export async function generateCompletionFull(
+  systemPrompt: string,
+  userMessage: string,
+  maxTokens = 4096,
+  apiKey?: string,
+): Promise<{ text: string; model: string; usage: { input_tokens: number; output_tokens: number } }> {
   const claude = getClaudeClient(apiKey);
 
   const response = await claude.messages.create({
@@ -63,5 +73,9 @@ export async function generateCompletion(
   });
 
   const textBlock = response.content.find((block) => block.type === "text");
-  return textBlock?.text ?? "";
+  return {
+    text: textBlock?.text ?? "",
+    model: response.model,
+    usage: response.usage,
+  };
 }

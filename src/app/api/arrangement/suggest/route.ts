@@ -1,4 +1,5 @@
-import { generateCompletion, getUserApiKey } from "@/lib/ai/claude";
+import { generateCompletionFull, getUserApiKey } from "@/lib/ai/claude";
+import { logUsage } from "@/lib/log-usage";
 import {
   buildMomentumPrompt,
   type MomentumSessionState,
@@ -33,9 +34,12 @@ const VALID_CATEGORIES: Suggestion["category"][] = [
 
 export async function POST(request: Request) {
   try {
+    let authedUserId: string | null = null;
+
     if (supabaseConfigured) {
       const client = await createClient();
-      await requireAuth(client);
+      const user = await requireAuth(client);
+      authedUserId = user.id;
     }
 
     const body = (await request.json()) as SuggestRequestBody;
@@ -52,12 +56,22 @@ export async function POST(request: Request) {
 
     const userApiKey = getUserApiKey(request);
 
-    const rawResponse = await generateCompletion(
+    const { text: rawResponse, model, usage } = await generateCompletionFull(
       systemPrompt,
       "Analyze my current session and suggest what I should do next.",
       2048,
       userApiKey,
     );
+
+    if (authedUserId) {
+      void logUsage({
+        userId: authedUserId,
+        tokensInput: usage.input_tokens,
+        tokensOutput: usage.output_tokens,
+        model,
+        endpoint: "/api/arrangement/suggest",
+      });
+    }
 
     const cleaned = rawResponse
       .replace(/^```(?:json)?\s*/m, "")

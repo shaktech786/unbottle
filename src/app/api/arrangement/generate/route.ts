@@ -1,4 +1,5 @@
-import { generateCompletion, getUserApiKey } from "@/lib/ai/claude";
+import { generateCompletionFull, getUserApiKey } from "@/lib/ai/claude";
+import { logUsage } from "@/lib/log-usage";
 import { buildArrangementPrompt } from "@/lib/ai/prompts/arrangement";
 import type { Section, ChordEvent, SectionType } from "@/lib/music/types";
 import { createClient } from "@/lib/supabase/server";
@@ -112,12 +113,22 @@ export async function POST(request: Request) {
       existingSections: body.existingSections,
     });
 
-    const rawResponse = await generateCompletion(
+    const { text: rawResponse, model, usage } = await generateCompletionFull(
       systemPrompt,
       prompt,
       4096,
       userApiKey,
     );
+
+    if (authedUserId) {
+      void logUsage({
+        userId: authedUserId,
+        tokensInput: usage.input_tokens,
+        tokensOutput: usage.output_tokens,
+        model,
+        endpoint: "/api/arrangement/generate",
+      });
+    }
 
     // Strip any markdown code fences the model may have added
     const cleaned = rawResponse

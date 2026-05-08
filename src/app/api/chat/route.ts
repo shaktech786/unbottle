@@ -6,6 +6,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/supabase/auth";
 import { checkRateLimit } from "@/lib/ratelimit";
+import { logUsage } from "@/lib/log-usage";
 
 const BYO_KEY_HEADER = "x-anthropic-key";
 
@@ -163,6 +164,10 @@ export async function POST(request: Request) {
           // Get the final completed message to check stop_reason
           const finalMessage = await stream.finalMessage();
 
+          let totalInputTokens = finalMessage.usage.input_tokens;
+          let totalOutputTokens = finalMessage.usage.output_tokens;
+          const responseModel = finalMessage.model;
+
           // If the model called tools, do a follow-up to get the summary text
           if (finalMessage.stop_reason === "tool_use") {
             const toolBlocks = finalMessage.content.filter(
@@ -187,6 +192,9 @@ export async function POST(request: Request) {
                 ],
               });
 
+              totalInputTokens += followUp.usage.input_tokens;
+              totalOutputTokens += followUp.usage.output_tokens;
+
               for (const block of followUp.content) {
                 if (block.type === "text" && block.text) {
                   sendSSE(controller, { type: "token", content: block.text });
@@ -201,6 +209,16 @@ export async function POST(request: Request) {
                 content: "\n\nI've set everything up for you. Hit play to hear it!",
               });
             }
+          }
+
+          if (authedUserId) {
+            void logUsage({
+              userId: authedUserId,
+              tokensInput: totalInputTokens,
+              tokensOutput: totalOutputTokens,
+              model: responseModel,
+              endpoint: "/api/chat",
+            });
           }
 
           sendSSE(controller, { type: "done" });
