@@ -13,6 +13,7 @@ import { SheetMusicView } from "@/components/sheet-music/sheet-music-view";
 import { GeneratePanel } from "@/components/audio/generate-panel";
 import { HyperfocusNudge } from "@/components/session/hyperfocus-nudge";
 import { BookmarkList } from "@/components/session/bookmark-list";
+import { ShareButton } from "@/components/session/share-button";
 import { useTonePlayer } from "@/lib/hooks/use-tone-player";
 import { useSequencer } from "@/lib/hooks/use-sequencer";
 import { useHyperfocusGuard } from "@/lib/hooks/use-hyperfocus-guard";
@@ -1244,6 +1245,11 @@ export default function SessionWorkspacePage() {
                 accept=".musicxml,.xml,.mxl"
                 onChange={handleImportMusicXML}
                 className="hidden"
+              />
+              <ShareButton
+                sessionId={session.id}
+                initialIsShared={session.isShared ?? false}
+                initialShareUrl={session.isShared ? `${typeof window !== "undefined" ? window.location.origin : ""}/share/${session.id}` : undefined}
               />
               <Button
                 variant="ghost"

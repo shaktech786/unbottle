@@ -31,6 +31,8 @@ export interface SessionRow {
   genre: string | null;
   mood: string | null;
   parent_branch_id: string | null;
+  is_shared: boolean | null;
+  shared_at: string | null;
   created_at: string;
   updated_at: string;
   last_active_at: string;
@@ -124,6 +126,8 @@ export function mapSessionRow(row: SessionRow): Session {
     genre: row.genre ?? undefined,
     mood: row.mood ?? undefined,
     parentBranchId: row.parent_branch_id ?? undefined,
+    isShared: row.is_shared ?? false,
+    sharedAt: row.shared_at ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     lastActiveAt: row.last_active_at,
@@ -273,6 +277,8 @@ export function sessionUpdatesToRow(
   if (updates.mood !== undefined) row.mood = updates.mood;
   if (updates.parentBranchId !== undefined)
     row.parent_branch_id = updates.parentBranchId;
+  if (updates.isShared !== undefined) row.is_shared = updates.isShared;
+  if (updates.sharedAt !== undefined) row.shared_at = updates.sharedAt;
   // updated_at and last_active_at are handled by DB triggers / explicit set
   row.last_active_at = new Date().toISOString();
   return row;

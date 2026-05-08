@@ -131,6 +131,8 @@ export interface Session {
   genre?: string;
   mood?: string;
   parentBranchId?: string;
+  isShared?: boolean;
+  sharedAt?: string;
   createdAt: string;
   updatedAt: string;
   lastActiveAt: string;
