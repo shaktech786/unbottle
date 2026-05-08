@@ -1,10 +1,12 @@
 name: E2E
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to run E2E against (requires SUPABASE_URL secret set)'
+        required: false
+        default: 'staging'
 
 jobs:
   e2e:
