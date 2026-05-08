@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils/cn";
+import { FirstUseTooltip } from "@/components/ui/first-use-tooltip";
 import type {
   InstrumentType,
   Note,
@@ -275,6 +276,11 @@ export function SequencerPanel({
               scrollY={pianoScrollY}
               height={rollHeight}
             />
+            <FirstUseTooltip
+              tooltipKey="piano-roll"
+              text="Your melody lives here — drag notes to edit, or let AI refine it"
+              position="top"
+            >
             <PianoRoll
               notes={notes}
               selectedNotes={selectedNotes}
@@ -297,6 +303,7 @@ export function SequencerPanel({
               onScrollY={setPianoScrollY}
               onScrollX={setPianoScrollX}
             />
+            </FirstUseTooltip>
           </div>
 
           {/* Velocity lane below the piano roll */}

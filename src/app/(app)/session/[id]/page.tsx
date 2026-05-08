@@ -22,6 +22,7 @@ import { useApiKey } from "@/lib/hooks/use-api-key";
 import { usePreferences } from "@/lib/hooks/use-preferences";
 import { useToast } from "@/components/ui/toast-provider";
 import { Tooltip } from "@/components/ui/tooltip";
+import { FirstUseTooltip } from "@/components/ui/first-use-tooltip";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 import { chordProgressionToNotes } from "@/lib/music/chord-to-notes";
@@ -1261,6 +1262,11 @@ export default function SessionWorkspacePage() {
                 initialIsShared={session.isShared ?? false}
                 initialShareUrl={session.isShared ? `${typeof window !== "undefined" ? window.location.origin : ""}/share/${session.id}` : undefined}
               />
+              <FirstUseTooltip
+                tooltipKey="export"
+                text="Download your track as MIDI or share it with a link"
+                position="bottom"
+              >
               <Button
                 variant="ghost"
                 size="sm"
@@ -1282,6 +1288,7 @@ export default function SessionWorkspacePage() {
                 </svg>
                 <span className="hidden md:inline">Export</span>
               </Button>
+              </FirstUseTooltip>
             </div>
           }
         />
