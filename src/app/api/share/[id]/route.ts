@@ -1,10 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import {
   getSession as getSessionDB,
+  getLatestAudioCapture,
 } from "@/lib/supabase/db";
 import { getSession as getSessionMemory } from "@/lib/session/store";
 
 const supabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL);
+
+// 7 days in seconds
+const SIGNED_URL_TTL = 7 * 24 * 60 * 60;
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +26,22 @@ export async function GET(
       if (!session) {
         return Response.json({ error: "Not found" }, { status: 404 });
       }
+
+      let audioUrl: string | null = null;
+
+      const capture = await getLatestAudioCapture(client, session.id);
+      if (capture?.audioUrl) {
+        // audio_url is stored as /api/audio/{captureId}; extract the captureId
+        const captureId = capture.audioUrl.split("/").pop();
+        if (captureId) {
+          const storagePath = `${session.userId}/${captureId}.webm`;
+          const { data: signed } = await client.storage
+            .from("captures")
+            .createSignedUrl(storagePath, SIGNED_URL_TTL);
+          audioUrl = signed?.signedUrl ?? null;
+        }
+      }
+
       return Response.json({
         id: session.id,
         title: session.title,
@@ -29,6 +49,7 @@ export async function GET(
         mood: session.mood,
         bpm: session.bpm,
         keySignature: session.keySignature,
+        audioUrl,
       });
     } catch {
       return Response.json({ error: "Internal server error" }, { status: 500 });
@@ -46,5 +67,6 @@ export async function GET(
     mood: session.mood,
     bpm: session.bpm,
     keySignature: session.keySignature,
+    audioUrl: null,
   });
 }

@@ -435,6 +435,29 @@ export async function addChatMessage(
 // ---------------------------------------------------------------------------
 
 /**
+ * Get the most recent audio capture for a session, or null if none exists.
+ * Used by the public share page to surface an audio player without auth.
+ */
+export async function getLatestAudioCapture(
+  client: SupabaseClient,
+  sessionId: string,
+): Promise<CaptureData | null> {
+  const { data, error } = await client
+    .from("captures")
+    .select("*")
+    .eq("session_id", sessionId)
+    .eq("type", "audio")
+    .not("audio_url", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+  return mapCaptureRow(data as CaptureRow);
+}
+
+/**
  * Get all captures for a session, ordered by created_at desc.
  */
 export async function getCaptures(

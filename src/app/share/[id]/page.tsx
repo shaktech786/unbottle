@@ -1,22 +1,49 @@
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { getSession as getSessionDB } from "@/lib/supabase/db";
+import { getSession as getSessionDB, getLatestAudioCapture } from "@/lib/supabase/db";
 import { getSession as getSessionMemory } from "@/lib/session/store";
 import type { Session } from "@/lib/music/types";
 
 const supabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL);
 
-async function fetchSession(id: string): Promise<Session | null> {
+// 7 days in seconds
+const SIGNED_URL_TTL = 7 * 24 * 60 * 60;
+
+interface ShareData {
+  session: Session;
+  audioUrl: string | null;
+}
+
+async function fetchShareData(id: string): Promise<ShareData | null> {
   if (supabaseConfigured) {
     try {
       const client = await createClient();
-      return await getSessionDB(client, id);
+      const session = await getSessionDB(client, id);
+      if (!session) return null;
+
+      let audioUrl: string | null = null;
+      const capture = await getLatestAudioCapture(client, session.id);
+      if (capture?.audioUrl) {
+        const captureId = capture.audioUrl.split("/").pop();
+        if (captureId) {
+          const storagePath = `${session.userId}/${captureId}.webm`;
+          const { data: signed } = await client.storage
+            .from("captures")
+            .createSignedUrl(storagePath, SIGNED_URL_TTL);
+          audioUrl = signed?.signedUrl ?? null;
+        }
+      }
+
+      return { session, audioUrl };
     } catch {
       return null;
     }
   }
-  return getSessionMemory(id) ?? null;
+
+  const session = getSessionMemory(id);
+  return session ? { session, audioUrl: null } : null;
 }
 
 function buildTweetText(title: string, shareUrl: string): string {
@@ -36,8 +63,10 @@ export default async function SharePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const session = await fetchSession(id);
-  if (!session) notFound();
+  const shareData = await fetchShareData(id);
+  if (!shareData) notFound();
+
+  const { session, audioUrl } = shareData;
 
   const headersList = await headers();
   const host = headersList.get("host") ?? "unbottle.com";
@@ -71,7 +100,18 @@ export default async function SharePage({
             {session.title}
           </h1>
           {meta && (
-            <p className="text-sm text-neutral-400 mb-6">{meta}</p>
+            <p className="text-sm text-neutral-400 mb-4">{meta}</p>
+          )}
+
+          {/* Audio player */}
+          {audioUrl && (
+            <audio
+              src={audioUrl}
+              controls
+              preload="metadata"
+              className="w-full mb-6 rounded-lg"
+              aria-label={`Listen to ${session.title}`}
+            />
           )}
 
           {/* Share on X button */}
@@ -97,7 +137,7 @@ export default async function SharePage({
 
         {/* Made with Unbottle badge */}
         <div className="flex justify-center">
-          <a
+          <Link
             href="/"
             className="inline-flex items-center gap-2 rounded-full bg-neutral-800/80 border border-neutral-700/60 px-4 py-1.5 text-xs font-medium text-neutral-400 transition-colors hover:text-neutral-200 hover:border-neutral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
           >
@@ -118,7 +158,7 @@ export default async function SharePage({
               <circle cx="18" cy="16" r="3" />
             </svg>
             Made with Unbottle
-          </a>
+          </Link>
         </div>
       </div>
     </div>
