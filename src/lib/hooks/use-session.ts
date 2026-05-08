@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { track } from "@vercel/analytics";
 import type { Session, Track, Section } from "@/lib/music/types";
 
 interface UseSessionReturn {
@@ -67,6 +68,7 @@ export function useSession(): UseSessionReturn {
 
         const { session: newSession } = await res.json();
         setSession(newSession);
+        track("session_created");
 
         // If template includes sections, create them
         if (templateSections && templateSections.length > 0) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
+import { track } from "@vercel/analytics";
 import { getElevenLabsAuthHeaders } from "./use-elevenlabs-key";
 import { useToast } from "@/components/ui/toast-provider";
 
@@ -107,6 +108,7 @@ export function useAudioGenerator(
 
         setAudioBlob(blob);
         setAudioUrl(url);
+        track("audio_generated");
         setProgress("Complete");
       } catch (err) {
         setError(err instanceof Error ? err.message : "Generation failed");

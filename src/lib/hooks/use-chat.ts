@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import { track } from "@vercel/analytics";
 import type { ChatMessage, Section, Track } from "@/lib/music/types";
 import { getAuthHeaders } from "@/lib/hooks/use-api-key";
 import { removeLastAssistantMessage } from "@/lib/ai/chat-utils";
@@ -226,6 +227,7 @@ export function useChat({ sessionId, context, apiKey, onAction }: UseChatOptions
         }
 
         if (fullContent) {
+          track("ai_message_sent");
           const finalAssistant = { ...assistantMessage, content: fullContent };
           persistMessages(sessionId, userMessage, finalAssistant);
         }

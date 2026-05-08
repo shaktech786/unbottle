@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { track } from "@vercel/analytics";
 import { useSessionContext } from "@/lib/session/context";
 import { TransportControls } from "@/components/sequencer/transport-controls";
 import { ArrangementPanel } from "@/components/arrangement/arrangement-panel";
@@ -495,6 +496,7 @@ export default function SessionWorkspacePage() {
             }
 
             await addSections(newSections);
+            track("arrangement_generated");
             addToast({
               message: `${newSections.length} section${newSections.length === 1 ? "" : "s"} added`,
               variant: "success",
@@ -1270,7 +1272,7 @@ export default function SessionWorkspacePage() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setExportOpen(true)}
+                onClick={() => { track("track_exported"); setExportOpen(true); }}
               >
                 <svg
                   width="14"
