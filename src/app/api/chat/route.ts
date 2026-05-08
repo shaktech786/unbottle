@@ -1,4 +1,4 @@
-import { getClaudeClient, getUserApiKey } from "@/lib/ai/claude";
+import { getClaudeClient } from "@/lib/ai/claude";
 import { buildProducerSystemPrompt } from "@/lib/ai/prompts/producer";
 import { PRODUCER_TOOLS } from "@/lib/ai/tools";
 import type { Section, Track } from "@/lib/music/types";
@@ -6,6 +6,8 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/supabase/auth";
 import { checkRateLimit } from "@/lib/ratelimit";
+
+const BYO_KEY_HEADER = "x-anthropic-key";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +43,10 @@ export async function POST(request: Request) {
       authedUserId = user.id;
     }
 
-    if (authedUserId) {
+    const userApiKey = request.headers.get(BYO_KEY_HEADER) || undefined;
+    const hasByoKey = Boolean(userApiKey);
+
+    if (authedUserId && !hasByoKey) {
       const rateLimit = await checkRateLimit(authedUserId);
       if (!rateLimit.allowed) {
         return Response.json(
@@ -49,7 +54,7 @@ export async function POST(request: Request) {
           {
             status: 429,
             headers: {
-              "Retry-After": String(rateLimit.retryAfter ?? 60),
+              "Retry-After": String(rateLimit.retryAfter ?? 3600),
             },
           },
         );
@@ -73,7 +78,6 @@ export async function POST(request: Request) {
       tracks: context?.tracks,
     });
 
-    const userApiKey = getUserApiKey(request);
     const claude = getClaudeClient(userApiKey);
 
     const validHistory: { role: "user" | "assistant"; content: string }[] = (

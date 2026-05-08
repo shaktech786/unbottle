@@ -2,9 +2,11 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { getUserSubscriptionTier } from "@/lib/subscription";
 
-const FREE_REQUESTS = 10;
-const PRO_REQUESTS = 100;
-const WINDOW_SECONDS = 60;
+function getFreeRequestsPerHour(): number {
+  const env = process.env.RATE_LIMIT_CHAT_PER_HOUR;
+  const parsed = env ? parseInt(env, 10) : NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 20;
+}
 
 function buildRatelimiters(): {
   free: Ratelimit;
@@ -15,16 +17,18 @@ function buildRatelimiters(): {
   if (!url || !token) return null;
 
   const redis = new Redis({ url, token });
+  const freeRequests = getFreeRequestsPerHour();
+  const proRequests = freeRequests * 10;
 
   return {
     free: new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(FREE_REQUESTS, `${WINDOW_SECONDS} s`),
+      limiter: Ratelimit.slidingWindow(freeRequests, "1 h"),
       prefix: "rl:free",
     }),
     pro: new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(PRO_REQUESTS, `${WINDOW_SECONDS} s`),
+      limiter: Ratelimit.slidingWindow(proRequests, "1 h"),
       prefix: "rl:pro",
     }),
   };
