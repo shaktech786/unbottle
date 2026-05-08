@@ -32,7 +32,7 @@ export async function POST() {
 
     if (!customerId) {
       return Response.json(
-        { error: "No Stripe customer found for this account." },
+        { error: "No billing account found" },
         { status: 400 },
       );
     }
@@ -41,7 +41,7 @@ export async function POST() {
 
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/settings/billing`,
+      return_url: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/settings`,
     });
 
     return Response.json({ url: session.url });
