@@ -5,6 +5,7 @@ import type { Section, Track } from "@/lib/music/types";
 import type Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/supabase/auth";
+import { checkRateLimit } from "@/lib/ratelimit";
 
 export const dynamic = "force-dynamic";
 
@@ -32,9 +33,27 @@ interface ChatRequestBody {
 
 export async function POST(request: Request) {
   try {
+    let authedUserId: string | null = null;
+
     if (supabaseConfigured) {
       const client = await createClient();
-      await requireAuth(client);
+      const user = await requireAuth(client);
+      authedUserId = user.id;
+    }
+
+    if (authedUserId) {
+      const rateLimit = await checkRateLimit(authedUserId);
+      if (!rateLimit.allowed) {
+        return Response.json(
+          { error: "Rate limit exceeded" },
+          {
+            status: 429,
+            headers: {
+              "Retry-After": String(rateLimit.retryAfter ?? 60),
+            },
+          },
+        );
+      }
     }
 
     const body = (await request.json()) as ChatRequestBody;
