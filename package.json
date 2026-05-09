@@ -17,7 +17,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.99.2",
-    "audio-to-musicxml": "file:../audio-to-musicxml/audio-to-musicxml-0.1.0.tgz",
+    "audio-to-musicxml": "file:../audio-to-musicxml",
     "clsx": "^2.1.1",
     "midi-writer-js": "^3.2.1",
     "next": "16.2.0",
@@ -39,7 +39,7 @@
     "@vitejs/plugin-react": "^6.0.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.0",
-    "jsdom": "^29.0.2",
+    "jsdom": "^27.4.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.1"
