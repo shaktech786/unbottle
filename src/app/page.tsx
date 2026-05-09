@@ -324,7 +324,7 @@ export default function Home() {
       {/* ================================================================ */}
       {/* FINAL CTA                                                        */}
       {/* ================================================================ */}
-      <section className="relative flex flex-col items-center px-4 py-20 text-center sm:px-6 sm:py-28 md:py-36">
+      <section className="relative flex flex-col items-center px-4 py-20 text-center sm:px-6 sm:py-28 md:py-36 overflow-hidden">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 h-px w-2/3 max-w-xl bg-gradient-to-r from-transparent via-amber-glow/20 to-transparent"
