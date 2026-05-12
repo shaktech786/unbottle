@@ -141,7 +141,7 @@ function reducer(state: TimelineState, action: Action): TimelineState {
           }),
         }));
         if (movingClip) {
-          const updated: TimelineClip = { ...movingClip, startTick: Math.max(0, startTick), trackId };
+          const updated: TimelineClip = { ...(movingClip as TimelineClip), startTick: Math.max(0, startTick), trackId };
           newTracks = newTracks.map((t) =>
             t.id === trackId
               ? { ...t, clips: [...t.clips, updated].sort((a, b) => a.startTick - b.startTick) }

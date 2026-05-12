@@ -45,8 +45,17 @@ export interface TimelineClip {
    * Defaults to 0. Useful for audio trim handles.
    */
   contentOffsetTicks: number;
+  /**
+   * Offset from the content end where playback stops (content trim end).
+   * 0 = play to the natural end of the content.
+   */
+  endOffsetTicks: number;
   /** Gain multiplier [0, 2]. Default 1. */
   gain: number;
+  /** Fade-in duration in ticks. 0 = no fade. */
+  fadeInTicks: number;
+  /** Fade-out duration in ticks. 0 = no fade. */
+  fadeOutTicks: number;
   /** Display colour override (hex). Inherits from track if omitted. */
   color?: string;
   /** Whether the clip is muted (plays silently). */
@@ -164,7 +173,10 @@ export function makeTimelineClip(
   return {
     name: undefined,
     contentOffsetTicks: 0,
+    endOffsetTicks: 0,
     gain: 1,
+    fadeInTicks: 0,
+    fadeOutTicks: 0,
     color: undefined,
     muted: false,
     selected: false,
