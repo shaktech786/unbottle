@@ -1,3 +1,11 @@
+/**
+ * MixerNode — stateful multi-channel mixer built on top of graph-design factories.
+ *
+ * Manages a set of channel strips and aux send buses, all routed into a shared
+ * master bus. Exposes a clean imperative API so React components don't have to
+ * manage Web Audio nodes directly.
+ */
+
 import {
   buildAudioGraph,
   createChannelNodes,
@@ -17,9 +25,16 @@ export class MixerNode {
     return this.graph.context;
   }
 
+  // ---------------------------------------------------------------------------
+  // Channel management
+  // ---------------------------------------------------------------------------
+
   addChannel(id: string): ChannelNodes {
-    if (this.graph.channels.has(id)) return this.graph.channels.get(id)!;
+    if (this.graph.channels.has(id)) {
+      return this.graph.channels.get(id)!;
+    }
     const nodes = createChannelNodes(this.graph.context);
+    // Wire channel output into master fader
     nodes.output.connect(this.graph.master.fader);
     this.graph.channels.set(id, nodes);
     return nodes;
@@ -39,21 +54,21 @@ export class MixerNode {
     this.graph.channels.delete(id);
   }
 
-  setGain(id: string, value: number): void {
-    const nodes = this.graph.channels.get(id);
-    if (nodes) nodes.fader.gain.value = Math.max(0, Math.min(2, value));
+  // ---------------------------------------------------------------------------
+  // Aux send buses
+  // ---------------------------------------------------------------------------
+
+  addSendBus(name: string): void {
+    if (this.graph.sendBuses.has(name)) return;
+    const bus = createSendBus(this.graph.context);
+    bus.output.connect(this.graph.master.fader);
+    this.graph.sendBuses.set(name, bus);
   }
 
-  setPan(id: string, value: number): void {
-    const nodes = this.graph.channels.get(id);
-    if (nodes) nodes.panner.pan.value = Math.max(-1, Math.min(1, value));
-  }
-
-  setSendLevel(channelId: string, busId: string, level: number): void {
+  setSendLevel(channelId: string, busName: string, level: number): void {
     const ch = this.graph.channels.get(channelId);
-    const bus = this.graph.sendBuses.get(busId);
+    const bus = this.graph.sendBuses.get(busName);
     if (!ch || !bus) return;
-
     ch.sendLevel.gain.value = Math.max(0, Math.min(1, level));
     try {
       ch.sendLevel.connect(bus.input);
@@ -62,24 +77,43 @@ export class MixerNode {
     }
   }
 
-  addSendBus(id: string): void {
-    if (this.graph.sendBuses.has(id)) return;
-    const bus = createSendBus(this.graph.context);
-    bus.output.connect(this.graph.master.fader);
-    this.graph.sendBuses.set(id, bus);
+  // ---------------------------------------------------------------------------
+  // Parameter control
+  // ---------------------------------------------------------------------------
+
+  setGain(channelId: string, gain: number): void {
+    const nodes = this.graph.channels.get(channelId);
+    if (!nodes) return;
+    nodes.fader.gain.value = Math.max(0, Math.min(2, gain));
   }
 
+  setPan(channelId: string, pan: number): void {
+    const nodes = this.graph.channels.get(channelId);
+    if (!nodes) return;
+    nodes.panner.pan.value = Math.max(-1, Math.min(1, pan));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Source routing
+  // ---------------------------------------------------------------------------
+
+  /** Connect an arbitrary AudioNode as the source for a channel. */
   connectSource(channelId: string, source: AudioNode): void {
     const nodes = this.graph.channels.get(channelId);
     if (nodes) source.connect(nodes.fader);
   }
 
+  /** Returns the channel's input (fader) node so callers can connect sources. */
   getChannelInputNode(channelId: string): GainNode | null {
     return this.graph.channels.get(channelId)?.fader ?? null;
   }
 
+  // ---------------------------------------------------------------------------
+  // Lifecycle
+  // ---------------------------------------------------------------------------
+
   dispose(): void {
-    for (const [id] of this.graph.channels) {
+    for (const id of [...this.graph.channels.keys()]) {
       this.removeChannel(id);
     }
     try {
