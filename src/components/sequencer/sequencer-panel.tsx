@@ -16,6 +16,8 @@ import { PianoKeys } from "./piano-keys";
 import { Timeline } from "./timeline";
 import { TrackList } from "./track-list";
 import { VelocityLane } from "./velocity-lane";
+import { CCLaneContainer } from "./cc-lane";
+import type { CCLane } from "@/lib/music/cc-lane";
 
 type SnapValue = "1/4" | "1/8" | "1/16" | "1/32";
 
@@ -70,6 +72,11 @@ export interface SequencerPanelProps {
   /** Update velocity for a single note */
   onUpdateVelocity?: (noteId: string, velocity: number) => void;
 
+  /** CC lanes (controlled). If provided, CC lane UI is shown. */
+  ccLanes?: CCLane[];
+  onChangeCCLane?: (index: number, lane: CCLane) => void;
+  onAddCCLane?: (ccNumber: number) => void;
+
   className?: string;
 }
 
@@ -95,6 +102,9 @@ export function SequencerPanel({
   onSetPlayhead,
   onClearAll,
   onUpdateVelocity,
+  ccLanes,
+  onChangeCCLane,
+  onAddCCLane,
   className,
 }: SequencerPanelProps) {
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(
@@ -318,6 +328,22 @@ export function SequencerPanel({
                 scrollX={pianoScrollX}
                 zoom={zoom}
                 onUpdateVelocity={onUpdateVelocity}
+              />
+            </div>
+          )}
+
+          {/* CC lanes below the velocity lane */}
+          {ccLanes !== undefined && onChangeCCLane && onAddCCLane && (
+            <div className="flex shrink-0">
+              <div style={{ width: PIANO_KEY_WIDTH }} className="shrink-0 border-t border-neutral-800" />
+              <CCLaneContainer
+                lanes={ccLanes}
+                totalBars={totalBars}
+                width={rollWidth}
+                scrollX={pianoScrollX}
+                zoom={zoom}
+                onChangeLane={onChangeCCLane}
+                onAddLane={onAddCCLane}
               />
             </div>
           )}
