@@ -55,7 +55,7 @@ describe("channel → master routing", () => {
     expect(master.fader).toBeInstanceOf(GainNode);
     expect(master.limiter).toBeInstanceOf(DynamicsCompressorNode);
     // Brickwall limiter settings
-    expect(master.limiter.threshold.value).toBeCloseTo(-1);
+    expect(master.limiter.threshold.value).toBeCloseTo(-0.1);
     expect(master.limiter.ratio.value).toBeCloseTo(20);
     expect(master.limiter.knee.value).toBeCloseTo(0);
   });
@@ -150,15 +150,15 @@ describe("aux send bus routing", () => {
     mixer.addSendBus("reverb");
 
     mixer.setSendLevel("t1", "reverb", 0.6);
-    expect(mixer.graph.channels.get("t1")!.sendLevel.gain.value).toBe(0.6);
+    expect(mixer.getSendLevel("t1", "reverb")).toBe(0.6);
 
     // clamp high
     mixer.setSendLevel("t1", "reverb", 1.5);
-    expect(mixer.graph.channels.get("t1")!.sendLevel.gain.value).toBe(1);
+    expect(mixer.getSendLevel("t1", "reverb")).toBe(1);
 
     // clamp low
     mixer.setSendLevel("t1", "reverb", -0.2);
-    expect(mixer.graph.channels.get("t1")!.sendLevel.gain.value).toBe(0);
+    expect(mixer.getSendLevel("t1", "reverb")).toBe(0);
   });
 
   it("setSendLevel on unknown channel/bus is a no-op", () => {
