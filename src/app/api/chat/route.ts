@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/supabase/auth";
 import { checkRateLimit } from "@/lib/ratelimit";
 import { logUsage } from "@/lib/log-usage";
+import { buildStyleContext } from "@/lib/style/build-style-context";
+import { mapStyleProfileRow, type StyleProfileRow } from "@/lib/style/schema";
 
 const BYO_KEY_HEADER = "x-anthropic-key";
 
@@ -31,6 +33,8 @@ interface ChatRequestBody {
     mood?: string;
     sections?: Section[];
     tracks?: Track[];
+    /** Idea summary from IdeaContext.buildIdeaSummary() */
+    ideaContext?: string | null;
   };
 }
 
@@ -69,6 +73,24 @@ export async function POST(request: Request) {
       return Response.json({ error: "Message is required" }, { status: 400 });
     }
 
+    // Fetch style profile for the authed user (best-effort)
+    let styleContext: string | null = null;
+    if (authedUserId && supabaseConfigured) {
+      try {
+        const profileClient = await createClient();
+        const { data: profileRow } = await profileClient
+          .from("style_profiles")
+          .select("*")
+          .eq("user_id", authedUserId)
+          .maybeSingle();
+        if (profileRow) {
+          styleContext = buildStyleContext(mapStyleProfileRow(profileRow as StyleProfileRow));
+        }
+      } catch {
+        // Non-fatal — proceed without style context
+      }
+    }
+
     const systemPrompt = buildProducerSystemPrompt({
       bpm: context?.bpm ?? 120,
       keySignature: context?.keySignature ?? "C major",
@@ -77,6 +99,8 @@ export async function POST(request: Request) {
       mood: context?.mood,
       sections: context?.sections,
       tracks: context?.tracks,
+      styleContext,
+      ideaContext: context?.ideaContext,
     });
 
     const claude = getClaudeClient(userApiKey);
