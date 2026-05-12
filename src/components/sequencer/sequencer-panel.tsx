@@ -80,7 +80,7 @@ export interface SequencerPanelProps {
   onAddCCLane?: (ccNumber: number) => void;
 
   /** AI assist: session metadata used for gap-fill context */
-  bpm?: number;
+  sessionBpm?: number;
   sessionKeySignature?: string;
   sessionTimeSignature?: string;
   /** Show AI assist panel */
