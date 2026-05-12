@@ -7,6 +7,7 @@ import { usePreferences } from "@/lib/hooks/use-preferences";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { StyleProfileEditor } from "@/components/settings/style-profile-editor";
 
 type Theme = "dark" | "light";
 
@@ -513,6 +514,9 @@ export default function SettingsPage() {
           </button>
         </div>
       </Card>
+
+      {/* Style Profile DNA */}
+      <StyleProfileEditor className="mt-4 sm:mt-6" />
 
       <Card className="mt-4 p-4 sm:mt-6 sm:p-6">
         <h2 className="mb-1 text-lg font-semibold text-neutral-100">
