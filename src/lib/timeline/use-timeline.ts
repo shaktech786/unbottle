@@ -149,10 +149,14 @@ function reducer(state: TimelineState, action: Action): TimelineState {
           );
         }
       } else {
-        newTracks = updateClipInTracks(newTracks, clipId, (c) => ({
-          ...c,
-          startTick: Math.max(0, startTick),
-        }));
+        newTracks = state.tracks.map((t) => {
+          const hasClip = t.clips.some((c) => c.id === clipId);
+          if (!hasClip) return t;
+          const updated = t.clips.map((c) =>
+            c.id === clipId ? { ...c, startTick: Math.max(0, startTick) } : c,
+          );
+          return { ...t, clips: updated.sort((a, b) => a.startTick - b.startTick) };
+        });
       }
 
       return { ...state, tracks: newTracks };
