@@ -31,16 +31,24 @@ export interface ChannelNodes {
   fader: GainNode;
   /** Stereo panner post-fader */
   panner: StereoPannerNode;
+  /** Mute gate — gain 0 = muted, 1 = live */
+  muteGate: GainNode;
   /** Per-channel send level to aux buses */
   sendLevel: GainNode;
+  /** AnalyserNode for peak metering */
+  analyser: AnalyserNode;
   /** Final output node — connects to master fader */
   output: GainNode;
+  /** Per-bus send gain nodes, keyed by bus name */
+  sendGains: Map<string, GainNode>;
 }
 
 export interface MasterBus {
   fader: GainNode;
   /** Brickwall limiter protecting the output */
   limiter: DynamicsCompressorNode;
+  /** AnalyserNode for peak metering on the master */
+  analyser: AnalyserNode;
 }
 
 /** @deprecated Use MasterBus */
@@ -68,16 +76,25 @@ export interface AudioGraph {
 export function createChannelNodes(ctx: AudioContext): ChannelNodes {
   const fader = ctx.createGain();
   const panner = ctx.createStereoPanner();
+  const muteGate = ctx.createGain();
   const sendLevel = ctx.createGain();
   sendLevel.gain.value = 0;
+  const analyser = ctx.createAnalyser();
   const output = ctx.createGain();
 
+  analyser.fftSize = 256;
+  analyser.smoothingTimeConstant = 0;
+
+  // Signal path: fader → panner → muteGate → analyser → output
   fader.connect(panner);
-  panner.connect(output);
-  // Send taps off the fader (pre-panner)
+  panner.connect(muteGate);
+  muteGate.connect(analyser);
+  analyser.connect(output);
+
+  // Send taps off the fader (pre-panner, pre-mute)
   fader.connect(sendLevel);
 
-  return { fader, panner, sendLevel, output };
+  return { fader, panner, muteGate, sendLevel, analyser, output, sendGains: new Map() };
 }
 
 export function createMasterBus(ctx: AudioContext): MasterBus {
@@ -85,18 +102,23 @@ export function createMasterBus(ctx: AudioContext): MasterBus {
   fader.gain.value = 1;
 
   const limiter = ctx.createDynamicsCompressor();
+  const analyser = ctx.createAnalyser();
 
-  // Brickwall limiter settings
-  limiter.threshold.value = -1;
+  analyser.fftSize = 256;
+  analyser.smoothingTimeConstant = 0;
+
+  // Brickwall limiter settings (threshold -0.1 dBFS, stored as dBFS value)
+  limiter.threshold.value = -0.1;
   limiter.knee.value = 0;
   limiter.ratio.value = 20;
   limiter.attack.value = 0.001;
   limiter.release.value = 0.1;
 
   fader.connect(limiter);
-  limiter.connect(ctx.destination);
+  limiter.connect(analyser);
+  analyser.connect(ctx.destination);
 
-  return { fader, limiter };
+  return { fader, limiter, analyser };
 }
 
 export function createSendBus(ctx: AudioContext): SendBus {

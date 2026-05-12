@@ -107,6 +107,28 @@ class MockAudioBufferSourceNode extends MockAudioNode {
 
 class MockAudioDestinationNode extends MockAudioNode {}
 
+class MockAnalyserNode extends MockAudioNode {
+  fftSize = 2048;
+  smoothingTimeConstant = 0.8;
+  frequencyBinCount = 1024;
+  minDecibels = -100;
+  maxDecibels = -30;
+
+  getFloatTimeDomainData(array: Float32Array) {
+    // Return a quiet signal by default
+    array.fill(0);
+  }
+  getFloatFrequencyData(array: Float32Array) {
+    array.fill(-Infinity);
+  }
+  getByteTimeDomainData(array: Uint8Array) {
+    array.fill(128);
+  }
+  getByteFrequencyData(array: Uint8Array) {
+    array.fill(0);
+  }
+}
+
 class MockBaseAudioContext {
   destination = new MockAudioDestinationNode();
   sampleRate = 44100;
@@ -120,6 +142,9 @@ class MockBaseAudioContext {
   }
   createDynamicsCompressor() {
     return new MockDynamicsCompressorNode();
+  }
+  createAnalyser() {
+    return new MockAnalyserNode();
   }
   createOscillator() {
     return new MockOscillatorNode();
@@ -216,6 +241,7 @@ Object.assign(globalThis, {
   GainNode: MockGainNode,
   StereoPannerNode: MockStereoPannerNode,
   DynamicsCompressorNode: MockDynamicsCompressorNode,
+  AnalyserNode: MockAnalyserNode,
   OscillatorNode: MockOscillatorNode,
   BiquadFilterNode: MockBiquadFilterNode,
   AudioBufferSourceNode: MockAudioBufferSourceNode,

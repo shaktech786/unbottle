@@ -16,6 +16,8 @@ import {
 
 export class MixerNode {
   readonly graph: AudioGraph;
+  /** Track which channels are soloed (by id) */
+  private _soloedChannels = new Set<string>();
 
   constructor(ctx: AudioContext) {
     this.graph = buildAudioGraph(ctx);
@@ -43,15 +45,18 @@ export class MixerNode {
   removeChannel(id: string): void {
     const nodes = this.graph.channels.get(id);
     if (!nodes) return;
-    try {
-      nodes.output.disconnect();
-      nodes.fader.disconnect();
-      nodes.panner.disconnect();
-      nodes.sendLevel.disconnect();
-    } catch {
-      // already disconnected
+    nodes.output.disconnect();
+    nodes.fader.disconnect();
+    nodes.panner.disconnect();
+    nodes.muteGate.disconnect();
+    nodes.analyser.disconnect();
+    nodes.sendLevel.disconnect();
+    for (const sg of nodes.sendGains.values()) {
+      sg.disconnect();
     }
+    this._soloedChannels.delete(id);
     this.graph.channels.delete(id);
+    this._applySolo();
   }
 
   // ---------------------------------------------------------------------------
@@ -65,16 +70,32 @@ export class MixerNode {
     this.graph.sendBuses.set(name, bus);
   }
 
+  /**
+   * Set the send level from a channel to a named aux bus.
+   * Creates a dedicated per-channel/per-bus GainNode the first time.
+   */
   setSendLevel(channelId: string, busName: string, level: number): void {
-    const ch = this.graph.channels.get(channelId);
+    const nodes = this.graph.channels.get(channelId);
     const bus = this.graph.sendBuses.get(busName);
-    if (!ch || !bus) return;
-    ch.sendLevel.gain.value = Math.max(0, Math.min(1, level));
-    try {
-      ch.sendLevel.connect(bus.input);
-    } catch {
-      // already connected
+    if (!nodes || !bus) return;
+
+    const clamped = Math.max(0, Math.min(1, level));
+
+    let sendGain = nodes.sendGains.get(busName);
+    if (!sendGain) {
+      sendGain = this.graph.context.createGain();
+      // Tap from the channel sendLevel node into the per-bus gain, then into the bus input
+      nodes.sendLevel.connect(sendGain);
+      sendGain.connect(bus.input);
+      nodes.sendGains.set(busName, sendGain);
     }
+    sendGain.gain.value = clamped;
+  }
+
+  getSendLevel(channelId: string, busName: string): number {
+    const nodes = this.graph.channels.get(channelId);
+    if (!nodes) return 0;
+    return nodes.sendGains.get(busName)?.gain.value ?? 0;
   }
 
   // ---------------------------------------------------------------------------
@@ -93,6 +114,51 @@ export class MixerNode {
     nodes.panner.pan.value = Math.max(-1, Math.min(1, pan));
   }
 
+  setMute(channelId: string, muted: boolean): void {
+    const nodes = this.graph.channels.get(channelId);
+    if (!nodes) return;
+    // Only mute if not soloed
+    if (!this._soloedChannels.has(channelId)) {
+      nodes.muteGate.gain.value = muted ? 0 : 1;
+    }
+    // Store muted state on the node via a custom property so solo can restore it
+    (nodes as unknown as { _muted: boolean })._muted = muted;
+  }
+
+  setSolo(channelId: string, soloed: boolean): void {
+    if (soloed) {
+      this._soloedChannels.add(channelId);
+    } else {
+      this._soloedChannels.delete(channelId);
+    }
+    this._applySolo();
+  }
+
+  isMuted(channelId: string): boolean {
+    const nodes = this.graph.channels.get(channelId);
+    if (!nodes) return false;
+    return (nodes as unknown as { _muted?: boolean })._muted ?? false;
+  }
+
+  isSoloed(channelId: string): boolean {
+    return this._soloedChannels.has(channelId);
+  }
+
+  /** Recompute muteGate for all channels based on solo state. */
+  private _applySolo(): void {
+    const hasSolo = this._soloedChannels.size > 0;
+    for (const [id, nodes] of this.graph.channels) {
+      const muted = (nodes as unknown as { _muted?: boolean })._muted ?? false;
+      if (hasSolo) {
+        // Solo mode: only soloed channels pass audio
+        nodes.muteGate.gain.value = this._soloedChannels.has(id) ? 1 : 0;
+      } else {
+        // No solo: respect per-channel mute
+        nodes.muteGate.gain.value = muted ? 0 : 1;
+      }
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Source routing
   // ---------------------------------------------------------------------------
@@ -108,6 +174,16 @@ export class MixerNode {
     return this.graph.channels.get(channelId)?.fader ?? null;
   }
 
+  /** Returns the channel's AnalyserNode for peak metering. */
+  getChannelAnalyser(channelId: string): AnalyserNode | null {
+    return this.graph.channels.get(channelId)?.analyser ?? null;
+  }
+
+  /** Returns the master bus AnalyserNode for peak metering. */
+  getMasterAnalyser(): AnalyserNode {
+    return this.graph.master.analyser;
+  }
+
   // ---------------------------------------------------------------------------
   // Lifecycle
   // ---------------------------------------------------------------------------
@@ -116,11 +192,8 @@ export class MixerNode {
     for (const id of [...this.graph.channels.keys()]) {
       this.removeChannel(id);
     }
-    try {
-      this.graph.master.limiter.disconnect();
-      this.graph.master.fader.disconnect();
-    } catch {
-      // ignore
-    }
+    this.graph.master.limiter.disconnect();
+    this.graph.master.analyser.disconnect();
+    this.graph.master.fader.disconnect();
   }
 }

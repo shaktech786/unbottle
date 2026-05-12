@@ -19,7 +19,7 @@ describe("createMasterBus", () => {
     const master = createMasterBus(ctx);
     expect(master.fader).toBeInstanceOf(GainNode);
     expect(master.limiter).toBeInstanceOf(DynamicsCompressorNode);
-    expect(master.limiter.threshold.value).toBeCloseTo(-1);
+    expect(master.limiter.threshold.value).toBeCloseTo(-0.1);
     expect(master.limiter.ratio.value).toBeCloseTo(20);
   });
 });
