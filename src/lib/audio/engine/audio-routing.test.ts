@@ -290,8 +290,9 @@ describe("full graph construction", () => {
   it("offline context has the right sample rate", () => {
     const ctx = new OfflineAudioContext({ numberOfChannels: 2, length: 88200, sampleRate: 44100 });
     expect(ctx.sampleRate).toBe(44100);
-    expect(ctx.numberOfChannels).toBe(2);
-    expect(ctx.length).toBe(88200);
+    // numberOfChannels is stored in our mock; cast to access it
+    expect((ctx as unknown as { numberOfChannels: number }).numberOfChannels).toBe(2);
+    expect((ctx as unknown as { length: number }).length).toBe(88200);
   });
 
   it("startRendering resolves with an AudioBuffer-shaped object", async () => {

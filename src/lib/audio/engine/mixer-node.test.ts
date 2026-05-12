@@ -9,8 +9,8 @@ import {
 // OfflineAudioContext is available in Node via the Web Audio API polyfill
 // provided by jsdom. We test the node graph structure, not audio rendering.
 
-function makeCtx(): OfflineAudioContext {
-  return new OfflineAudioContext({ numberOfChannels: 2, length: 4410, sampleRate: 44100 });
+function makeCtx(): AudioContext {
+  return new OfflineAudioContext({ numberOfChannels: 2, length: 4410, sampleRate: 44100 }) as unknown as AudioContext;
 }
 
 describe("createMasterBus", () => {
@@ -61,7 +61,7 @@ describe("buildAudioGraph", () => {
 });
 
 describe("MixerNode", () => {
-  let ctx: OfflineAudioContext;
+  let ctx: AudioContext;
 
   beforeEach(() => {
     ctx = makeCtx();
