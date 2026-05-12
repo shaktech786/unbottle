@@ -155,6 +155,9 @@ export interface TimelineState {
 // Helper constructors
 // ---------------------------------------------------------------------------
 
+/** PPQ (Pulses Per Quarter Note) — matches the core music/types constant. */
+export const PPQ_DEFAULT = 480;
+
 export function makeTimelineClip(
   overrides: Partial<TimelineClip> & Pick<TimelineClip, "id" | "trackId" | "startTick" | "durationTicks" | "type" | "contentRef">,
 ): TimelineClip {
