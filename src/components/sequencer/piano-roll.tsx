@@ -87,6 +87,8 @@ const DRAG_INITIAL: DragState = {
 
 export interface PianoRollProps {
   notes: Note[];
+  /** AI-suggested notes rendered in a distinct "pending" color. */
+  suggestionNotes?: Note[];
   selectedNotes: Set<string>;
   activeTrackId: string;
   activeTrackColor?: string;
@@ -169,6 +171,7 @@ function hexToRgb(hex: string): [number, number, number] {
 
 export function PianoRoll({
   notes,
+  suggestionNotes = [],
   selectedNotes,
   activeTrackId,
   activeTrackColor = "#6366f1",
@@ -468,6 +471,35 @@ export function PianoRoll({
       drawNote(ctx, x, y, w, isSelected, note.velocity, note.pitch, 1);
     }
 
+    // ── AI suggestion notes (pending) ──
+    for (const note of suggestionNotes) {
+      const pitchIdx = pitches.indexOf(note.pitch);
+      if (pitchIdx === -1) continue;
+
+      const x = tickToX(note.startTick, activePxPerTick, scrollX);
+      const y = pitchIndexToY(pitchIdx, scrollY, totalRows);
+      const w = note.durationTicks * activePxPerTick;
+
+      if (x + w < 0 || x > width || y + ROW_HEIGHT < 0 || y > height) continue;
+
+      // Render as a teal ghost note
+      const pad = 2;
+      const noteW = Math.max(4, w - pad * 2);
+      const noteH = ROW_HEIGHT - pad * 2;
+      ctx.save();
+      ctx.globalAlpha = 0.65;
+      ctx.strokeStyle = "#2dd4bf";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([3, 2]);
+      ctx.fillStyle = "rgba(45, 212, 191, 0.25)";
+      ctx.beginPath();
+      ctx.roundRect(x + pad, y + pad, noteW, noteH, 3);
+      ctx.fill();
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+
     // ── Ghost note (hover preview) ──
     if (hoverCell && drag.mode === "none") {
       const gx = tickToX(hoverCell.tick, activePxPerTick, scrollX);
@@ -560,6 +592,7 @@ export function PianoRoll({
     activeTrackColor,
     hoverCell,
     dragCursor,
+    suggestionNotes,
   ]);
 
   // ── Mouse Handlers ─────────────────────────────────────────
