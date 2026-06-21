@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -11,6 +11,22 @@ export default function ResetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+    // The Supabase client processes the #access_token hash on init and fires
+    // PASSWORD_RECOVERY before rendering the form — this prevents updateUser
+    // from being called before the recovery session is established.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") setReady(true);
+    });
+    // Also handle the case where the session is already active (page refresh)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setReady(true);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -29,9 +45,7 @@ export default function ResetPasswordPage() {
     setLoading(true);
 
     const supabase = createClient();
-    const { error: updateError } = await supabase.auth.updateUser({
-      password,
-    });
+    const { error: updateError } = await supabase.auth.updateUser({ password });
 
     if (updateError) {
       setError(updateError.message);
@@ -40,6 +54,12 @@ export default function ResetPasswordPage() {
     }
 
     router.push("/dashboard");
+  }
+
+  if (!ready) {
+    return (
+      <p className="text-sm text-neutral-400">Verifying reset link…</p>
+    );
   }
 
   return (

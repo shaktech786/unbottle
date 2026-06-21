@@ -90,7 +90,7 @@ export async function POST(request: Request): Promise<Response> {
         auth: { persistSession: false, autoRefreshToken: false },
       });
       const { error } = await anon.auth.resetPasswordForEmail(email, {
-        redirectTo: `${origin}/callback?type=recovery`,
+        redirectTo: `${origin}/reset-password`,
       });
       if (error) {
         // The SDK returns errors as values rather than throwing — surface
