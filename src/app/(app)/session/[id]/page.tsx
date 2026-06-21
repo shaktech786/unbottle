@@ -34,6 +34,12 @@ import type { SessionSnapshot } from "@/lib/session/action-history";
 import type { ChatAction, ChatContext } from "@/lib/hooks/use-chat";
 import { PPQ } from "@/lib/music/types";
 import type { Bookmark, InstrumentType, Note, Section, SectionType, ChordEvent } from "@/lib/music/types";
+import { useDawMode } from "@/lib/hooks/use-daw-mode";
+import { executeDAWTool } from "@/lib/daw/executor";
+import { ToneBackend } from "@/lib/daw/backends/tone-backend";
+import { ReaperBackend, ReaperBridgeError } from "@/lib/daw/backends/reaper-backend";
+import { getDAWState } from "@/lib/daw/state";
+import { DAW_TOOL_NAMES } from "@/lib/daw/tools";
 
 type MobileTab = "arrange" | "chat" | "capture";
 
@@ -77,6 +83,7 @@ export default function SessionWorkspacePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { preferences } = usePreferences();
+  const [dawMode] = useDawMode();
 
   // ------- Sequencer (note management with undo/redo) -------
   const sequencer = useSequencer(contextNotes);
@@ -630,9 +637,31 @@ export default function SessionWorkspacePage() {
           variant: "success",
           duration: 3000,
         });
+      } else if (DAW_TOOL_NAMES.has(action.toolName)) {
+        const daw = getDAWState();
+        const backend =
+          dawMode === "reaper"
+            ? new ReaperBackend("localhost", preferences.reaperBridgePort)
+            : new ToneBackend(daw);
+
+        void executeDAWTool(daw, backend, action.toolName, action.toolInput).then((result) => {
+          if (!result.success) {
+            addToast({
+              message: result.error ?? "DAW tool failed",
+              variant: "error",
+            });
+          }
+        }).catch((err) => {
+          if (err instanceof ReaperBridgeError) {
+            addToast({
+              message: "Reaper not responding — check the bridge is running",
+              variant: "error",
+            });
+          }
+        });
       }
     },
-    [addSections, addToast, updateSession, setBpm, tracks, session, sequencer, play, refreshSession, clearSections, sections, pushAISnapshot],
+    [addSections, addToast, updateSession, setBpm, tracks, session, sequencer, play, refreshSession, clearSections, sections, pushAISnapshot, dawMode, preferences.reaperBridgePort],
   );
 
   // ------- Chord-to-sequencer handler -------
