@@ -12,20 +12,34 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
+  const [tokenError, setTokenError] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
-    // The Supabase client processes the #access_token hash on init and fires
-    // PASSWORD_RECOVERY before rendering the form — this prevents updateUser
-    // from being called before the recovery session is established.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") setReady(true);
-    });
-    // Also handle the case where the session is already active (page refresh)
+
+    // Parse hash params — Supabase implicit flow sends tokens as
+    // #access_token=...&refresh_token=...&type=recovery
+    const hash = window.location.hash.slice(1);
+    const params = new URLSearchParams(hash);
+    const accessToken = params.get("access_token");
+    const refreshToken = params.get("refresh_token");
+    const type = params.get("type");
+
+    if (accessToken && refreshToken && type === "recovery") {
+      supabase.auth
+        .setSession({ access_token: accessToken, refresh_token: refreshToken })
+        .then(({ error }) => {
+          if (error) setTokenError(true);
+          else setReady(true);
+        });
+      return;
+    }
+
+    // Fallback: page refresh after session already established
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) setReady(true);
+      else setTokenError(true);
     });
-    return () => subscription.unsubscribe();
   }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -54,6 +68,23 @@ export default function ResetPasswordPage() {
     }
 
     router.push("/dashboard");
+  }
+
+  if (tokenError) {
+    return (
+      <>
+        <h1 className="mb-2 text-2xl font-bold text-stone-100">Link expired</h1>
+        <p className="mb-6 text-sm text-neutral-400">
+          This reset link is invalid or has expired.
+        </p>
+        <Link
+          href="/forgot-password"
+          className="inline-block w-full rounded-lg bg-amber-600 px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-amber-500"
+        >
+          Request a new link
+        </Link>
+      </>
+    );
   }
 
   if (!ready) {
