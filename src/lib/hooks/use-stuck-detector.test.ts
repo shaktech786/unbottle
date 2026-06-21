@@ -46,7 +46,7 @@ describe("stuck detector timer (simulated)", () => {
 
   it("fires onStuck after threshold elapses without edits", () => {
     const onStuck = vi.fn();
-    let lastEditMs = Date.now();
+    const lastEditMs = Date.now();
 
     // Simulate the poll loop: check every 5 s
     const THRESHOLD_MS = 60_000; // 1 minute

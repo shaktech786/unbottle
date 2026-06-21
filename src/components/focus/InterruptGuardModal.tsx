@@ -49,10 +49,10 @@ export function InterruptGuardModal({
           </svg>
         </div>
 
-        <h2 className="mb-1 text-base font-semibold text-white">You're in Deep Work</h2>
+        <h2 className="mb-1 text-base font-semibold text-white">You&apos;re in Deep Work</h2>
         <p className="mb-5 text-sm text-neutral-400">
           You switched away from your session. Your focus streak is still active —
-          come back when you're ready.
+          come back when you&apos;re ready.
         </p>
 
         <div className="flex gap-3">
