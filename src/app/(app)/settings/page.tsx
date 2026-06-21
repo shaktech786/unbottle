@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { StyleProfileEditor } from "@/components/settings/style-profile-editor";
+import { ReaperSetupWizard } from "@/components/settings/reaper-setup-wizard";
 
 type Theme = "dark" | "light";
 
@@ -101,6 +102,7 @@ export default function SettingsPage() {
   // DAW mode
   const [dawMode, setDawMode] = useDawMode();
   const [pingStatus, setPingStatus] = useState<PingStatus>("idle");
+  const [wizardOpen, setWizardOpen] = useState(false);
   const portCommitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handlePortChange = useCallback(
@@ -578,7 +580,14 @@ export default function SettingsPage() {
           </button>
           <button
             type="button"
-            onClick={() => setDawMode("reaper")}
+            onClick={() => {
+              if (!preferences.reaperSetupComplete) {
+                setDawMode("reaper");
+                setWizardOpen(true);
+              } else {
+                setDawMode("reaper");
+              }
+            }}
             className={`flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20 ${
               dawMode === "reaper"
                 ? "border-amber-500 bg-amber-500/10 text-amber-400"
@@ -591,6 +600,12 @@ export default function SettingsPage() {
 
         {dawMode === "reaper" && (
           <div className="mt-4 space-y-4 rounded-lg border border-neutral-700 bg-neutral-800/50 p-4">
+            {preferences.reaperSetupComplete && (
+              <div className="flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-medium text-emerald-400 w-fit mb-3">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                Reaper: Connected
+              </div>
+            )}
             {/* Port + test */}
             <div className="flex flex-col gap-1.5">
               <label
@@ -656,10 +671,30 @@ export default function SettingsPage() {
               >
                 Setup guide
               </a>
+              <button
+                type="button"
+                onClick={() => {
+                  updatePreference("reaperSetupComplete", false);
+                  setWizardOpen(true);
+                }}
+                className="text-neutral-500 underline transition-colors duration-200 hover:text-neutral-300"
+              >
+                Re-run setup
+              </button>
             </div>
           </div>
         )}
       </Card>
+
+      <ReaperSetupWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        onComplete={() => {
+          updatePreference("reaperSetupComplete", true);
+          setWizardOpen(false);
+        }}
+        initialPort={preferences.reaperBridgePort}
+      />
 
       {/* Style Profile DNA */}
       <StyleProfileEditor className="mt-4 sm:mt-6" />
