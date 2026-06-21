@@ -7,15 +7,18 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { DAWState } from "./state";
 import { executeDAWTool } from "./executor";
+import { ToneBackend } from "./backends/tone-backend";
 
 // ---------------------------------------------------------------------------
 // Shared setup
 // ---------------------------------------------------------------------------
 
 let daw: DAWState;
+let backend: ToneBackend;
 
 beforeEach(() => {
   daw = new DAWState();
+  backend = new ToneBackend(daw);
 });
 
 // ---------------------------------------------------------------------------
@@ -23,16 +26,16 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe("createTrack", () => {
-  it("adds a track to state", () => {
-    const result = executeDAWTool(daw, "createTrack", { name: "Bass" });
+  it("adds a track to state", async () => {
+    const result = await executeDAWTool(daw, backend, "createTrack", { name: "Bass" });
 
     expect(result.success).toBe(true);
     expect(result.state_delta?.tracks).toHaveLength(1);
     expect(daw.tracks[0].name).toBe("Bass");
   });
 
-  it("uses the provided instrument", () => {
-    executeDAWTool(daw, "createTrack", {
+  it("uses the provided instrument", async () => {
+    await executeDAWTool(daw, backend, "createTrack", {
       name: "Rhythm Guitar",
       instrument: "guitar_electric",
     });
@@ -40,22 +43,22 @@ describe("createTrack", () => {
     expect(daw.tracks[0].instrument).toBe("guitar_electric");
   });
 
-  it("defaults instrument to synth when omitted", () => {
-    executeDAWTool(daw, "createTrack", { name: "Pad" });
+  it("defaults instrument to synth when omitted", async () => {
+    await executeDAWTool(daw, backend, "createTrack", { name: "Pad" });
 
     expect(daw.tracks[0].instrument).toBe("synth");
   });
 
-  it("returns error when name is missing", () => {
-    const result = executeDAWTool(daw, "createTrack", {});
+  it("returns error when name is missing", async () => {
+    const result = await executeDAWTool(daw, backend, "createTrack", {});
 
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/name/i);
   });
 
-  it("adds multiple tracks in order", () => {
-    executeDAWTool(daw, "createTrack", { name: "Track 1" });
-    executeDAWTool(daw, "createTrack", { name: "Track 2" });
+  it("adds multiple tracks in order", async () => {
+    await executeDAWTool(daw, backend, "createTrack", { name: "Track 1" });
+    await executeDAWTool(daw, backend, "createTrack", { name: "Track 2" });
 
     expect(daw.tracks).toHaveLength(2);
     expect(daw.tracks[0].name).toBe("Track 1");
@@ -68,18 +71,18 @@ describe("createTrack", () => {
 // ---------------------------------------------------------------------------
 
 describe("deleteTrack", () => {
-  it("removes the track from state", () => {
-    executeDAWTool(daw, "createTrack", { name: "Lead" });
+  it("removes the track from state", async () => {
+    await executeDAWTool(daw, backend, "createTrack", { name: "Lead" });
     const trackId = daw.tracks[0].id;
 
-    const result = executeDAWTool(daw, "deleteTrack", { trackId });
+    const result = await executeDAWTool(daw, backend, "deleteTrack", { trackId });
 
     expect(result.success).toBe(true);
     expect(daw.tracks).toHaveLength(0);
   });
 
-  it("returns error for unknown trackId", () => {
-    const result = executeDAWTool(daw, "deleteTrack", { trackId: "nonexistent" });
+  it("returns error for unknown trackId", async () => {
+    const result = await executeDAWTool(daw, backend, "deleteTrack", { trackId: "nonexistent" });
 
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/not found/i);
@@ -91,24 +94,24 @@ describe("deleteTrack", () => {
 // ---------------------------------------------------------------------------
 
 describe("setTempo", () => {
-  it("updates BPM in state", () => {
-    const result = executeDAWTool(daw, "setTempo", { bpm: 140 });
+  it("updates BPM in state", async () => {
+    const result = await executeDAWTool(daw, backend, "setTempo", { bpm: 140 });
 
     expect(result.success).toBe(true);
     expect(daw.bpm).toBe(140);
     expect(result.state_delta?.bpm).toBe(140);
   });
 
-  it("clamps BPM to valid range", () => {
-    executeDAWTool(daw, "setTempo", { bpm: 5 });
+  it("clamps BPM to valid range", async () => {
+    await executeDAWTool(daw, backend, "setTempo", { bpm: 5 });
     expect(daw.bpm).toBe(20);
 
-    executeDAWTool(daw, "setTempo", { bpm: 999 });
+    await executeDAWTool(daw, backend, "setTempo", { bpm: 999 });
     expect(daw.bpm).toBe(400);
   });
 
-  it("returns error for non-numeric bpm", () => {
-    const result = executeDAWTool(daw, "setTempo", { bpm: "fast" });
+  it("returns error for non-numeric bpm", async () => {
+    const result = await executeDAWTool(daw, backend, "setTempo", { bpm: "fast" });
 
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/bpm/i);
@@ -120,31 +123,31 @@ describe("setTempo", () => {
 // ---------------------------------------------------------------------------
 
 describe("muteTrack", () => {
-  it("sets muted=true on a track", () => {
-    executeDAWTool(daw, "createTrack", { name: "Drums" });
+  it("sets muted=true on a track", async () => {
+    await executeDAWTool(daw, backend, "createTrack", { name: "Drums" });
     const trackId = daw.tracks[0].id;
 
-    const result = executeDAWTool(daw, "muteTrack", { trackId, muted: true });
+    const result = await executeDAWTool(daw, backend, "muteTrack", { trackId, muted: true });
 
     expect(result.success).toBe(true);
     expect(daw.tracks[0].muted).toBe(true);
   });
 
-  it("toggles mute flag when muted param is omitted", () => {
-    executeDAWTool(daw, "createTrack", { name: "Bass" });
+  it("toggles mute flag when muted param is omitted", async () => {
+    await executeDAWTool(daw, backend, "createTrack", { name: "Bass" });
     const trackId = daw.tracks[0].id;
 
     // initially unmuted → mute
-    executeDAWTool(daw, "muteTrack", { trackId });
+    await executeDAWTool(daw, backend, "muteTrack", { trackId });
     expect(daw.tracks[0].muted).toBe(true);
 
     // muted → unmute
-    executeDAWTool(daw, "muteTrack", { trackId });
+    await executeDAWTool(daw, backend, "muteTrack", { trackId });
     expect(daw.tracks[0].muted).toBe(false);
   });
 
-  it("returns error for unknown track", () => {
-    const result = executeDAWTool(daw, "muteTrack", { trackId: "ghost" });
+  it("returns error for unknown track", async () => {
+    const result = await executeDAWTool(daw, backend, "muteTrack", { trackId: "ghost" });
 
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/not found/i);
@@ -156,11 +159,11 @@ describe("muteTrack", () => {
 // ---------------------------------------------------------------------------
 
 describe("soloTrack", () => {
-  it("sets solo=true on a track", () => {
-    executeDAWTool(daw, "createTrack", { name: "Lead Synth" });
+  it("sets solo=true on a track", async () => {
+    await executeDAWTool(daw, backend, "createTrack", { name: "Lead Synth" });
     const trackId = daw.tracks[0].id;
 
-    const result = executeDAWTool(daw, "soloTrack", { trackId, solo: true });
+    const result = await executeDAWTool(daw, backend, "soloTrack", { trackId, solo: true });
 
     expect(result.success).toBe(true);
     expect(daw.tracks[0].solo).toBe(true);
@@ -172,24 +175,24 @@ describe("soloTrack", () => {
 // ---------------------------------------------------------------------------
 
 describe("setVolume", () => {
-  it("updates the track volume", () => {
-    executeDAWTool(daw, "createTrack", { name: "Pad" });
+  it("updates the track volume", async () => {
+    await executeDAWTool(daw, backend, "createTrack", { name: "Pad" });
     const trackId = daw.tracks[0].id;
 
-    const result = executeDAWTool(daw, "setVolume", { trackId, volume: 0.5 });
+    const result = await executeDAWTool(daw, backend, "setVolume", { trackId, volume: 0.5 });
 
     expect(result.success).toBe(true);
     expect(daw.tracks[0].volume).toBeCloseTo(0.5);
   });
 
-  it("clamps volume to 0–1", () => {
-    executeDAWTool(daw, "createTrack", { name: "Pad" });
+  it("clamps volume to 0–1", async () => {
+    await executeDAWTool(daw, backend, "createTrack", { name: "Pad" });
     const trackId = daw.tracks[0].id;
 
-    executeDAWTool(daw, "setVolume", { trackId, volume: 2.5 });
+    await executeDAWTool(daw, backend, "setVolume", { trackId, volume: 2.5 });
     expect(daw.tracks[0].volume).toBe(1);
 
-    executeDAWTool(daw, "setVolume", { trackId, volume: -1 });
+    await executeDAWTool(daw, backend, "setVolume", { trackId, volume: -1 });
     expect(daw.tracks[0].volume).toBe(0);
   });
 });
@@ -199,11 +202,11 @@ describe("setVolume", () => {
 // ---------------------------------------------------------------------------
 
 describe("addClip", () => {
-  it("adds a clip to an existing track", () => {
-    executeDAWTool(daw, "createTrack", { name: "Piano" });
+  it("adds a clip to an existing track", async () => {
+    await executeDAWTool(daw, backend, "createTrack", { name: "Piano" });
     const trackId = daw.tracks[0].id;
 
-    const result = executeDAWTool(daw, "addClip", {
+    const result = await executeDAWTool(daw, backend, "addClip", {
       trackId,
       name: "Intro Riff",
       startBar: 1,
@@ -216,8 +219,8 @@ describe("addClip", () => {
     expect(daw.clips[0].trackId).toBe(trackId);
   });
 
-  it("returns error for unknown track", () => {
-    const result = executeDAWTool(daw, "addClip", {
+  it("returns error for unknown track", async () => {
+    const result = await executeDAWTool(daw, backend, "addClip", {
       trackId: "missing",
       startBar: 1,
       lengthBars: 4,
@@ -233,23 +236,23 @@ describe("addClip", () => {
 // ---------------------------------------------------------------------------
 
 describe("playback controls", () => {
-  it("play sets status to playing", () => {
-    const result = executeDAWTool(daw, "play", {});
+  it("play sets status to playing", async () => {
+    const result = await executeDAWTool(daw, backend, "play", {});
 
     expect(result.success).toBe(true);
     expect(daw.playback.status).toBe("playing");
   });
 
-  it("pause sets status to paused", () => {
-    executeDAWTool(daw, "play", {});
-    executeDAWTool(daw, "pause", {});
+  it("pause sets status to paused", async () => {
+    await executeDAWTool(daw, backend, "play", {});
+    await executeDAWTool(daw, backend, "pause", {});
 
     expect(daw.playback.status).toBe("paused");
   });
 
-  it("stop sets status to stopped and resets bar to 1", () => {
-    executeDAWTool(daw, "play", { fromBar: 5 });
-    executeDAWTool(daw, "stop", {});
+  it("stop sets status to stopped and resets bar to 1", async () => {
+    await executeDAWTool(daw, backend, "play", { fromBar: 5 });
+    await executeDAWTool(daw, backend, "stop", {});
 
     expect(daw.playback.status).toBe("stopped");
     expect(daw.playback.currentBar).toBe(1);
@@ -261,36 +264,36 @@ describe("playback controls", () => {
 // ---------------------------------------------------------------------------
 
 describe("undo / redo", () => {
-  it("undo reverses a createTrack", () => {
-    executeDAWTool(daw, "createTrack", { name: "Guitar" });
+  it("undo reverses a createTrack", async () => {
+    await executeDAWTool(daw, backend, "createTrack", { name: "Guitar" });
     expect(daw.tracks).toHaveLength(1);
 
-    const result = executeDAWTool(daw, "undo", {});
+    const result = await executeDAWTool(daw, backend, "undo", {});
 
     expect(result.success).toBe(true);
     expect(daw.tracks).toHaveLength(0);
   });
 
-  it("redo re-applies after undo", () => {
-    executeDAWTool(daw, "setTempo", { bpm: 160 });
-    executeDAWTool(daw, "undo", {});
+  it("redo re-applies after undo", async () => {
+    await executeDAWTool(daw, backend, "setTempo", { bpm: 160 });
+    await executeDAWTool(daw, backend, "undo", {});
     expect(daw.bpm).toBe(120);
 
-    const result = executeDAWTool(daw, "redo", {});
+    const result = await executeDAWTool(daw, backend, "redo", {});
 
     expect(result.success).toBe(true);
     expect(daw.bpm).toBe(160);
   });
 
-  it("returns error when nothing to undo", () => {
-    const result = executeDAWTool(daw, "undo", {});
+  it("returns error when nothing to undo", async () => {
+    const result = await executeDAWTool(daw, backend, "undo", {});
 
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/nothing to undo/i);
   });
 
-  it("returns error when nothing to redo", () => {
-    const result = executeDAWTool(daw, "redo", {});
+  it("returns error when nothing to redo", async () => {
+    const result = await executeDAWTool(daw, backend, "redo", {});
 
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/nothing to redo/i);
@@ -302,8 +305,8 @@ describe("undo / redo", () => {
 // ---------------------------------------------------------------------------
 
 describe("unknown tool", () => {
-  it("returns error result for unrecognised tool name", () => {
-    const result = executeDAWTool(daw, "launchRocket", { payload: "moon" });
+  it("returns error result for unrecognised tool name", async () => {
+    const result = await executeDAWTool(daw, backend, "launchRocket", { payload: "moon" });
 
     expect(result.success).toBe(false);
     expect(result.state_delta).toBeNull();
