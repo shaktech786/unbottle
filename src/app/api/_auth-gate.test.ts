@@ -18,6 +18,7 @@ const {
   createClientMock,
   requireAuthMock,
   generateCompletionMock,
+  generateCompletionFullMock,
   generateMusicMock,
   getUserApiKeyMock,
   getUserElevenLabsKeyMock,
@@ -33,6 +34,7 @@ const {
   })),
   requireAuthMock: vi.fn(),
   generateCompletionMock: vi.fn(),
+  generateCompletionFullMock: vi.fn(),
   generateMusicMock: vi.fn(),
   getUserApiKeyMock: vi.fn(() => undefined),
   getUserElevenLabsKeyMock: vi.fn(() => undefined),
@@ -48,6 +50,7 @@ vi.mock("@/lib/supabase/auth", () => ({
 }));
 vi.mock("@/lib/ai/claude", () => ({
   generateCompletion: generateCompletionMock,
+  generateCompletionFull: generateCompletionFullMock,
   getUserApiKey: getUserApiKeyMock,
   getClaudeClient: getClaudeClientMock,
 }));
@@ -70,6 +73,7 @@ beforeEach(() => {
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", SUPABASE_URL);
   requireAuthMock.mockReset();
   generateCompletionMock.mockReset();
+  generateCompletionFullMock.mockReset();
   generateMusicMock.mockReset();
   supabaseStorageUploadMock.mockReset();
 });
@@ -92,13 +96,15 @@ describe("POST /api/arrangement/generate — auth gate", () => {
 
   it("calls Claude when auth succeeds (non-401 path)", async () => {
     requireAuthMock.mockResolvedValueOnce({ id: "u1", email: "u@x.com" });
-    generateCompletionMock.mockResolvedValueOnce(
-      JSON.stringify({ sections: [], suggestions: [] }),
-    );
+    generateCompletionFullMock.mockResolvedValueOnce({
+      text: JSON.stringify({ sections: [], suggestions: [] }),
+      model: "claude-3-haiku-20240307",
+      usage: { input_tokens: 10, output_tokens: 20 },
+    });
     const { POST } = await import("./arrangement/generate/route");
     const res = await POST(jsonReq({ prompt: "hello" }));
     expect(res.status).not.toBe(401);
-    expect(generateCompletionMock).toHaveBeenCalledTimes(1);
+    expect(generateCompletionFullMock).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -115,13 +121,15 @@ describe("POST /api/arrangement/suggest — auth gate", () => {
 
   it("calls Claude when auth succeeds", async () => {
     requireAuthMock.mockResolvedValueOnce({ id: "u1", email: "u@x.com" });
-    generateCompletionMock.mockResolvedValueOnce(
-      JSON.stringify({ suggestions: [], nextStep: "go" }),
-    );
+    generateCompletionFullMock.mockResolvedValueOnce({
+      text: JSON.stringify({ suggestions: [], nextStep: "go" }),
+      model: "claude-3-haiku-20240307",
+      usage: { input_tokens: 10, output_tokens: 20 },
+    });
     const { POST } = await import("./arrangement/suggest/route");
     const res = await POST(jsonReq({ sessionState: { bpm: 120 } }));
     expect(res.status).not.toBe(401);
-    expect(generateCompletionMock).toHaveBeenCalledTimes(1);
+    expect(generateCompletionFullMock).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -200,11 +208,15 @@ describe("POST /api/capture/analyze — auth gate (returns 401)", () => {
 
   it("calls Claude when auth succeeds", async () => {
     requireAuthMock.mockResolvedValueOnce({ id: "u1", email: "u@x.com" });
-    generateCompletionMock.mockResolvedValueOnce(JSON.stringify({ ok: true }));
+    generateCompletionFullMock.mockResolvedValueOnce({
+      text: JSON.stringify({ ok: true }),
+      model: "claude-3-haiku-20240307",
+      usage: { input_tokens: 10, output_tokens: 20 },
+    });
     const { POST } = await import("./capture/analyze/route");
     const res = await POST(jsonReq({ type: "text", textDescription: "hi" }) as never);
     expect(res.status).not.toBe(401);
-    expect(generateCompletionMock).toHaveBeenCalledTimes(1);
+    expect(generateCompletionFullMock).toHaveBeenCalledTimes(1);
   });
 });
 
