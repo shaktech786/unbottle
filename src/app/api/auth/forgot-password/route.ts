@@ -57,6 +57,11 @@ function buildResetEmail(resetUrl: string): string {
           </tr>
           <tr>
             <td style="padding-top:24px;text-align:center;">
+              <p style="margin:0 0 6px;font-size:12px;color:#404040;">
+                <a href="https://unbottle-rouge.vercel.app/terms" style="color:#404040;text-decoration:underline;">Terms</a>
+                &middot;
+                <a href="https://unbottle-rouge.vercel.app/privacy" style="color:#404040;text-decoration:underline;">Privacy</a>
+              </p>
               <p style="margin:0;font-size:12px;color:#404040;">
                 Unbottle &middot; <a href="https://unbottle-rouge.vercel.app" style="color:#404040;text-decoration:underline;">unbottle.app</a>
               </p>

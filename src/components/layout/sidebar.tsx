@@ -206,6 +206,13 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
           <CollapseIcon collapsed={collapsed} />
           {!collapsed && <span>Collapse</span>}
         </button>
+        {!collapsed && (
+          <nav className="mt-2 flex flex-wrap gap-x-3 gap-y-1 px-3 text-xs text-neutral-600">
+            <Link href="/terms" className="hover:text-neutral-400">Terms</Link>
+            <Link href="/privacy" className="hover:text-neutral-400">Privacy</Link>
+            <Link href="/cookies" className="hover:text-neutral-400">Cookies</Link>
+          </nav>
+        )}
       </div>
     </aside>
     </>

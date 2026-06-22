@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { StyleProfileEditor } from "@/components/settings/style-profile-editor";
 import { ReaperSetupWizard } from "@/components/settings/reaper-setup-wizard";
+import { AccountSection } from "@/components/settings/account-section";
 
 type Theme = "dark" | "light";
 
@@ -721,6 +722,14 @@ export default function SettingsPage() {
           </li>
         </ul>
       </Card>
+
+      <AccountSection />
+
+      <nav className="mt-8 flex flex-wrap justify-center gap-x-5 gap-y-2 border-t border-neutral-800/50 pt-6 text-sm text-neutral-500">
+        <a href="/terms" className="hover:text-neutral-300">Terms</a>
+        <a href="/privacy" className="hover:text-neutral-300">Privacy</a>
+        <a href="/cookies" className="hover:text-neutral-300">Cookies</a>
+      </nav>
     </div>
   );
 }
