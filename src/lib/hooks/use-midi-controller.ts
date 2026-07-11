@@ -31,6 +31,11 @@ export interface UseMidiControllerReturn {
   error: string | null;
 }
 
+export interface UseMidiControllerOptions {
+  /** Fired synchronously for every note-on/note-off, in addition to lastNote. */
+  onNote?: (event: MidiNoteEvent) => void;
+}
+
 function midiNumberToPitch(midiNumber: number): Pitch {
   const noteIndex = midiNumber % 12;
   const octave = Math.floor(midiNumber / 12) - 1;
@@ -49,7 +54,9 @@ function checkMidiSupport(): boolean {
 /**
  * React hook for WebMIDI input.
  */
-export function useMidiController(): UseMidiControllerReturn {
+export function useMidiController(
+  options?: UseMidiControllerOptions,
+): UseMidiControllerReturn {
   const supported = checkMidiSupport();
 
   const [isConnected, setIsConnected] = useState(false);
@@ -59,6 +66,8 @@ export function useMidiController(): UseMidiControllerReturn {
   const [error, setError] = useState<string | null>(null);
 
   const midiAccessRef = useRef<MIDIAccess | null>(null);
+  const onNoteRef = useRef<UseMidiControllerOptions["onNote"]>(options?.onNote);
+  onNoteRef.current = options?.onNote;
 
   const refreshInputs = useCallback(() => {
     const access = midiAccessRef.current;
@@ -132,13 +141,16 @@ export function useMidiController(): UseMidiControllerReturn {
       if (status === 0x90 || status === 0x80) {
         const isNoteOn = status === 0x90 && velocity > 0;
 
-        setLastNote({
+        const noteEvent: MidiNoteEvent = {
           pitch: midiNumberToPitch(noteNumber),
           velocity: isNoteOn ? velocity : 0,
           channel,
           timestamp: event.timeStamp,
           type: isNoteOn ? "noteon" : "noteoff",
-        });
+        };
+
+        setLastNote(noteEvent);
+        onNoteRef.current?.(noteEvent);
       }
     }
 
