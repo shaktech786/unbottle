@@ -6,10 +6,16 @@
  * Response: { chords: string[], key: string, bpm: number }
  */
 
-import { generateCompletion, getUserApiKey } from "@/lib/ai/claude";
+import { generateCompletionFull, getUserApiKey } from "@/lib/ai/claude";
 import { validateVibeInput, VibeInputValidationError } from "@/lib/vibe/schema";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/supabase/auth";
+import { checkRateLimit } from "@/lib/ratelimit";
+import { logUsage } from "@/lib/log-usage";
 
 export const dynamic = "force-dynamic";
+
+const supabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL);
 
 const SYSTEM_PROMPT = `You are a professional music producer AI. Given a vibe description, you generate a chord progression.
 
@@ -51,12 +57,52 @@ interface ChordResponse {
 
 export async function POST(request: Request) {
   try {
+    let authedUserId: string | null = null;
+
+    if (supabaseConfigured) {
+      const client = await createClient();
+      const user = await requireAuth(client);
+      authedUserId = user.id;
+    }
+
+    const userApiKey = getUserApiKey(request);
+    const hasByoKey = Boolean(userApiKey);
+
+    if (authedUserId && !hasByoKey) {
+      const rateLimit = await checkRateLimit(authedUserId, "chat");
+      if (!rateLimit.allowed) {
+        return Response.json(
+          { error: "Rate limit exceeded" },
+          {
+            status: 429,
+            headers: {
+              "Retry-After": String(rateLimit.retryAfter ?? 3600),
+            },
+          },
+        );
+      }
+    }
+
     const body = await request.json().catch(() => null);
     const vibe = validateVibeInput(body);
 
-    const userApiKey = getUserApiKey(request);
     const prompt = buildVibePrompt(vibe);
-    const rawText = await generateCompletion(SYSTEM_PROMPT, prompt, 512, userApiKey);
+    const { text: rawText, model, usage } = await generateCompletionFull(
+      SYSTEM_PROMPT,
+      prompt,
+      512,
+      userApiKey,
+    );
+
+    if (authedUserId) {
+      void logUsage({
+        userId: authedUserId,
+        tokensInput: usage.input_tokens,
+        tokensOutput: usage.output_tokens,
+        model,
+        endpoint: "/api/vibe/chords",
+      });
+    }
 
     // Strip markdown fences if present
     const cleaned = rawText
@@ -87,6 +133,9 @@ export async function POST(request: Request) {
 
     return Response.json({ chords, key, bpm });
   } catch (err) {
+    if (err instanceof Error && err.message === "Authentication required") {
+      return Response.json({ error: "Authentication required" }, { status: 401 });
+    }
     if (err instanceof VibeInputValidationError) {
       return Response.json(
         { error: err.message, field: err.field },
