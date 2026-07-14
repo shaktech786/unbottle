@@ -141,54 +141,62 @@ export function ChatPanel({
       <ChatErrorBanner errorType={chatError} />
 
       {/* Messages */}
-      <MessageList messages={messages} isStreaming={isStreaming} className="flex-1" />
+      <MessageList
+        messages={messages}
+        isStreaming={isStreaming}
+        className="flex-1"
+        footer={
+          <>
+            {/* Regenerate button — shown when last message is from assistant and idle */}
+            {!isStreaming &&
+              messages.length > 0 &&
+              messages[messages.length - 1].role === "assistant" && (
+                <div className="flex justify-start pb-1 pt-0">
+                  <button
+                    onClick={regenerate}
+                    className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-neutral-500 transition-colors hover:bg-neutral-800 hover:text-neutral-300"
+                    aria-label="Regenerate last response"
+                  >
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                      <path d="M3 3v5h5" />
+                    </svg>
+                    Regenerate
+                  </button>
+                </div>
+              )}
 
-      {/* Regenerate button — shown when last message is from assistant and idle */}
-      {!isStreaming &&
-        messages.length > 0 &&
-        messages[messages.length - 1].role === "assistant" && (
-          <div className="flex justify-start px-4 pb-1 pt-0">
-            <button
-              onClick={regenerate}
-              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-neutral-500 transition-colors hover:bg-neutral-800 hover:text-neutral-300"
-              aria-label="Regenerate last response"
-            >
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                <path d="M3 3v5h5" />
-              </svg>
-              Regenerate
-            </button>
-          </div>
-        )}
+            {/* Suggestions */}
+            {activeSuggestions.length > 0 && !isStreaming && (
+              <SuggestionChips
+                suggestions={activeSuggestions}
+                onSelect={handleSuggestionSelect}
+                className="px-0"
+              />
+            )}
 
-      {/* Suggestions */}
-      {activeSuggestions.length > 0 && !isStreaming && (
-        <SuggestionChips
-          suggestions={activeSuggestions}
-          onSelect={handleSuggestionSelect}
-        />
-      )}
-
-      {/* Just Pick Button - always available when chat is idle */}
-      {messages.length > 0 && !isStreaming && (
-        <div className="flex justify-center px-4 py-2">
-          <JustPickButton
-            context="what to do next"
-            onPick={handleJustPick}
-            disabled={isStreaming}
-          />
-        </div>
-      )}
+            {/* Just Pick Button - always available when chat is idle */}
+            {messages.length > 0 && !isStreaming && (
+              <div className="flex justify-center py-2">
+                <JustPickButton
+                  context="what to do next"
+                  onPick={handleJustPick}
+                  disabled={isStreaming}
+                />
+              </div>
+            )}
+          </>
+        }
+      />
 
       {/* Input */}
       <ChatInput onSend={sendMessage} disabled={isStreaming} />
