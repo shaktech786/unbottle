@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, type ReactNode } from "react";
 import { cn } from "@/lib/utils/cn";
 import type { ChatMessage } from "@/lib/music/types";
 import { MessageBubble } from "./message-bubble";
@@ -9,6 +9,8 @@ interface MessageListProps {
   messages: ChatMessage[];
   isStreaming?: boolean;
   className?: string;
+  /** Trailing content rendered inside the scroll container, after the last message. */
+  footer?: ReactNode;
 }
 
 /** Threshold (px) to decide if the user is "near the bottom" of the scroll container. */
@@ -26,7 +28,7 @@ function TypingIndicator() {
   );
 }
 
-export function MessageList({ messages, isStreaming = false, className }: MessageListProps) {
+export function MessageList({ messages, isStreaming = false, className, footer }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   /** Whether the user is near the bottom (should auto-scroll). */
@@ -43,10 +45,7 @@ export function MessageList({ messages, isStreaming = false, className }: Messag
   /** Scroll to the bottom if user is near it. */
   const scrollToBottomIfNeeded = useCallback(() => {
     if (!isNearBottomRef.current) return;
-    const el = containerRef.current;
-    if (el) {
-      el.scrollTop = el.scrollHeight;
-    }
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, []);
 
   // Track user scroll position
@@ -125,6 +124,7 @@ export function MessageList({ messages, isStreaming = false, className }: Messag
         <MessageBubble key={message.id} message={message} />
       ))}
       {showTypingIndicator && <TypingIndicator />}
+      {footer}
       <div ref={bottomRef} />
     </div>
   );
