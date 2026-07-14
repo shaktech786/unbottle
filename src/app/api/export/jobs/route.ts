@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/supabase/auth";
+import { getSession as getSessionDB } from "@/lib/supabase/db";
 import { parseExportJob } from "@/lib/export/schema";
 import type { ExportFormat, BitDepth } from "@/lib/export/schema";
 
@@ -16,7 +17,7 @@ interface CreateJobBody {
 export async function POST(request: Request): Promise<Response> {
   try {
     const client = await createClient();
-    await requireAuth(client);
+    const user = await requireAuth(client);
 
     const body = (await request.json()) as CreateJobBody;
 
@@ -25,6 +26,14 @@ export async function POST(request: Request): Promise<Response> {
         { error: "sessionId and format are required" },
         { status: 400 },
       );
+    }
+
+    const session = await getSessionDB(client, body.sessionId);
+    if (!session) {
+      return Response.json({ error: "Session not found" }, { status: 404 });
+    }
+    if (session.userId !== user.id) {
+      return Response.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { data, error } = await client
@@ -68,12 +77,20 @@ export async function POST(request: Request): Promise<Response> {
 export async function GET(request: Request): Promise<Response> {
   try {
     const client = await createClient();
-    await requireAuth(client);
+    const user = await requireAuth(client);
 
     const url = new URL(request.url);
     const sessionId = url.searchParams.get("sessionId");
     if (!sessionId) {
       return Response.json({ error: "sessionId query param required" }, { status: 400 });
+    }
+
+    const session = await getSessionDB(client, sessionId);
+    if (!session) {
+      return Response.json({ error: "Session not found" }, { status: 404 });
+    }
+    if (session.userId !== user.id) {
+      return Response.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { data, error } = await client
