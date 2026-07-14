@@ -77,6 +77,13 @@ export async function POST(request: Request): Promise<Response> {
     const selectedTrackIds = new Set(filteredTracks.map((t) => t.id));
     notes = notes.filter((n) => selectedTrackIds.has(n.trackId));
 
+    if (notes.length === 0) {
+      return NextResponse.json(
+        { error: "No notes to export" },
+        { status: 400 },
+      );
+    }
+
     const midiBytes = exportToMidi(filteredTracks, notes, bpm);
 
     const filename = body.sessionId
