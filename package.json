@@ -23,7 +23,6 @@
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.0",
     "@vercel/analytics": "^2.0.1",
-    "audio-to-musicxml": "file:../audio-to-musicxml",
     "clsx": "^2.1.1",
     "midi-writer-js": "^3.2.1",
     "nanoid": "^5.1.11",
