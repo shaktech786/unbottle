@@ -22,19 +22,30 @@ export function ShareButton({ sessionId, initialIsShared, initialShareUrl }: Sha
     if (isLoading) return;
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/session/${sessionId}/share`, {
-        method: "POST",
-      });
-      if (!res.ok) {
-        return;
+      if (isShared) {
+        const res = await fetch(`/api/sessions/${sessionId}/share`, {
+          method: "DELETE",
+        });
+        if (!res.ok) {
+          return;
+        }
+        setIsShared(false);
+        setShareUrl(null);
+      } else {
+        const res = await fetch(`/api/sessions/${sessionId}/share`, {
+          method: "POST",
+        });
+        if (!res.ok) {
+          return;
+        }
+        const data = (await res.json()) as { url: string };
+        setIsShared(true);
+        setShareUrl(data.url);
       }
-      const data = (await res.json()) as { shareUrl: string | null; isShared: boolean };
-      setIsShared(data.isShared);
-      setShareUrl(data.shareUrl);
     } finally {
       setIsLoading(false);
     }
-  }, [sessionId, isLoading]);
+  }, [sessionId, isShared, isLoading]);
 
   const handleCopy = useCallback(async () => {
     if (!shareUrl) return;
