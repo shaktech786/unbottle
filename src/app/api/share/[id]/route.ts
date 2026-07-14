@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import {
-  getSession as getSessionDB,
+  getSessionBySlug,
   getLatestAudioCapture,
 } from "@/lib/supabase/db";
 import { getSession as getSessionMemory } from "@/lib/session/store";
@@ -13,6 +13,7 @@ const SIGNED_URL_TTL = 7 * 24 * 60 * 60;
 export const dynamic = "force-dynamic";
 
 // GET /api/share/[id] - public read of a session's share metadata (no auth required)
+// `id` is the share_slug, not the session id — only public sessions are returned.
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -22,8 +23,8 @@ export async function GET(
   if (supabaseConfigured) {
     try {
       const client = await createClient();
-      const session = await getSessionDB(client, id);
-      if (!session) {
+      const session = await getSessionBySlug(client, id);
+      if (!session || !session.isPublic) {
         return Response.json({ error: "Not found" }, { status: 404 });
       }
 
