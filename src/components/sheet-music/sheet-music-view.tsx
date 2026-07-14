@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils/cn";
 import type { Note, Track } from "@/lib/music/types";
 import { exportToMusicXML } from "@/lib/musicxml/writer";
+import { computeContentSignature } from "@/lib/music/content-signature";
 
 export interface SheetMusicViewProps {
   tracks: Track[];
@@ -44,6 +45,13 @@ export function SheetMusicView({
   const elemToNoteRef = useRef<Map<Element, Note>>(new Map());
   const noteIdToElemRef = useRef<Map<string, Element>>(new Map());
   const selectedNoteIdRef = useRef<string | null | undefined>(selectedNoteId);
+  // Signature of the score content (tracks/notes/bpm/key/time-sig) from the
+  // last successful full render — lets renderScore() skip the expensive
+  // exportToMusicXML/osmd.load/osmd.render pipeline when nothing that
+  // affects the rendered score actually changed (e.g. a parent re-render
+  // handing down a new-but-identical `notes` array reference).
+  const lastRenderedSignatureRef = useRef<string | null>(null);
+  const lastRenderedZoomRef = useRef<number | null>(null);
 
   // Lazily import OSMD (it's a large library, only load when needed)
   useEffect(() => {
@@ -58,6 +66,13 @@ export function SheetMusicView({
         if (cancelled || !containerRef.current) return;
 
         const osmd = new OpenSheetMusicDisplay(containerRef.current, {
+          // opensheetmusicdisplay@1.9.9's autoResize only listens for
+          // window "resize" events (200ms debounced) — it does not use a
+          // ResizeObserver on the container, so calling osmd.render() here
+          // (which can change the container's content height) does not
+          // itself dispatch a window resize and cannot create a
+          // render->resize->render feedback loop. Safe to leave enabled so
+          // the score re-flows if the browser window is resized.
           autoResize: true,
           backend: "svg",
           drawTitle: false,
@@ -127,9 +142,12 @@ export function SheetMusicView({
     const notesSorted = [...notes].sort((a, b) => a.startTick - b.startTick);
     const assigned = new Set<string>();
 
+    // Computed once outside the loop: the svg's position doesn't change
+    // across iterations, so re-querying it per-element was pure waste.
+    const svgRect = svg.getBoundingClientRect();
+
     for (const elem of stavenotes) {
       const rect = elem.getBoundingClientRect();
-      const svgRect = svg.getBoundingClientRect();
       const relX = rect.left + rect.width / 2 - svgRect.left;
       const estimatedTick = (relX / svgWidth) * maxTick;
 
@@ -157,17 +175,31 @@ export function SheetMusicView({
     const osmd = osmdRef.current;
     if (!osmd || tracks.length === 0) return;
 
-    try {
-      const musicxml = exportToMusicXML(tracks, notes, bpm, {
-        keySignature,
-        timeSignature,
-      });
+    const signature = computeContentSignature(tracks, notes, bpm, keySignature, timeSignature);
+    const contentChanged = signature !== lastRenderedSignatureRef.current;
+    const zoomChanged = zoom !== lastRenderedZoomRef.current;
 
-      await osmd.load(musicxml);
+    // Nothing that affects the rendered score changed (e.g. a parent
+    // re-render handed down new-but-identical tracks/notes references) —
+    // skip the expensive export/load/render pipeline entirely.
+    if (!contentChanged && !zoomChanged) return;
+
+    try {
+      if (contentChanged) {
+        const musicxml = exportToMusicXML(tracks, notes, bpm, {
+          keySignature,
+          timeSignature,
+        });
+        await osmd.load(musicxml);
+      }
       osmd.zoom = zoom;
       osmd.render();
+      lastRenderedSignatureRef.current = signature;
+      lastRenderedZoomRef.current = zoom;
       setError(null);
-      buildNoteMap();
+      if (contentChanged) {
+        buildNoteMap();
+      }
       applyHighlight(selectedNoteIdRef.current);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to render score");
