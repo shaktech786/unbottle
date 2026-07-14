@@ -6,12 +6,18 @@
  * Response: { notes: Array<{ pitch, startTick, durationTicks, velocity }> }
  */
 
-import { generateCompletion, getUserApiKey } from "@/lib/ai/claude";
+import { generateCompletionFull, getUserApiKey } from "@/lib/ai/claude";
 import { validateVibeInput, VibeInputValidationError } from "@/lib/vibe/schema";
 import { PPQ } from "@/lib/music/types";
 import type { Note } from "@/lib/music/types";
+import { createClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/supabase/auth";
+import { checkRateLimit } from "@/lib/ratelimit";
+import { logUsage } from "@/lib/log-usage";
 
 export const dynamic = "force-dynamic";
+
+const supabaseConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL);
 
 const SYSTEM_PROMPT = `You are a professional music producer and composer AI. Generate a short melody sketch that fits the given vibe and chord context.
 
@@ -90,6 +96,32 @@ function parseNotes(raw: unknown, trackId: string): Omit<Note, "id">[] {
 
 export async function POST(request: Request) {
   try {
+    let authedUserId: string | null = null;
+
+    if (supabaseConfigured) {
+      const client = await createClient();
+      const user = await requireAuth(client);
+      authedUserId = user.id;
+    }
+
+    const userApiKey = getUserApiKey(request);
+    const hasByoKey = Boolean(userApiKey);
+
+    if (authedUserId && !hasByoKey) {
+      const rateLimit = await checkRateLimit(authedUserId, "chat");
+      if (!rateLimit.allowed) {
+        return Response.json(
+          { error: "Rate limit exceeded" },
+          {
+            status: 429,
+            headers: {
+              "Retry-After": String(rateLimit.retryAfter ?? 3600),
+            },
+          },
+        );
+      }
+    }
+
     const body = await request.json().catch(() => null);
     if (!body || typeof body !== "object") {
       return Response.json({ error: "Request body required" }, { status: 400 });
@@ -113,7 +145,6 @@ export async function POST(request: Request) {
     const resolvedBpm = typeof bpm === "number" ? Math.round(bpm) : 120;
     const resolvedTrackId = typeof trackId === "string" && trackId ? trackId : "melody-track";
 
-    const userApiKey = getUserApiKey(request);
     const prompt = buildMelodyPrompt({
       vibe,
       chords: chords as string[],
@@ -121,7 +152,22 @@ export async function POST(request: Request) {
       bpm: resolvedBpm,
     });
 
-    const rawText = await generateCompletion(SYSTEM_PROMPT, prompt, 1024, userApiKey);
+    const { text: rawText, model, usage } = await generateCompletionFull(
+      SYSTEM_PROMPT,
+      prompt,
+      1024,
+      userApiKey,
+    );
+
+    if (authedUserId) {
+      void logUsage({
+        userId: authedUserId,
+        tokensInput: usage.input_tokens,
+        tokensOutput: usage.output_tokens,
+        model,
+        endpoint: "/api/vibe/melody",
+      });
+    }
 
     const cleaned = rawText
       .replace(/^```(?:json)?\s*/m, "")
@@ -145,6 +191,9 @@ export async function POST(request: Request) {
 
     return Response.json({ notes });
   } catch (err) {
+    if (err instanceof Error && err.message === "Authentication required") {
+      return Response.json({ error: "Authentication required" }, { status: 401 });
+    }
     if (err instanceof VibeInputValidationError) {
       return Response.json(
         { error: err.message, field: err.field },
