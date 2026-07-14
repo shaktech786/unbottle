@@ -49,4 +49,12 @@ describe("Sidebar — mobile responsive classes (NAV3)", () => {
   it("My Sessions link navigates to /sessions", () => {
     expect(sidebarSrc).toContain('"/sessions"');
   });
+
+  it("Billing link navigates to /settings/billing", () => {
+    expect(sidebarSrc).toContain('"/settings/billing"');
+  });
+
+  it("Billing link has a visible label", () => {
+    expect(sidebarSrc).toContain('label="Billing"');
+  });
 });
