@@ -241,9 +241,10 @@ export function ExportDialog({
               variant="primary"
               size="sm"
               onClick={handleMidiExport}
+              disabled={notes.length === 0}
               className="w-full"
             >
-              Export MIDI
+              {notes.length === 0 ? "No notes to export" : "Export MIDI"}
             </Button>
           )}
 
