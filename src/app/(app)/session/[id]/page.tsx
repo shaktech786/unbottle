@@ -35,7 +35,7 @@ import type { SessionSnapshot } from "@/lib/session/action-history";
 import { midiEventsToNotes, type RecordedMidiEvent } from "@/lib/midi/recorder";
 import type { ChatAction, ChatContext } from "@/lib/hooks/use-chat";
 import { PPQ } from "@/lib/music/types";
-import type { Bookmark, InstrumentType, Note, Section, SectionType, ChordEvent } from "@/lib/music/types";
+import type { Bookmark, InstrumentType, Note, Section, SectionType, ChordEvent, Track } from "@/lib/music/types";
 import { useDawMode } from "@/lib/hooks/use-daw-mode";
 import { executeDAWTool } from "@/lib/daw/executor";
 import { ToneBackend } from "@/lib/daw/backends/tone-backend";
@@ -93,6 +93,13 @@ export default function SessionWorkspacePage() {
   // ------- AI Action undo history -------
   const aiHistory = useRef(new ActionHistory());
   const [canUndoAI, setCanUndoAI] = useState(false);
+
+  // Tracks the AI just asked to create, keyed by lowercased name, resolving to
+  // the real persisted Track once the add_track POST completes. Populated
+  // synchronously when the request is *initiated* so a generate_notation call
+  // for the same track (streamed moments later, before `tracks` state has
+  // refreshed) can await the real track instead of falling back to tracks[0].
+  const pendingTracksRef = useRef<Map<string, Promise<Track | null>>>(new Map());
 
   const snapshotSession = useCallback((): SessionSnapshot => ({
     sections: [...sections],
@@ -559,15 +566,17 @@ export default function SessionWorkspacePage() {
               duration: 3000,
             });
 
-            // Auto-place chords in sequencer and auto-play
+            // Auto-place chords in sequencer (fallback so every existing track has
+            // something audible even before/if generate_notation fires) and auto-play
             setTimeout(() => {
               if (tracks.length > 0) {
-                const trackId = tracks[0].id;
-                const chordNotes = chordProgressionToNotes(
-                  newSections as Section[],
-                  trackId,
-                  input.bpm ?? session?.bpm ?? 120,
-                  session?.timeSignature ?? "4/4",
+                const chordNotes = tracks.flatMap((t) =>
+                  chordProgressionToNotes(
+                    newSections as Section[],
+                    t.id,
+                    input.bpm ?? session?.bpm ?? 120,
+                    session?.timeSignature ?? "4/4",
+                  ),
                 );
                 if (chordNotes.length > 0) {
                   sequencer.addBulkNotes(chordNotes);
@@ -606,16 +615,21 @@ export default function SessionWorkspacePage() {
         };
 
         if (session) {
-          fetch(`/api/session/${session.id}/tracks`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              name: input.name,
-              instrument: input.instrument,
-            }),
-          })
-            .then((res) => {
+          const trackKey = input.name.toLowerCase();
+          const trackPromise: Promise<Track | null> = fetch(
+            `/api/session/${session.id}/tracks`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name: input.name,
+                instrument: input.instrument,
+              }),
+            },
+          )
+            .then(async (res) => {
               if (res.ok) {
+                const data = (await res.json()) as { track: Track };
                 addToast({
                   message: `Track '${input.name}' added`,
                   variant: "success",
@@ -623,19 +637,25 @@ export default function SessionWorkspacePage() {
                 });
                 // Refresh session to pick up the new track in state
                 void refreshSession();
-              } else {
-                addToast({
-                  message: "Failed to add track",
-                  variant: "error",
-                });
+                return data.track;
               }
+              addToast({
+                message: "Failed to add track",
+                variant: "error",
+              });
+              return null;
             })
             .catch(() => {
               addToast({
                 message: "Failed to add track",
                 variant: "error",
               });
+              return null;
             });
+
+          // Store synchronously (before the request settles) so a
+          // generate_notation call for this same track name can find it.
+          pendingTracksRef.current.set(trackKey, trackPromise);
         }
       } else if (action.toolName === "generate_notation") {
         const input = action.toolInput as {
@@ -649,31 +669,46 @@ export default function SessionWorkspacePage() {
           description?: string;
         };
 
-        // Find the target track by name
-        const targetTrack = tracks.find(
-          (t) => t.name.toLowerCase() === input.trackName.toLowerCase(),
-        ) ?? tracks[0];
+        const applyNotation = async () => {
+          // Find the target track by name in current state first...
+          let targetTrack = tracks.find(
+            (t) => t.name.toLowerCase() === input.trackName.toLowerCase(),
+          );
 
-        if (targetTrack && input.notes?.length) {
-          const newNotes: Note[] = input.notes.map((n, idx) => ({
-            id: `ai_note_${Date.now()}_${idx}`,
-            trackId: targetTrack.id,
-            pitch: n.pitch as Note["pitch"],
-            startTick: Math.round((n.startBeat - 1) * PPQ),
-            durationTicks: Math.round(n.durationBeats * PPQ),
-            velocity: n.velocity ?? 80,
-          }));
+          // ...otherwise it may be a track that was just created via add_track
+          // in this same streamed response and hasn't reached `tracks` state yet.
+          if (!targetTrack) {
+            const pending = pendingTracksRef.current.get(input.trackName.toLowerCase());
+            if (pending) {
+              targetTrack = (await pending) ?? undefined;
+            }
+          }
 
-          sequencer.addBulkNotes(newNotes);
-          setSequencerVisible(true);
-          setSheetMusicVisible(true);
+          targetTrack = targetTrack ?? tracks[0];
 
-          addToast({
-            message: `${newNotes.length} notes added${input.description ? `: ${input.description}` : ""}`,
-            variant: "success",
-            duration: 3000,
-          });
-        }
+          if (targetTrack && input.notes?.length) {
+            const newNotes: Note[] = input.notes.map((n, idx) => ({
+              id: `ai_note_${Date.now()}_${idx}`,
+              trackId: targetTrack.id,
+              pitch: n.pitch as Note["pitch"],
+              startTick: Math.round((n.startBeat - 1) * PPQ),
+              durationTicks: Math.round(n.durationBeats * PPQ),
+              velocity: n.velocity ?? 80,
+            }));
+
+            sequencer.addBulkNotes(newNotes);
+            setSequencerVisible(true);
+            setSheetMusicVisible(true);
+
+            addToast({
+              message: `${newNotes.length} notes added${input.description ? `: ${input.description}` : ""}`,
+              variant: "success",
+              duration: 3000,
+            });
+          }
+        };
+
+        void applyNotation();
       } else if (action.toolName === "suggest_lyrics") {
         const input = action.toolInput as {
           sectionName: string;
