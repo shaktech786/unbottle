@@ -117,6 +117,10 @@ export function MessageList({ messages, isStreaming = false, className, footer }
       ref={containerRef}
       className={cn(
         "flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-4",
+        "[&::-webkit-scrollbar]:w-1.5",
+        "[&::-webkit-scrollbar-track]:bg-transparent",
+        "[&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-neutral-700",
+        "[&::-webkit-scrollbar-thumb]:hover:bg-neutral-500",
         className,
       )}
     >

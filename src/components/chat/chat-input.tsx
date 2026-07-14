@@ -69,6 +69,10 @@ export function ChatInput({ onSend, disabled = false, className }: ChatInputProp
             "disabled:cursor-not-allowed disabled:opacity-50",
             "transition-colors duration-300",
             "max-h-40",
+            "[&::-webkit-scrollbar]:w-1.5",
+            "[&::-webkit-scrollbar-track]:bg-transparent",
+            "[&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-neutral-700",
+            "[&::-webkit-scrollbar-thumb]:hover:bg-neutral-500",
           )}
         />
         </FirstUseTooltip>
