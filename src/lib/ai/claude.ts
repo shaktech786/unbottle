@@ -40,7 +40,7 @@ export async function streamChat({ systemPrompt, messages, maxTokens = 4096, api
   const claude = getClaudeClient(apiKey);
 
   return claude.messages.stream({
-    model: "claude-sonnet-4-20250514",
+    model: "claude-sonnet-5",
     max_tokens: maxTokens,
     system: systemPrompt,
     messages,
@@ -66,7 +66,7 @@ export async function generateCompletionFull(
   const claude = getClaudeClient(apiKey);
 
   const response = await claude.messages.create({
-    model: "claude-sonnet-4-20250514",
+    model: "claude-sonnet-5",
     max_tokens: maxTokens,
     system: systemPrompt,
     messages: [{ role: "user", content: userMessage }],

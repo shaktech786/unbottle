@@ -126,7 +126,7 @@ export async function POST(request: Request) {
         try {
           // Stream the first API call — tokens arrive in real time
           const stream = claude.messages.stream({
-            model: "claude-sonnet-4-20250514",
+            model: "claude-sonnet-5",
             max_tokens: 4096,
             system: systemPrompt,
             messages,
@@ -206,7 +206,7 @@ export async function POST(request: Request) {
 
             try {
               const followUp = await claude.messages.create({
-                model: "claude-sonnet-4-20250514",
+                model: "claude-sonnet-5",
                 max_tokens: 2048,
                 system: systemPrompt,
                 messages: [
