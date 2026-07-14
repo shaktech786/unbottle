@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/supabase/auth";
 import { ManageSubscriptionButton } from "./manage-subscription-button";
+import { UpgradeButton } from "./upgrade-button";
 
 const AI_CALL_LIMIT_FREE = 50;
 const AI_CALL_LIMIT_PRO = 1000;
@@ -135,13 +136,7 @@ export default async function BillingPage() {
             <p className="text-sm text-neutral-400">
               Upgrade to Pro for unlimited AI calls, priority support, and more.
             </p>
-            {/* TODO: replace href with real Stripe Checkout link when ready */}
-            <a
-              href="#"
-              className="inline-flex items-center rounded-lg bg-amber-500 px-5 py-2.5 text-sm font-semibold text-black transition-colors duration-200 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:ring-offset-2 focus:ring-offset-neutral-900"
-            >
-              Upgrade to Pro
-            </a>
+            <UpgradeButton />
           </div>
         )}
       </div>
