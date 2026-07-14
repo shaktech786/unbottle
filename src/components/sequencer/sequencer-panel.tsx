@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils/cn";
+import { FirstUseTooltip } from "@/components/ui/first-use-tooltip";
 import type {
   InstrumentType,
   Note,
@@ -15,6 +16,10 @@ import { PianoKeys } from "./piano-keys";
 import { Timeline } from "./timeline";
 import { TrackList } from "./track-list";
 import { VelocityLane } from "./velocity-lane";
+import { CCLaneContainer } from "./cc-lane";
+import type { CCLane } from "@/lib/music/cc-lane";
+import { AIAssistPanel } from "./ai-assist";
+import type { AISuggestedNote } from "./ai-assist";
 
 type SnapValue = "1/4" | "1/8" | "1/16" | "1/32";
 
@@ -69,6 +74,18 @@ export interface SequencerPanelProps {
   /** Update velocity for a single note */
   onUpdateVelocity?: (noteId: string, velocity: number) => void;
 
+  /** CC lanes (controlled). If provided, CC lane UI is shown. */
+  ccLanes?: CCLane[];
+  onChangeCCLane?: (index: number, lane: CCLane) => void;
+  onAddCCLane?: (ccNumber: number) => void;
+
+  /** AI assist: session metadata used for gap-fill context */
+  sessionBpm?: number;
+  sessionKeySignature?: string;
+  sessionTimeSignature?: string;
+  /** Show AI assist panel */
+  showAIAssist?: boolean;
+
   className?: string;
 }
 
@@ -94,6 +111,13 @@ export function SequencerPanel({
   onSetPlayhead,
   onClearAll,
   onUpdateVelocity,
+  ccLanes,
+  onChangeCCLane,
+  onAddCCLane,
+  bpm,
+  sessionKeySignature,
+  sessionTimeSignature,
+  showAIAssist = false,
   className,
 }: SequencerPanelProps) {
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(
@@ -113,6 +137,7 @@ export function SequencerPanel({
   const totalBars = Math.max(manualBars, barsNeeded, 16);
   const [pianoScrollY, setPianoScrollY] = useState(0);
   const [pianoScrollX, setPianoScrollX] = useState(0);
+  const [pendingSuggestions, setPendingSuggestions] = useState<AISuggestedNote[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const PIANO_KEY_WIDTH = 64;
@@ -275,8 +300,14 @@ export function SequencerPanel({
               scrollY={pianoScrollY}
               height={rollHeight}
             />
+            <FirstUseTooltip
+              tooltipKey="piano-roll"
+              text="Your melody lives here — drag notes to edit, or let AI refine it"
+              position="top"
+            >
             <PianoRoll
               notes={notes}
+              suggestionNotes={pendingSuggestions}
               selectedNotes={selectedNotes}
               activeTrackId={selectedTrackId ?? "default"}
               activeTrackColor={activeTrackColor}
@@ -297,6 +328,7 @@ export function SequencerPanel({
               onScrollY={setPianoScrollY}
               onScrollX={setPianoScrollX}
             />
+            </FirstUseTooltip>
           </div>
 
           {/* Velocity lane below the piano roll */}
@@ -313,6 +345,44 @@ export function SequencerPanel({
                 onUpdateVelocity={onUpdateVelocity}
               />
             </div>
+          )}
+
+          {/* CC lanes below the velocity lane */}
+          {ccLanes !== undefined && onChangeCCLane && onAddCCLane && (
+            <div className="flex shrink-0">
+              <div style={{ width: PIANO_KEY_WIDTH }} className="shrink-0 border-t border-neutral-800" />
+              <CCLaneContainer
+                lanes={ccLanes}
+                totalBars={totalBars}
+                width={rollWidth}
+                scrollX={pianoScrollX}
+                zoom={zoom}
+                onChangeLane={onChangeCCLane}
+                onAddLane={onAddCCLane}
+              />
+            </div>
+          )}
+
+          {/* AI Assist panel */}
+          {showAIAssist && (
+            <AIAssistPanel
+              notes={notes}
+              activeTrackId={selectedTrackId ?? "default"}
+              totalBars={totalBars}
+              bpm={bpm}
+              keySignature={sessionKeySignature}
+              timeSignature={sessionTimeSignature}
+              pendingSuggestions={pendingSuggestions}
+              onSuggestionsReady={setPendingSuggestions}
+              onAccept={() => {
+                for (const note of pendingSuggestions) {
+                  const { id: _id, ...rest } = note;
+                  onAddNote?.(rest);
+                }
+                setPendingSuggestions([]);
+              }}
+              onReject={() => setPendingSuggestions([])}
+            />
           )}
         </div>
       </div>

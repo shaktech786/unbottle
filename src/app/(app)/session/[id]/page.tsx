@@ -1,18 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { track } from "@vercel/analytics";
 import { useSessionContext } from "@/lib/session/context";
 import { TransportControls } from "@/components/sequencer/transport-controls";
 import { ArrangementPanel } from "@/components/arrangement/arrangement-panel";
 import { ChatPanel } from "@/components/chat/chat-panel";
 import { CapturePanel } from "@/components/capture/capture-panel";
+import { MidiRecordPanel } from "@/components/instruments/midi-record-panel";
 import { SequencerPanel } from "@/components/sequencer/sequencer-panel";
 import { ExportDialog } from "@/components/export/export-dialog";
 import { SheetMusicView } from "@/components/sheet-music/sheet-music-view";
 import { GeneratePanel } from "@/components/audio/generate-panel";
 import { HyperfocusNudge } from "@/components/session/hyperfocus-nudge";
 import { BookmarkList } from "@/components/session/bookmark-list";
+import { ShareButton } from "@/components/session/share-button";
 import { useTonePlayer } from "@/lib/hooks/use-tone-player";
 import { useSequencer } from "@/lib/hooks/use-sequencer";
 import { useHyperfocusGuard } from "@/lib/hooks/use-hyperfocus-guard";
@@ -21,6 +24,7 @@ import { useApiKey } from "@/lib/hooks/use-api-key";
 import { usePreferences } from "@/lib/hooks/use-preferences";
 import { useToast } from "@/components/ui/toast-provider";
 import { Tooltip } from "@/components/ui/tooltip";
+import { FirstUseTooltip } from "@/components/ui/first-use-tooltip";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 import { chordProgressionToNotes } from "@/lib/music/chord-to-notes";
@@ -28,9 +32,16 @@ import { reorderSections } from "@/lib/music/section-reorder";
 import { getSectionTickRange, copyNotesForSection } from "@/lib/audio/playback-utils";
 import { ActionHistory } from "@/lib/session/action-history";
 import type { SessionSnapshot } from "@/lib/session/action-history";
+import { midiEventsToNotes, type RecordedMidiEvent } from "@/lib/midi/recorder";
 import type { ChatAction, ChatContext } from "@/lib/hooks/use-chat";
 import { PPQ } from "@/lib/music/types";
 import type { Bookmark, InstrumentType, Note, Section, SectionType, ChordEvent } from "@/lib/music/types";
+import { useDawMode } from "@/lib/hooks/use-daw-mode";
+import { executeDAWTool } from "@/lib/daw/executor";
+import { ToneBackend } from "@/lib/daw/backends/tone-backend";
+import { ReaperBackend, ReaperBridgeError } from "@/lib/daw/backends/reaper-backend";
+import { getDAWState } from "@/lib/daw/state";
+import { DAW_TOOL_NAMES } from "@/lib/daw/tools";
 
 type MobileTab = "arrange" | "chat" | "capture";
 
@@ -72,7 +83,9 @@ export default function SessionWorkspacePage() {
 
   const { addToast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { preferences } = usePreferences();
+  const [dawMode] = useDawMode();
 
   // ------- Sequencer (note management with undo/redo) -------
   const sequencer = useSequencer(contextNotes);
@@ -209,6 +222,8 @@ export default function SessionWorkspacePage() {
   // ------- Auto-kickoff for fresh sessions -------
   // When a user lands on a brand-new session (no sections, no notes),
   // auto-send a kickoff message to the AI so they get immediate guidance.
+  // When autoStart=true (from "Just Start"), send a welcoming opener instead
+  // of the arrangement request so the AI greets the user immediately.
   const hasAutoKicked = useRef(false);
   useEffect(() => {
     if (
@@ -219,17 +234,24 @@ export default function SessionWorkspacePage() {
     ) {
       hasAutoKicked.current = true;
 
-      const parts: string[] = [];
-      if (session.genre) parts.push(`genre is ${session.genre}`);
-      if (session.mood) parts.push(`mood is ${session.mood}`);
-      if (session.bpm !== 120) parts.push(`BPM is ${session.bpm}`);
-      if (session.keySignature && session.keySignature !== "C") parts.push(`key is ${session.keySignature}`);
+      const isAutoStart = searchParams.get("autoStart") === "true";
 
-      const ctx = parts.length > 0
-        ? `I've set up: ${parts.join(", ")}.`
-        : "I just started a fresh session.";
+      let msg: string;
+      if (isAutoStart) {
+        msg = "Hey! I just jumped into a fresh session. What should we make?";
+      } else {
+        const parts: string[] = [];
+        if (session.genre) parts.push(`genre is ${session.genre}`);
+        if (session.mood) parts.push(`mood is ${session.mood}`);
+        if (session.bpm !== 120) parts.push(`BPM is ${session.bpm}`);
+        if (session.keySignature && session.keySignature !== "C") parts.push(`key is ${session.keySignature}`);
 
-      const msg = `${ctx} Build me a full arrangement with chord progressions I can hear right away. Pick anything I haven't chosen yet.`;
+        const ctx = parts.length > 0
+          ? `I've set up: ${parts.join(", ")}.`
+          : "I just started a fresh session.";
+
+        msg = `${ctx} Build me a full arrangement with chord progressions I can hear right away. Pick anything I haven't chosen yet.`;
+      }
 
       let attempts = 0;
       const tryKick = () => {
@@ -240,10 +262,10 @@ export default function SessionWorkspacePage() {
           setTimeout(tryKick, 500);
         }
       };
-      const timer = setTimeout(tryKick, 1000);
+      const timer = setTimeout(tryKick, 300);
       return () => clearTimeout(timer);
     }
-  }, [session, sections.length, contextNotes.length]);
+  }, [session, sections.length, contextNotes.length, searchParams]);
 
   // ------- Tone.js player (uses sequencer notes, not empty context) -------
   const {
@@ -418,6 +440,53 @@ export default function SessionWorkspacePage() {
     [session, tracks, refreshSession, sequencer, addToast],
   );
 
+  // ------- MIDI recording: capture raw MIDI events into notes -------
+  const handleMidiCapture = useCallback(
+    async (events: RecordedMidiEvent[]) => {
+      if (!session || events.length === 0) {
+        addToast({ message: "No MIDI notes recorded", variant: "error" });
+        return;
+      }
+
+      // Find an existing "MIDI" track or create one. We don't reuse the
+      // first track because that's usually a piano/bass and stomping notes
+      // onto it would surprise the user.
+      let midiTrack = tracks.find((t) => t.name.toLowerCase().includes("midi"));
+      if (!midiTrack) {
+        const r = await fetch(`/api/session/${session.id}/tracks`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "MIDI", instrument: "piano" }),
+        });
+        if (r.ok) {
+          const { track } = (await r.json()) as { track: typeof tracks[number] };
+          midiTrack = track;
+          await refreshSession();
+        }
+      }
+
+      if (!midiTrack) {
+        addToast({ message: "Failed to create MIDI track", variant: "error" });
+        return;
+      }
+
+      const endMs = Math.max(...events.map((e) => e.timeMs));
+      const partial = midiEventsToNotes(events, {
+        trackId: midiTrack.id,
+        bpm: session.bpm ?? 120,
+        endMs,
+      });
+      const notes: Note[] = partial.map((n, idx) => ({
+        ...n,
+        id: `midi_${n.startTick}_${idx}`,
+      }));
+      sequencer.addBulkNotes(notes);
+
+      addToast({ message: `Added ${notes.length} notes from MIDI`, variant: "success" });
+    },
+    [session, tracks, refreshSession, sequencer, addToast],
+  );
+
   // ------- AI tool action handler -------
   const handleChatAction = useCallback(
     (action: ChatAction) => {
@@ -483,6 +552,7 @@ export default function SessionWorkspacePage() {
             }
 
             await addSections(newSections);
+            track("arrangement_generated");
             addToast({
               message: `${newSections.length} section${newSections.length === 1 ? "" : "s"} added`,
               variant: "success",
@@ -616,9 +686,31 @@ export default function SessionWorkspacePage() {
           variant: "success",
           duration: 3000,
         });
+      } else if (DAW_TOOL_NAMES.has(action.toolName)) {
+        const daw = getDAWState();
+        const backend =
+          dawMode === "reaper"
+            ? new ReaperBackend("localhost", preferences.reaperBridgePort)
+            : new ToneBackend(daw);
+
+        void executeDAWTool(daw, backend, action.toolName, action.toolInput).then((result) => {
+          if (!result.success) {
+            addToast({
+              message: result.error ?? "DAW tool failed",
+              variant: "error",
+            });
+          }
+        }).catch((err) => {
+          if (err instanceof ReaperBridgeError) {
+            addToast({
+              message: "Reaper not responding — check the bridge is running",
+              variant: "error",
+            });
+          }
+        });
       }
     },
-    [addSections, addToast, updateSession, setBpm, tracks, session, sequencer, play, refreshSession, clearSections, sections, pushAISnapshot],
+    [addSections, addToast, updateSession, setBpm, tracks, session, sequencer, play, refreshSession, clearSections, sections, pushAISnapshot, dawMode, preferences.reaperBridgePort],
   );
 
   // ------- Chord-to-sequencer handler -------
@@ -1245,10 +1337,20 @@ export default function SessionWorkspacePage() {
                 onChange={handleImportMusicXML}
                 className="hidden"
               />
+              <ShareButton
+                sessionId={session.id}
+                initialIsShared={session.isShared ?? false}
+                initialShareUrl={session.isShared ? `${typeof window !== "undefined" ? window.location.origin : ""}/share/${session.id}` : undefined}
+              />
+              <FirstUseTooltip
+                tooltipKey="export"
+                text="Download your track as MIDI or share it with a link"
+                position="bottom"
+              >
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setExportOpen(true)}
+                onClick={() => { track("track_exported"); setExportOpen(true); }}
               >
                 <svg
                   width="14"
@@ -1266,6 +1368,7 @@ export default function SessionWorkspacePage() {
                 </svg>
                 <span className="hidden md:inline">Export</span>
               </Button>
+              </FirstUseTooltip>
             </div>
           }
         />
@@ -1403,13 +1506,20 @@ export default function SessionWorkspacePage() {
         )}
 
         {mobileTab === "capture" && (
-          <CapturePanel
-            collapsed={false}
-            onAddToSession={handleCaptureAddToSession}
-            onTranscribeToMidi={handleTranscribeToMidi}
-            sessionId={session.id}
-            className="flex-1 w-full border-l-0"
-          />
+          <div className="flex flex-1 flex-col overflow-y-auto">
+            <CapturePanel
+              collapsed={false}
+              onAddToSession={handleCaptureAddToSession}
+              onTranscribeToMidi={handleTranscribeToMidi}
+              sessionId={session.id}
+              className="w-full flex-1 border-l-0"
+            />
+            <MidiRecordPanel
+              bpm={session.bpm ?? 120}
+              onCapture={handleMidiCapture}
+              className="m-3 mt-0"
+            />
+          </div>
         )}
       </div>
 
@@ -1580,7 +1690,7 @@ export default function SessionWorkspacePage() {
               className="fixed inset-0 z-30"
               onClick={() => setCaptureOpen(false)}
             />
-            <div className="fixed bottom-24 right-6 z-40 w-80 rounded-2xl border border-neutral-700 bg-[#0a0a0a] shadow-2xl shadow-black/50">
+            <div className="fixed bottom-24 right-6 z-40 max-h-[80vh] w-80 overflow-y-auto rounded-2xl border border-neutral-700 bg-[#0a0a0a] shadow-2xl shadow-black/50">
               <CapturePanel
                 collapsed={false}
                 onAddToSession={handleCaptureAddToSession}
@@ -1588,6 +1698,12 @@ export default function SessionWorkspacePage() {
                 sessionId={session.id}
                 className="border-l-0 rounded-2xl"
               />
+              <div className="border-t border-neutral-800 p-3">
+                <MidiRecordPanel
+                  bpm={session.bpm ?? 120}
+                  onCapture={handleMidiCapture}
+                />
+              </div>
             </div>
           </>
         )}

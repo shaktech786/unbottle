@@ -362,6 +362,20 @@ export default function Home() {
         <p className="text-sm text-dim">
           Made for musicians who work alone.
         </p>
+        <nav className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-dim">
+          <Link href="/terms" className="hover:text-warm-white transition-colors">
+            Terms
+          </Link>
+          <Link href="/privacy" className="hover:text-warm-white transition-colors">
+            Privacy
+          </Link>
+          <Link href="/cookies" className="hover:text-warm-white transition-colors">
+            Cookies
+          </Link>
+        </nav>
+        <p className="mt-4 text-xs text-dim">
+          &copy; {new Date().getFullYear()} ShakTech Labs LLC
+        </p>
       </footer>
     </div>
   );

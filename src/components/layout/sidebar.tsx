@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
 import { createClient } from "@/lib/supabase/client";
 import { NavLink } from "./nav-link";
@@ -135,13 +136,13 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
       {/* Logo */}
       <div className="flex h-14 items-center gap-3 border-b border-neutral-800/50 px-4">
         {!collapsed ? (
-          <span className="text-lg font-bold tracking-tight text-neutral-100">
+          <Link href="/" className="text-lg font-bold tracking-tight text-neutral-100 hover:opacity-80 transition-opacity">
             <span className="text-amber-500">Un</span>bottle
-          </span>
+          </Link>
         ) : (
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center text-base font-bold text-amber-500">
+          <Link href="/" className="flex h-8 w-8 shrink-0 items-center justify-center text-base font-bold text-amber-500 hover:opacity-80 transition-opacity">
             U
-          </span>
+          </Link>
         )}
       </div>
 
@@ -205,6 +206,13 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
           <CollapseIcon collapsed={collapsed} />
           {!collapsed && <span>Collapse</span>}
         </button>
+        {!collapsed && (
+          <nav className="mt-2 flex flex-wrap gap-x-3 gap-y-1 px-3 text-xs text-neutral-600">
+            <Link href="/terms" className="hover:text-neutral-400">Terms</Link>
+            <Link href="/privacy" className="hover:text-neutral-400">Privacy</Link>
+            <Link href="/cookies" className="hover:text-neutral-400">Cookies</Link>
+          </nav>
+        )}
       </div>
     </aside>
     </>

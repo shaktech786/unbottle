@@ -8,6 +8,10 @@ export function buildProducerSystemPrompt(session: {
   mood?: string;
   sections?: Section[];
   tracks?: Track[];
+  /** Optional style DNA suffix injected by buildStyleContext(). */
+  styleContext?: string | null;
+  /** Optional idea summary injected by IdeaContext.buildIdeaSummary(). */
+  ideaContext?: string | null;
 }): string {
   const sectionSummary = session.sections?.length
     ? `Current sections: ${session.sections.map((s) => `${s.name} (${s.type}, ${s.lengthBars} bars)`).join(", ")}`
@@ -66,5 +70,9 @@ You have tools that directly modify the workspace. USE THEM proactively:
 - When the user asks to add an instrument or track — ALWAYS call add_track. Never just describe what they should add.
 - After using tools, give a SHORT summary of what you built and suggest what to do next.
 - Keep your text responses concise — the music speaks for itself.
-- Always end with a clear next action or question to keep momentum going.`;
+- Always end with a clear next action or question to keep momentum going.${
+    session.styleContext ? `\n\n${session.styleContext}` : ""
+  }${
+    session.ideaContext ? `\n\n${session.ideaContext}` : ""
+  }`;
 }

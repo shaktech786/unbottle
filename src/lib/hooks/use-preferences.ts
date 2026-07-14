@@ -10,6 +10,9 @@ export interface UserPreferences {
   defaultMood: string;
   hyperfocusMinutes: number;
   autoSaveEnabled: boolean;
+  dawMode: "tone" | "reaper";
+  reaperBridgePort: number;
+  reaperSetupComplete: boolean;
 }
 
 const DEFAULT_PREFERENCES: UserPreferences = {
@@ -18,6 +21,9 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   defaultMood: "",
   hyperfocusMinutes: 45,
   autoSaveEnabled: true,
+  dawMode: "tone",
+  reaperBridgePort: 9000,
+  reaperSetupComplete: false,
 };
 
 // External store for localStorage-backed preferences

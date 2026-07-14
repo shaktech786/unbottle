@@ -1,14 +1,41 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { OfflineBanner } from "@/components/ui/offline-banner";
+import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
+import { createClient } from "@/lib/supabase/client";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [onboardingUserId, setOnboardingUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const client = createClient();
+    void (async () => {
+      const { data: { user } } = await client.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await client
+        .from("profiles")
+        .select("onboarding_completed")
+        .eq("id", user.id)
+        .single();
+
+      if (profile && !profile.onboarding_completed) {
+        setOnboardingUserId(user.id);
+      }
+    })();
+  }, []);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[#0a0a0a] text-stone-100">
+      {onboardingUserId && (
+        <OnboardingModal
+          userId={onboardingUserId}
+          onComplete={() => setOnboardingUserId(null)}
+        />
+      )}
       <OfflineBanner />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar

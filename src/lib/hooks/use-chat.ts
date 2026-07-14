@@ -1,9 +1,14 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import { track } from "@vercel/analytics";
 import type { ChatMessage, Section, Track } from "@/lib/music/types";
 import { getAuthHeaders } from "@/lib/hooks/use-api-key";
 import { removeLastAssistantMessage } from "@/lib/ai/chat-utils";
+import { useToast } from "@/components/ui/toast-provider";
+
+const RATE_LIMIT_TOAST_MESSAGE =
+  "You've hit your AI limit for today. Try again tomorrow or use your own API key in Settings.";
 
 export interface ChatContext {
   bpm?: number;
@@ -71,6 +76,7 @@ export function useChat({ sessionId, context, apiKey, onAction }: UseChatOptions
   const abortRef = useRef<AbortController | null>(null);
   const onActionRef = useRef(onAction);
   onActionRef.current = onAction;
+  const { addToast } = useToast();
 
   useEffect(() => {
     let cancelled = false;
@@ -145,7 +151,10 @@ export function useChat({ sessionId, context, apiKey, onAction }: UseChatOptions
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => null);
-          if (response.status === 401 || response.status === 403) {
+          if (response.status === 429) {
+            addToast({ message: RATE_LIMIT_TOAST_MESSAGE, variant: "warning", duration: 8000 });
+            throw new Error(RATE_LIMIT_TOAST_MESSAGE);
+          } else if (response.status === 401 || response.status === 403) {
             setChatError("auth");
             throw new Error("AI is not available right now.");
           } else if (response.status >= 500) {
@@ -218,6 +227,7 @@ export function useChat({ sessionId, context, apiKey, onAction }: UseChatOptions
         }
 
         if (fullContent) {
+          track("ai_message_sent");
           const finalAssistant = { ...assistantMessage, content: fullContent };
           persistMessages(sessionId, userMessage, finalAssistant);
         }
@@ -248,7 +258,7 @@ export function useChat({ sessionId, context, apiKey, onAction }: UseChatOptions
         abortRef.current = null;
       }
     },
-    [sessionId, context, isStreaming, apiKey, messages],
+    [sessionId, context, isStreaming, apiKey, messages, addToast],
   );
 
   const clearMessages = useCallback(() => {

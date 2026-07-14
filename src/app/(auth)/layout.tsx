@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function AuthLayout({
   children,
 }: Readonly<{
@@ -7,9 +9,9 @@ export default function AuthLayout({
     <div className="flex min-h-screen flex-col items-center justify-center bg-[#0a0a0a] px-4">
       {/* Logo */}
       <div className="mb-8 flex items-center gap-3">
-        <span className="text-2xl font-bold tracking-tight text-stone-100" style={{ fontFamily: "var(--font-space-grotesk)" }}>
+        <Link href="/" className="text-2xl font-bold tracking-tight text-stone-100 hover:opacity-80 transition-opacity" style={{ fontFamily: "var(--font-space-grotesk)" }}>
           <span className="text-amber-500">Un</span>bottle
-        </span>
+        </Link>
       </div>
 
       {/* Card container */}

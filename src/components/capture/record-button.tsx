@@ -3,6 +3,7 @@
 import { useAudioRecorder } from "@/lib/hooks/use-audio-recorder";
 import { cn } from "@/lib/utils/cn";
 import { WaveformDisplay } from "./waveform-display";
+import { FirstUseTooltip } from "@/components/ui/first-use-tooltip";
 
 export interface RecordButtonProps {
   onRecordingComplete: (blob: Blob, url: string) => void;
@@ -51,6 +52,11 @@ export function RecordButton({
   return (
     <div className={cn("flex flex-col items-center gap-4", className)}>
       {/* Main record button */}
+      <FirstUseTooltip
+        tooltipKey="capture"
+        text="Hum or tap to capture a melody — AI converts it to notes"
+        position="top"
+      >
       <button
         type="button"
         onClick={handleClick}
@@ -85,6 +91,7 @@ export function RecordButton({
           </svg>
         )}
       </button>
+      </FirstUseTooltip>
 
       {/* Recording duration */}
       {isRecording && (

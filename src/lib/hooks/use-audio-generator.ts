@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
+import { track } from "@vercel/analytics";
 import { getElevenLabsAuthHeaders } from "./use-elevenlabs-key";
+import { useToast } from "@/components/ui/toast-provider";
+
+const RATE_LIMIT_TOAST_MESSAGE =
+  "You've hit your AI limit for today. Try again tomorrow or use your own API key in Settings.";
 
 export interface GenerateOptions {
   prompt?: string;
@@ -35,6 +40,7 @@ export function useAudioGenerator(
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { addToast } = useToast();
 
   // Track blob URLs for cleanup
   const currentBlobUrl = useRef<string | null>(null);
@@ -78,6 +84,10 @@ export function useAudioGenerator(
         });
 
         if (!response.ok) {
+          if (response.status === 429) {
+            addToast({ message: RATE_LIMIT_TOAST_MESSAGE, variant: "warning", duration: 8000 });
+            throw new Error(RATE_LIMIT_TOAST_MESSAGE);
+          }
           let errorMessage = `Generation failed (${response.status})`;
           try {
             const errBody = (await response.json()) as { error?: string };
@@ -98,6 +108,7 @@ export function useAudioGenerator(
 
         setAudioBlob(blob);
         setAudioUrl(url);
+        track("audio_generated");
         setProgress("Complete");
       } catch (err) {
         setError(err instanceof Error ? err.message : "Generation failed");
@@ -106,7 +117,7 @@ export function useAudioGenerator(
         setIsGenerating(false);
       }
     },
-    [elevenLabsKey],
+    [elevenLabsKey, addToast],
   );
 
   return {

@@ -1,7 +1,7 @@
 # Unbottle User Flows -- Source of Truth
 
 > Comprehensive audit of every user flow, current state assessment, ideal behavior, and improvement plan.
-> Last tested: 2026-04-16 via Playwright MCP against localhost:3000.
+> Last tested: 2026-05-08. Updated to reflect UNB-21 (focused empty state) and subsequent sprint changes.
 
 ---
 
@@ -102,25 +102,25 @@
 **Route:** `/dashboard`
 
 ### Current State
-- Shows "What are you working on?" heading
-- When no sessions: Shows "Just Start" card (120 BPM, key of C), "Or configure a session first" link, and "The studio is empty" empty state
-- When sessions exist: Shows "Recent Sessions" grid with session cards
-- Session cards show: auto-generated title ("Session Apr 16, 1:34 AM"), genre/mood tags, BPM/key badges, relative timestamp, active indicator (green dot)
+- **Empty state (0 sessions):** Centered focused CTA — music note icon, tagline "Turn a melody in your head into a full arrangement — just hum or describe it.", single "Start your first track" button. No clutter.
+- **Normal state (1+ sessions):** "What are you working on?" heading + "Start New Session" button (top-right) + "Recent Sessions" grid with session cards.
+- Session cards show: auto-generated title ("Session Apr 16, 1:34 AM"), genre/mood tags, BPM/key badges, relative timestamp, active indicator (green dot), inline rename (pencil icon on hover), delete (trash icon on hover).
+- Search input appears when 3+ sessions exist, filtering by title/genre/mood/key.
+- Branch view toggle appears when any session has been forked.
 
-### Issues Found
+### Issues Fixed
 | # | Severity | Issue |
 |---|----------|-------|
-| D1 | **HIGH** | **Quick-start options disappear once sessions exist.** The "Just Start" card and "Or configure a session first" link vanish when there are sessions, leaving only "+ Start New Session" button in top-right. The prominent low-friction entry point is lost. |
-| D2 | MEDIUM | `/session` redirects to `/dashboard` instead of being its own page. The sidebar "My Sessions" link goes to the same place as "Dashboard" -- redundant nav. |
-| D3 | MINOR | Session cards have auto-generated titles ("Session Apr 16, 1:34 AM") that aren't descriptive. No inline rename. |
-| D4 | MINOR | No session delete/archive from dashboard -- only accessible from within a session. |
-| D5 | MINOR | No search or filter for sessions as the list grows. |
+| D1 | **HIGH** | **FIXED (UNB-21)** — Replaced cluttered multi-CTA empty state with a single focused "Start your first track" CTA. Normal-state header and session grid retained when sessions exist. |
+| D2 | MEDIUM | **FIXED** — "My Sessions" sidebar link changed to "New Session" pointing to `/session/new`. |
+| D3 | MINOR | **FIXED** — Inline rename via pencil icon on session cards. |
+| D4 | MINOR | **FIXED** — Trash icon on hover deletes/archives session from dashboard. |
+| D5 | MINOR | **FIXED** — Search input filters by title/genre/mood/key (appears at 3+ sessions). |
 
 ### Ideal Flow
-1. Dashboard always shows quick-start options (Just Start, configure, or pick a template) regardless of session count
-2. Recent Sessions grid below with session cards showing meaningful titles, metadata, and quick actions (rename, delete, duplicate)
-3. "My Sessions" nav link leads to a dedicated sessions list with search/filter/sort
-4. Empty state is warm and inviting (current "The studio is empty. Time to change that." is good)
+1. First visit: single "Start your first track" CTA with tagline — zero friction
+2. Return visits: recent sessions grid with search, branch view, inline rename/delete
+3. Top-right "Start New Session" always available as secondary action
 
 ---
 
@@ -502,7 +502,7 @@ Sections:
 ### High (Should Fix)
 | # | Flow | Status | Issue |
 |---|------|--------|-------|
-| D1 | Dashboard | **FIXED** | ~~Quick-start options disappear when sessions exist~~ -- Removed `sessions.length === 0` guard |
+| D1 | Dashboard | **FIXED (UNB-21)** | ~~Cluttered empty state with multiple CTAs~~ -- Replaced with single focused "Start your first track" CTA when 0 sessions; normal layout retained for returning users |
 
 ### Medium (Improve)
 | # | Flow | Status | Issue |
@@ -554,6 +554,13 @@ Sections:
 - **1 new component** created (`landing-nav.tsx`)
 - **2 new API handlers** added (bookmark PATCH + DELETE)
 - All changes compile clean (`tsc --noEmit` passes)
-- Remaining open: W4 (keyboard shortcut tooltips added), N2 (time signature on new session added), F2 (fork badge on dashboard added) — all now fixed
 - All tracked issues resolved
-- Remaining 6 open items are either low-impact, require external config (OAuth), or need larger architectural changes (DnD library)
+
+### Sprint 2 additions (2026-05-08)
+- **Onboarding modal** (3-step: Welcome / Capture / Create) — shown once to new users, writes `onboarding_completed` to profile
+- **Session sharing** — `/api/sessions/[id]/share` POST/DELETE, public share page at `/share/[slug]`
+- **Monetization** — Stripe checkout, customer portal, webhook subscription sync, `subscriptions` table
+- **Rate limiting** — tier-aware sliding window via `@upstash/ratelimit` with BYO-key bypass; `usage_logs` table for token tracking
+- **Vercel Analytics** — `<Analytics />` in root layout; 5 core events (`session_created`, `ai_message_sent`, `audio_generated`, `arrangement_generated`, `track_exported`)
+- **Dashboard empty state** (UNB-21) — single focused CTA for first-time users
+- **PLAN.md** — never created; this file (`USER_FLOWS.md`) is the canonical source of truth

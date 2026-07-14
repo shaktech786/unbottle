@@ -156,10 +156,6 @@ beforeEach(() => {
   vi.resetModules();
 });
 
-afterEach(() => {
-  vi.doUnmock("tone");
-});
-
 const sampleTrack = {
   id: "t1",
   instrument: "piano",

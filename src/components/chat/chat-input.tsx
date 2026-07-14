@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, type KeyboardEvent } from "react";
 import { cn } from "@/lib/utils/cn";
+import { FirstUseTooltip } from "@/components/ui/first-use-tooltip";
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -44,6 +45,12 @@ export function ChatInput({ onSend, disabled = false, className }: ChatInputProp
   return (
     <div className={cn("border-t border-neutral-800/50 bg-neutral-950 px-4 py-3", className)}>
       <div className="flex items-end gap-2">
+        <FirstUseTooltip
+          tooltipKey="chat"
+          text="Type your idea here — the AI will shape it into an arrangement"
+          position="top"
+          className="flex-1"
+        >
         <textarea
           ref={textareaRef}
           value={value}
@@ -56,7 +63,7 @@ export function ChatInput({ onSend, disabled = false, className }: ChatInputProp
           rows={1}
           placeholder="Describe what you're hearing in your head..."
           className={cn(
-            "flex-1 resize-none rounded-xl border bg-neutral-900 px-4 py-3 text-sm text-neutral-50",
+            "w-full resize-none rounded-xl border bg-neutral-900 px-4 py-3 text-sm text-neutral-50",
             "border-neutral-700 placeholder:text-neutral-500",
             "focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20",
             "disabled:cursor-not-allowed disabled:opacity-50",
@@ -64,6 +71,7 @@ export function ChatInput({ onSend, disabled = false, className }: ChatInputProp
             "max-h-40",
           )}
         />
+        </FirstUseTooltip>
         <button
           onClick={handleSend}
           disabled={disabled || !value.trim()}

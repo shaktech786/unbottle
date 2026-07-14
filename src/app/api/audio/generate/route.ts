@@ -5,6 +5,7 @@ import {
 import { buildMusicPrompt } from "@/lib/audio/music-prompt";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/supabase/auth";
+import { checkRateLimit } from "@/lib/ratelimit";
 
 export const dynamic = "force-dynamic";
 
@@ -26,9 +27,30 @@ interface AudioGenerateRequestBody {
 
 export async function POST(request: Request) {
   try {
+    let authedUserId: string | null = null;
+
     if (supabaseConfigured) {
       const client = await createClient();
-      await requireAuth(client);
+      const user = await requireAuth(client);
+      authedUserId = user.id;
+    }
+
+    const userApiKey = getUserElevenLabsKey(request);
+    const hasByoKey = Boolean(userApiKey);
+
+    if (authedUserId && !hasByoKey) {
+      const rateLimit = await checkRateLimit(authedUserId, "audio");
+      if (!rateLimit.allowed) {
+        return Response.json(
+          { error: "Rate limit exceeded" },
+          {
+            status: 429,
+            headers: {
+              "Retry-After": String(rateLimit.retryAfter ?? 86400),
+            },
+          },
+        );
+      }
     }
 
     const body = (await request.json()) as AudioGenerateRequestBody;
@@ -62,7 +84,6 @@ export async function POST(request: Request) {
     }
 
     const forceInstrumental = body.forceInstrumental ?? true;
-    const userApiKey = getUserElevenLabsKey(request);
 
     const result = await generateMusic(
       { prompt, duration, forceInstrumental },

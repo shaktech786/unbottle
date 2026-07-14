@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -11,6 +11,36 @@ export default function ResetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [tokenError, setTokenError] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+
+    // Parse hash params — Supabase implicit flow sends tokens as
+    // #access_token=...&refresh_token=...&type=recovery
+    const hash = window.location.hash.slice(1);
+    const params = new URLSearchParams(hash);
+    const accessToken = params.get("access_token");
+    const refreshToken = params.get("refresh_token");
+    const type = params.get("type");
+
+    if (accessToken && refreshToken && type === "recovery") {
+      supabase.auth
+        .setSession({ access_token: accessToken, refresh_token: refreshToken })
+        .then(({ error }) => {
+          if (error) setTokenError(true);
+          else setReady(true);
+        });
+      return;
+    }
+
+    // Fallback: page refresh after session already established
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setReady(true);
+      else setTokenError(true);
+    });
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -29,9 +59,7 @@ export default function ResetPasswordPage() {
     setLoading(true);
 
     const supabase = createClient();
-    const { error: updateError } = await supabase.auth.updateUser({
-      password,
-    });
+    const { error: updateError } = await supabase.auth.updateUser({ password });
 
     if (updateError) {
       setError(updateError.message);
@@ -40,6 +68,29 @@ export default function ResetPasswordPage() {
     }
 
     router.push("/dashboard");
+  }
+
+  if (tokenError) {
+    return (
+      <>
+        <h1 className="mb-2 text-2xl font-bold text-stone-100">Link expired</h1>
+        <p className="mb-6 text-sm text-neutral-400">
+          This reset link is invalid or has expired.
+        </p>
+        <Link
+          href="/forgot-password"
+          className="inline-block w-full rounded-lg bg-amber-600 px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-amber-500"
+        >
+          Request a new link
+        </Link>
+      </>
+    );
+  }
+
+  if (!ready) {
+    return (
+      <p className="text-sm text-neutral-400">Verifying reset link…</p>
+    );
   }
 
   return (

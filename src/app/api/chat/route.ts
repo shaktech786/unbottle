@@ -1,10 +1,16 @@
-import { getClaudeClient, getUserApiKey } from "@/lib/ai/claude";
+import { getClaudeClient } from "@/lib/ai/claude";
 import { buildProducerSystemPrompt } from "@/lib/ai/prompts/producer";
 import { PRODUCER_TOOLS } from "@/lib/ai/tools";
 import type { Section, Track } from "@/lib/music/types";
 import type Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/supabase/auth";
+import { checkRateLimit } from "@/lib/ratelimit";
+import { logUsage } from "@/lib/log-usage";
+import { buildStyleContext } from "@/lib/style/build-style-context";
+import { mapStyleProfileRow, type StyleProfileRow } from "@/lib/style/schema";
+
+const BYO_KEY_HEADER = "x-anthropic-key";
 
 export const dynamic = "force-dynamic";
 
@@ -27,14 +33,37 @@ interface ChatRequestBody {
     mood?: string;
     sections?: Section[];
     tracks?: Track[];
+    /** Idea summary from IdeaContext.buildIdeaSummary() */
+    ideaContext?: string | null;
   };
 }
 
 export async function POST(request: Request) {
   try {
+    let authedUserId: string | null = null;
+
     if (supabaseConfigured) {
       const client = await createClient();
-      await requireAuth(client);
+      const user = await requireAuth(client);
+      authedUserId = user.id;
+    }
+
+    const userApiKey = request.headers.get(BYO_KEY_HEADER) || undefined;
+    const hasByoKey = Boolean(userApiKey);
+
+    if (authedUserId && !hasByoKey) {
+      const rateLimit = await checkRateLimit(authedUserId);
+      if (!rateLimit.allowed) {
+        return Response.json(
+          { error: "Rate limit exceeded" },
+          {
+            status: 429,
+            headers: {
+              "Retry-After": String(rateLimit.retryAfter ?? 3600),
+            },
+          },
+        );
+      }
     }
 
     const body = (await request.json()) as ChatRequestBody;
@@ -42,6 +71,24 @@ export async function POST(request: Request) {
 
     if (!message?.trim()) {
       return Response.json({ error: "Message is required" }, { status: 400 });
+    }
+
+    // Fetch style profile for the authed user (best-effort)
+    let styleContext: string | null = null;
+    if (authedUserId && supabaseConfigured) {
+      try {
+        const profileClient = await createClient();
+        const { data: profileRow } = await profileClient
+          .from("style_profiles")
+          .select("*")
+          .eq("user_id", authedUserId)
+          .maybeSingle();
+        if (profileRow) {
+          styleContext = buildStyleContext(mapStyleProfileRow(profileRow as StyleProfileRow));
+        }
+      } catch {
+        // Non-fatal — proceed without style context
+      }
     }
 
     const systemPrompt = buildProducerSystemPrompt({
@@ -52,9 +99,10 @@ export async function POST(request: Request) {
       mood: context?.mood,
       sections: context?.sections,
       tracks: context?.tracks,
+      styleContext,
+      ideaContext: context?.ideaContext,
     });
 
-    const userApiKey = getUserApiKey(request);
     const claude = getClaudeClient(userApiKey);
 
     const validHistory: { role: "user" | "assistant"; content: string }[] = (
@@ -140,6 +188,10 @@ export async function POST(request: Request) {
           // Get the final completed message to check stop_reason
           const finalMessage = await stream.finalMessage();
 
+          let totalInputTokens = finalMessage.usage.input_tokens;
+          let totalOutputTokens = finalMessage.usage.output_tokens;
+          const responseModel = finalMessage.model;
+
           // If the model called tools, do a follow-up to get the summary text
           if (finalMessage.stop_reason === "tool_use") {
             const toolBlocks = finalMessage.content.filter(
@@ -164,6 +216,9 @@ export async function POST(request: Request) {
                 ],
               });
 
+              totalInputTokens += followUp.usage.input_tokens;
+              totalOutputTokens += followUp.usage.output_tokens;
+
               for (const block of followUp.content) {
                 if (block.type === "text" && block.text) {
                   sendSSE(controller, { type: "token", content: block.text });
@@ -178,6 +233,16 @@ export async function POST(request: Request) {
                 content: "\n\nI've set everything up for you. Hit play to hear it!",
               });
             }
+          }
+
+          if (authedUserId) {
+            void logUsage({
+              userId: authedUserId,
+              tokensInput: totalInputTokens,
+              tokensOutput: totalOutputTokens,
+              model: responseModel,
+              endpoint: "/api/chat",
+            });
           }
 
           sendSSE(controller, { type: "done" });

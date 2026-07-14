@@ -1,12 +1,16 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useApiKey } from "@/lib/hooks/use-api-key";
 import { useElevenLabsKey } from "@/lib/hooks/use-elevenlabs-key";
 import { usePreferences } from "@/lib/hooks/use-preferences";
+import { useDawMode } from "@/lib/hooks/use-daw-mode";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { StyleProfileEditor } from "@/components/settings/style-profile-editor";
+import { ReaperSetupWizard } from "@/components/settings/reaper-setup-wizard";
+import { AccountSection } from "@/components/settings/account-section";
 
 type Theme = "dark" | "light";
 
@@ -72,6 +76,8 @@ function SavedIndicator({ show }: { show: boolean }) {
   );
 }
 
+type PingStatus = "idle" | "checking" | "connected" | "failed";
+
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const { apiKey, setApiKey, hasUserKey, isLoaded } = useApiKey();
@@ -93,6 +99,44 @@ export default function SettingsPage() {
   const { preferences, updatePreference } = usePreferences();
   const [prefSaved, setPrefSaved] = useState(false);
   const prefSavedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // DAW mode
+  const [dawMode, setDawMode] = useDawMode();
+  const [pingStatus, setPingStatus] = useState<PingStatus>("idle");
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const portCommitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handlePortChange = useCallback(
+    (value: string) => {
+      setPingStatus("idle");
+      const port = Number(value);
+      if (!Number.isInteger(port) || port < 1 || port > 65535) return;
+      if (portCommitTimer.current) clearTimeout(portCommitTimer.current);
+      portCommitTimer.current = setTimeout(() => {
+        updatePreference("reaperBridgePort", port);
+      }, 600);
+    },
+    [updatePreference],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (portCommitTimer.current) clearTimeout(portCommitTimer.current);
+    };
+  }, []);
+
+  async function testReaperConnection() {
+    const port = preferences.reaperBridgePort;
+    setPingStatus("checking");
+    try {
+      const res = await fetch(`http://localhost:${port}/ping`, {
+        signal: AbortSignal.timeout(3000),
+      });
+      setPingStatus(res.ok ? "connected" : "failed");
+    } catch {
+      setPingStatus("failed");
+    }
+  }
 
   function showPrefSaved() {
     setPrefSaved(true);
@@ -514,6 +558,148 @@ export default function SettingsPage() {
         </div>
       </Card>
 
+      {/* DAW Backend */}
+      <Card className="mt-4 p-4 sm:mt-6 sm:p-6">
+        <h2 className="mb-1 text-lg font-semibold text-neutral-100">
+          DAW Backend
+        </h2>
+        <p className="mb-4 text-sm text-neutral-400">
+          Choose the audio engine Unbottle uses for playback and MIDI output.
+        </p>
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setDawMode("tone")}
+            className={`flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20 ${
+              dawMode === "tone"
+                ? "border-amber-500 bg-amber-500/10 text-amber-400"
+                : "border-neutral-700 bg-neutral-800/50 text-neutral-400 hover:border-neutral-600 hover:text-neutral-300"
+            }`}
+          >
+            Built-in (Tone.js)
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (!preferences.reaperSetupComplete) {
+                setDawMode("reaper");
+                setWizardOpen(true);
+              } else {
+                setDawMode("reaper");
+              }
+            }}
+            className={`flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20 ${
+              dawMode === "reaper"
+                ? "border-amber-500 bg-amber-500/10 text-amber-400"
+                : "border-neutral-700 bg-neutral-800/50 text-neutral-400 hover:border-neutral-600 hover:text-neutral-300"
+            }`}
+          >
+            Reaper (via local bridge)
+          </button>
+        </div>
+
+        {dawMode === "reaper" && (
+          <div className="mt-4 space-y-4 rounded-lg border border-neutral-700 bg-neutral-800/50 p-4">
+            {preferences.reaperSetupComplete && (
+              <div className="flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-medium text-emerald-400 w-fit mb-3">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                Reaper: Connected
+              </div>
+            )}
+            {/* Port + test */}
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="reaper-port"
+                className="text-sm font-medium text-neutral-300"
+              >
+                Bridge port
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  id="reaper-port"
+                  type="number"
+                  min={1}
+                  max={65535}
+                  defaultValue={preferences.reaperBridgePort}
+                  onChange={(e) => handlePortChange(e.target.value)}
+                  className="w-28 font-mono"
+                />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={testReaperConnection}
+                  disabled={pingStatus === "checking"}
+                  className="shrink-0"
+                >
+                  {pingStatus === "checking" ? "Checking…" : "Test connection"}
+                </Button>
+
+                {pingStatus === "connected" && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-medium text-emerald-400">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                    Connected
+                  </span>
+                )}
+                {pingStatus === "failed" && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/15 px-3 py-1 text-xs font-medium text-red-400">
+                    <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                    Bridge not found
+                  </span>
+                )}
+              </div>
+              {pingStatus === "failed" && (
+                <p className="text-xs text-neutral-500">
+                  Is Reaper running with the bridge script loaded?
+                </p>
+              )}
+            </div>
+
+            {/* Links */}
+            <div className="flex gap-4 border-t border-neutral-700 pt-3 text-xs">
+              <a
+                href="/unbottle-bridge.lua"
+                download
+                className="text-amber-400 underline transition-colors duration-200 hover:text-amber-300"
+              >
+                Download bridge script
+              </a>
+              <a
+                href="/REAPER_BRIDGE.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-neutral-500 underline transition-colors duration-200 hover:text-neutral-300"
+              >
+                Setup guide
+              </a>
+              <button
+                type="button"
+                onClick={() => {
+                  updatePreference("reaperSetupComplete", false);
+                  setWizardOpen(true);
+                }}
+                className="text-neutral-500 underline transition-colors duration-200 hover:text-neutral-300"
+              >
+                Re-run setup
+              </button>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      <ReaperSetupWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        onComplete={() => {
+          updatePreference("reaperSetupComplete", true);
+          setWizardOpen(false);
+        }}
+        initialPort={preferences.reaperBridgePort}
+      />
+
+      {/* Style Profile DNA */}
+      <StyleProfileEditor className="mt-4 sm:mt-6" />
+
       <Card className="mt-4 p-4 sm:mt-6 sm:p-6">
         <h2 className="mb-1 text-lg font-semibold text-neutral-100">
           How it works
@@ -536,6 +722,14 @@ export default function SettingsPage() {
           </li>
         </ul>
       </Card>
+
+      <AccountSection />
+
+      <nav className="mt-8 flex flex-wrap justify-center gap-x-5 gap-y-2 border-t border-neutral-800/50 pt-6 text-sm text-neutral-500">
+        <a href="/terms" className="hover:text-neutral-300">Terms</a>
+        <a href="/privacy" className="hover:text-neutral-300">Privacy</a>
+        <a href="/cookies" className="hover:text-neutral-300">Cookies</a>
+      </nav>
     </div>
   );
 }
