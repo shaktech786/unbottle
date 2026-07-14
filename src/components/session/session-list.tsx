@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { Session } from "@/lib/music/types";
 import { SessionCard } from "./session-card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,11 +12,49 @@ interface SessionListProps {
   onDelete?: (id: string) => Promise<void>;
 }
 
+const LAST_SESSION_COUNT_KEY = "unbottle:last-session-count";
+const MIN_SKELETON_COUNT = 1;
+const MAX_SKELETON_COUNT = 6;
+const DEFAULT_SKELETON_COUNT = 3;
+
+function clampSkeletonCount(count: number): number {
+  return Math.min(MAX_SKELETON_COUNT, Math.max(MIN_SKELETON_COUNT, count));
+}
+
+function readLastSessionCount(): number {
+  if (typeof window === "undefined") return DEFAULT_SKELETON_COUNT;
+  try {
+    const raw = localStorage.getItem(LAST_SESSION_COUNT_KEY);
+    const parsed = raw ? parseInt(raw, 10) : NaN;
+    return Number.isNaN(parsed) ? DEFAULT_SKELETON_COUNT : clampSkeletonCount(parsed);
+  } catch {
+    return DEFAULT_SKELETON_COUNT;
+  }
+}
+
+function writeLastSessionCount(count: number): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(LAST_SESSION_COUNT_KEY, String(count));
+  } catch {
+    // Storage full — not critical
+  }
+}
+
 export function SessionList({ sessions, isLoading, onRename, onDelete }: SessionListProps) {
+  const [skeletonCount, setSkeletonCount] = useState(readLastSessionCount);
+
+  useEffect(() => {
+    if (!isLoading && sessions.length > 0) {
+      writeLastSessionCount(sessions.length);
+      setSkeletonCount(clampSkeletonCount(sessions.length));
+    }
+  }, [isLoading, sessions.length]);
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
+        {Array.from({ length: skeletonCount }).map((_, i) => (
           <div
             key={i}
             className="flex flex-col rounded-xl border border-neutral-800 bg-neutral-900/50 p-4"

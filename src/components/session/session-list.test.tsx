@@ -7,6 +7,7 @@ import type { Session } from "@/lib/music/types";
 
 afterEach(() => {
   cleanup();
+  localStorage.clear();
 });
 
 function makeSession(overrides: Partial<Session> = {}): Session {
@@ -28,15 +29,62 @@ function makeSession(overrides: Partial<Session> = {}): Session {
   };
 }
 
+const LAST_SESSION_COUNT_KEY = "unbottle:last-session-count";
+
+function skeletonCardCount(container: HTMLElement): number {
+  // Each skeleton card renders 4 Skeleton elements (title, 2 tags, date)
+  return container.querySelectorAll(".animate-pulse").length / 4;
+}
+
 describe("SessionList", () => {
   it("shows skeleton placeholders while loading", () => {
     const { container } = render(
       <SessionList sessions={[]} isLoading={true} />,
     );
-    // 6 skeleton cards in the loading state
     expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(
       0,
     );
+  });
+
+  it("defaults to 3 skeleton cards on first-ever load with no cached count", () => {
+    const { container } = render(
+      <SessionList sessions={[]} isLoading={true} />,
+    );
+    expect(skeletonCardCount(container)).toBe(3);
+  });
+
+  it("uses the cached session count to size the skeleton grid", () => {
+    localStorage.setItem(LAST_SESSION_COUNT_KEY, "2");
+    const { container } = render(
+      <SessionList sessions={[]} isLoading={true} />,
+    );
+    expect(skeletonCardCount(container)).toBe(2);
+  });
+
+  it("clamps the cached count to a max of 6 skeleton cards", () => {
+    localStorage.setItem(LAST_SESSION_COUNT_KEY, "20");
+    const { container } = render(
+      <SessionList sessions={[]} isLoading={true} />,
+    );
+    expect(skeletonCardCount(container)).toBe(6);
+  });
+
+  it("clamps the cached count to a min of 1 skeleton card", () => {
+    localStorage.setItem(LAST_SESSION_COUNT_KEY, "0");
+    const { container } = render(
+      <SessionList sessions={[]} isLoading={true} />,
+    );
+    expect(skeletonCardCount(container)).toBe(1);
+  });
+
+  it("caches the session count once sessions load, for use on the next loading render", () => {
+    const sessions = [
+      makeSession({ id: "a", title: "Alpha" }),
+      makeSession({ id: "b", title: "Beta" }),
+    ];
+    render(<SessionList sessions={sessions} isLoading={false} />);
+
+    expect(localStorage.getItem(LAST_SESSION_COUNT_KEY)).toBe("2");
   });
 
   it("shows the empty state when there are no sessions", () => {
