@@ -19,7 +19,7 @@ const POSITION_CLASSES: Record<
   { bubble: string; arrow: string }
 > = {
   top: {
-    bubble: "bottom-full mb-2 left-1/2 -translate-x-1/2",
+    bubble: "bottom-full mb-4 left-1/2 -translate-x-1/2",
     arrow:
       "absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-amber-500",
   },
