@@ -80,6 +80,18 @@ export async function getSession(
 }
 
 /**
+ * Columns readable by a signed-out share viewer. `anon` holds a column-level
+ * grant on sessions rather than a table-level one (see
+ * 20260512000100_add_share_link_password) so share_password_hash stays secret,
+ * which means `select("*")` returns "permission denied for table sessions" for
+ * anon. Any column added to sessions must be added both to that GRANT and here.
+ */
+const SHARE_VIEWER_COLUMNS =
+  "id, user_id, title, description, status, bpm, key_signature, time_signature, " +
+  "genre, mood, parent_branch_id, created_at, updated_at, last_active_at, " +
+  "share_slug, is_public, has_share_password";
+
+/**
  * Get a session by its share slug. Returns null if not found.
  */
 export async function getSessionBySlug(
@@ -88,13 +100,13 @@ export async function getSessionBySlug(
 ): Promise<Session | null> {
   const { data, error } = await client
     .from("sessions")
-    .select("*")
+    .select(SHARE_VIEWER_COLUMNS)
     .eq("share_slug", slug)
     .maybeSingle();
 
   if (error) throw error;
   if (!data) return null;
-  return mapSessionRow(data as SessionRow);
+  return mapSessionRow(data as unknown as SessionRow);
 }
 
 /**

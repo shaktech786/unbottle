@@ -6,11 +6,22 @@
  * No auth required — public endpoint.
  */
 
-import { createClient } from "@/lib/supabase/server";
-import { getSessionBySlug } from "@/lib/supabase/db";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { verifySharePassword } from "@/lib/share/password";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Reads share_password_hash, which `anon` deliberately has no column grant on
+ * (20260512000100). The comparison has to happen server-side; the hash must
+ * never reach the client.
+ */
+function getServiceClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return createServiceClient(url, key, { auth: { persistSession: false } });
+}
 
 export async function POST(
   request: Request,
@@ -19,9 +30,13 @@ export async function POST(
   const { id } = await params;
 
   try {
-    const client = await createClient();
+    const client = getServiceClient();
+    if (!client) {
+      return Response.json({ error: "Not found" }, { status: 404 });
+    }
 
-    // Fetch the session (by slug) including password_hash
+    // This client bypasses RLS, so is_public is the only gate on the row -- it
+    // must be checked before anything is returned or compared.
     const { data, error } = await client
       .from("sessions")
       .select("id, is_public, share_password_hash")
@@ -43,8 +58,8 @@ export async function POST(
 
     const valid = await verifySharePassword(password, data.share_password_hash);
     return Response.json({ valid });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Internal server error";
-    return Response.json({ error: message }, { status: 500 });
+  } catch {
+    // Don't echo the DB error: this endpoint is public and unauthenticated.
+    return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 }
