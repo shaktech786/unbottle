@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, type KeyboardEvent } from "react";
 import { cn } from "@/lib/utils/cn";
-import { FirstUseTooltip } from "@/components/ui/first-use-tooltip";
+import { useFirstUseTooltip } from "@/lib/hooks/use-first-use-tooltip";
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -13,6 +13,7 @@ interface ChatInputProps {
 export function ChatInput({ onSend, disabled = false, className }: ChatInputProps) {
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { show: showTip, dismiss: dismissTip } = useFirstUseTooltip("chat");
 
   const handleSend = useCallback(() => {
     const trimmed = value.trim();
@@ -44,13 +45,34 @@ export function ChatInput({ onSend, disabled = false, className }: ChatInputProp
 
   return (
     <div className={cn("border-t border-neutral-800/50 bg-neutral-950 px-4 py-3", className)}>
+      {showTip && (
+        <div className="mb-2 flex items-start gap-2 rounded-xl border border-amber-500/40 bg-neutral-900 px-3 py-2">
+          <span className="flex-1 text-xs leading-snug text-neutral-200">
+            Type your idea here — the AI will shape it into an arrangement
+          </span>
+          <button
+            type="button"
+            onClick={dismissTip}
+            aria-label="Dismiss tip"
+            className="mt-0.5 shrink-0 text-neutral-500 hover:text-neutral-300 transition-colors"
+          >
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      )}
       <div className="flex items-end gap-2">
-        <FirstUseTooltip
-          tooltipKey="chat"
-          text="Type your idea here — the AI will shape it into an arrangement"
-          position="top"
-          className="flex-1"
-        >
         <textarea
           ref={textareaRef}
           value={value}
@@ -75,7 +97,6 @@ export function ChatInput({ onSend, disabled = false, className }: ChatInputProp
             "[&::-webkit-scrollbar-thumb]:hover:bg-neutral-500",
           )}
         />
-        </FirstUseTooltip>
         <button
           onClick={handleSend}
           disabled={disabled || !value.trim()}
