@@ -21,10 +21,11 @@ async function fetchShareData(slug: string): Promise<ShareData | null> {
     try {
       const client = await createClient();
 
-      // Fetch session + password_hash in one query
+      // has_share_password, not share_password_hash: anon has no column grant on
+      // the hash, and this page renders for signed-out visitors.
       const { data: row, error } = await client
         .from("sessions")
-        .select("*, share_password_hash")
+        .select("is_public, has_share_password")
         .eq("share_slug", slug)
         .maybeSingle();
 
@@ -49,7 +50,7 @@ async function fetchShareData(slug: string): Promise<ShareData | null> {
       return {
         session,
         audioUrl,
-        passwordProtected: Boolean(row.share_password_hash),
+        passwordProtected: Boolean(row.has_share_password),
       };
     } catch {
       return null;
