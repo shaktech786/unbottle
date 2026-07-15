@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+import { renderSessionToAudio } from "./offline-renderer";
 
 /**
  * Offline audio renderer tests.
@@ -10,6 +11,20 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
  *   - assert the failed sampler is disconnected before fallback wiring
  *   - verify Tone.Offline is invoked with the right arguments and the
  *     resulting channel data is forwarded to the WAV encoder
+ *
+ * `renderSessionToAudio` does `await import("tone")` internally, and the
+ * test previously re-registered a fresh `vi.doMock("tone", ...)` +
+ * `vi.resetModules()` + dynamic `await import("./offline-renderer")` per
+ * test to swap mock behavior. That pattern raced Vitest's module registry
+ * under parallel/threaded test execution (flaky in CI, never locally) —
+ * the module could resolve against a stale "tone" mock from a previous
+ * test or the initial hoisted factory, so assertions against the current
+ * test's `fake.samplerInstances` saw 0 instead of 1.
+ *
+ * Fixed by mocking "tone" exactly once, with each export delegating at
+ * call-time to a mutable `current` fake that tests simply reassign before
+ * calling the statically-imported `renderSessionToAudio` — no module
+ * cache resets, no re-imports, nothing for the module graph to race on.
  */
 
 type TriggerFn = ReturnType<typeof vi.fn>;
@@ -113,12 +128,29 @@ function buildToneFake(options: { samplerShouldFail?: boolean } = {}) {
   };
 }
 
-let toneFake: ToneFake;
+// Mutable fake that each test reassigns before calling renderSessionToAudio.
+// Default: samples load successfully.
+let current: ToneFake = buildToneFake();
 
-vi.mock("tone", async () => {
-  // Default: samples load successfully
-  toneFake = buildToneFake();
-  return { default: toneFake.mock, ...toneFake.mock };
+// Registered exactly once. Each export delegates to whatever `current` is
+// at call time, so swapping behavior between tests never touches the
+// module registry.
+vi.mock("tone", () => {
+  function delegate(name: keyof ToneFake["mock"]) {
+    return function (this: unknown, ...args: unknown[]) {
+      return (current.mock[name] as (...a: unknown[]) => unknown).apply(this, args);
+    };
+  }
+  const proxy = {
+    Channel: delegate("Channel"),
+    Sampler: delegate("Sampler"),
+    PolySynth: delegate("PolySynth"),
+    Synth: delegate("Synth"),
+    MembraneSynth: delegate("MembraneSynth"),
+    Offline: (...args: unknown[]) =>
+      (current.mock.Offline as (...a: unknown[]) => unknown)(...args),
+  };
+  return { default: proxy, ...proxy };
 });
 
 // Mock WAV encoder so we don't depend on real audio math
@@ -147,15 +179,6 @@ vi.mock("./instruments", () => ({
   buildSampleUrls: vi.fn(() => ({ C4: "C4.mp3" })),
 }));
 
-// Re-stub tone for each test so we can swap success/failure behavior.
-function reInstallTone(fake: ToneFake) {
-  vi.doMock("tone", () => ({ default: fake.mock, ...fake.mock }));
-}
-
-beforeEach(() => {
-  vi.resetModules();
-});
-
 const sampleTrack = {
   id: "t1",
   instrument: "piano",
@@ -177,9 +200,8 @@ const sampleNote = {
 describe("renderSessionToAudio — Sampler success path", () => {
   it("loads the Sampler with expected URLs and produces a WAV blob", async () => {
     const fake = buildToneFake({ samplerShouldFail: false });
-    reInstallTone(fake);
+    current = fake;
 
-    const { renderSessionToAudio } = await import("./offline-renderer");
     const progress: number[] = [];
 
     const blob = await renderSessionToAudio(
@@ -205,9 +227,7 @@ describe("renderSessionToAudio — Sampler success path", () => {
 describe("renderSessionToAudio — Sampler onerror falls back to PolySynth and disconnects failed sampler", () => {
   it("swaps in a PolySynth fallback and disconnects the failed Sampler", async () => {
     const fake = buildToneFake({ samplerShouldFail: true });
-    reInstallTone(fake);
-
-    const { renderSessionToAudio } = await import("./offline-renderer");
+    current = fake;
 
     const blob = await renderSessionToAudio([sampleNote], [sampleTrack], 120, 2);
 
@@ -224,9 +244,8 @@ describe("renderSessionToAudio — Sampler onerror falls back to PolySynth and d
 describe("renderSessionToAudio — Tone.Offline produces non-empty buffer", () => {
   it("passes channel data to the WAV encoder (interleaved, length > 0)", async () => {
     const fake = buildToneFake({ samplerShouldFail: false });
-    reInstallTone(fake);
+    current = fake;
 
-    const { renderSessionToAudio } = await import("./offline-renderer");
     const wavEncoder = await import("./wav-encoder");
 
     await renderSessionToAudio([sampleNote], [sampleTrack], 120, 2);
@@ -244,11 +263,8 @@ describe("renderSessionToAudio — Tone.Offline produces non-empty buffer", () =
 
   it("throws when Tone.Offline returns no audio", async () => {
     const fake = buildToneFake({ samplerShouldFail: false });
-    // Override Offline to return a buffer whose `get()` is null
     fake.mock.Offline = vi.fn(async () => ({ get: () => null })) as unknown as typeof fake.mock.Offline;
-    reInstallTone(fake);
-
-    const { renderSessionToAudio } = await import("./offline-renderer");
+    current = fake;
 
     await expect(
       renderSessionToAudio([sampleNote], [sampleTrack], 120, 2),
