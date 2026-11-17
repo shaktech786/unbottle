@@ -231,6 +231,10 @@ Contributions are welcome. Open an issue to discuss before submitting a PR for a
 
 ---
 
+## Author
+
+Built by [Shakeel Bhamani](https://shak-tech.com) at [ShakTech Labs](https://shak-tech.com), a product engineering studio.
+
 ## License
 
 TBD

@@ -28,7 +28,11 @@ export default function LegalLayout({
       {/* Footer */}
       <footer className="border-t border-white/5 py-8 text-center">
         <p className="text-sm text-dim">
-          &copy; {new Date().getFullYear()} ShakTech Labs LLC &middot;{" "}
+          &copy; {new Date().getFullYear()}{" "}
+          <a href="https://shak-tech.com" target="_blank" rel="noopener" className="underline hover:text-white">
+            ShakTech Labs LLC
+          </a>{" "}
+          &middot;{" "}
           <Link href="/" className="hover:text-white">Unbottle</Link>
         </p>
       </footer>

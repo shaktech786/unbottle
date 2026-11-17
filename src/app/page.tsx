@@ -374,7 +374,10 @@ export default function Home() {
           </Link>
         </nav>
         <p className="mt-4 text-xs text-dim">
-          &copy; {new Date().getFullYear()} ShakTech Labs LLC
+          &copy; {new Date().getFullYear()}{" "}
+          <a href="https://shak-tech.com" target="_blank" rel="noopener" className="underline hover:text-white">
+            ShakTech Labs LLC
+          </a>
         </p>
       </footer>
     </div>
