@@ -24,6 +24,11 @@ jobs:
 
       - run: npm ci
 
+      - name: Supabase grants guard
+        run: |
+          node scripts/check-supabase-grants.mjs
+          node --test scripts/check-supabase-grants.test.mjs
+
       - name: Tests
         run: npm test
 
